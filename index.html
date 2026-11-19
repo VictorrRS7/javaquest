@@ -459,7 +459,8 @@ details.given summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
 /* ----- Schéma mémoire ----- */
 .mem { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
 @media (max-width: 640px) { .mem { grid-template-columns: 1fr; } }
-.mem h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.memclass { margin-top: 10px; }
+.memclass h3, .mem h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 .frame, .obj { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; background: var(--code-bg); }
 .frame .fname, .obj .oname { font: 600 .82rem var(--mono); color: var(--muted); margin-bottom: 6px; }
 .mrow { display: grid; grid-template-columns: minmax(60px, auto) 1fr; gap: 8px; align-items: center; margin: 4px 0; font-family: var(--mono); font-size: .88rem; }
@@ -831,7 +832,7 @@ var JavaMini = (function ()
 	var KW = Object.create(null);
 	("abstract boolean break byte case char class continue default do double else extends final " +
 	 "float for if implements import int interface long new null package private protected public " +
-	 "return short static switch this true false void while var").split(" ").forEach(function (k) { KW[k] = 1; });
+	 "return short static switch this true false void while var instanceof super try catch finally throw throws enum").split(" ").forEach(function (k) { KW[k] = 1; });
 	var PRIM = Object.assign(Object.create(null), { "int": 1, "double": 1, "char": 1, "boolean": 1, "long": 1, "short": 1, "byte": 1, "float": 1 });
 	var OPS3 = [">>=", "<<=", "..."];
 	var OPS2 = ["->", "++", "--", "+=", "-=", "*=", "/=", "%=", "==", "!=", "<=", ">=", "&&", "||", "&=", "|="];
@@ -1017,12 +1018,28 @@ var JavaMini = (function ()
 		{
 			var m = this.mods();
 			var t = this.peek();
-			if (this.is("interface")) { throw cErr("les interfaces ne sont pas au programme du semestre 1", t.line); }
-			if (!this.is("class")) { throw cErr("« class » attendu, trouvé « " + t.v + " »", t.line, "Un fichier Java contient : public class Nom { ... }"); }
-			this.next();
-			var name = this.ident("classe");
-			if (this.is("extends") || this.is("implements")) { throw cErr("l'héritage et les interfaces ne sont pas au programme du semestre 1", t.line); }
-			var cls = { name: name, pub: !!m["public"], line: t.line, fields: [], methods: Object.create(null), ctors: [], statics: Object.create(null), finfo: Object.create(null) };
+			var iface = !!this.accept("interface");
+			if (!iface)
+			{
+				if (!this.is("class")) { throw cErr("« class » attendu, trouvé « " + t.v + " »", t.line, "Un fichier Java contient : public class Nom { ... }"); }
+				this.next();
+			}
+			var name = this.ident(iface ? "interface" : "classe");
+			var tparams = [];
+			if (this.accept("<")) { do { tparams.push(this.ident("paramètre de type")); } while (this.accept(",")); this.expect(">"); }
+			var ext = null, impls = [];
+			if (this.accept("extends"))
+			{
+				if (iface) { do { impls.push(this.type()); } while (this.accept(",")); }
+				else { ext = this.type(); }
+			}
+			if (this.accept("implements"))
+			{
+				if (iface) { throw cErr("une interface n'implémente rien : elle peut seulement en étendre une autre (extends)", t.line); }
+				do { impls.push(this.type()); } while (this.accept(","));
+			}
+			var cls = { name: name, pub: !!m["public"], line: t.line, fields: [], methods: Object.create(null), ctors: [], statics: Object.create(null), finfo: Object.create(null),
+				iface: iface, abs: !!m["abstract"] || iface, ext: ext, impls: impls, tparams: tparams };
 			this.expect("{", "après le nom de la classe");
 			while (!this.is("}"))
 			{
@@ -1038,9 +1055,48 @@ var JavaMini = (function ()
 			var base;
 			if ((t.type === "kw" && (PRIM[t.v] || t.v === "void")) || t.type === "id") { base = normType(this.next().v); }
 			else { throw cErr("type attendu, trouvé « " + t.v + " »", t.line); }
+			if (t.type === "id" && this.is("<")) { base += this.typeArgs(); }
 			var d = 0;
 			while (this.is("[") && this.is("]", 1)) { this.next(); this.next(); d++; }
 			return arr(base, d);
+		},
+		/* Arguments de type : <String>, <Integer, Piece>, <> (diamant), <?>. Rendus tels quels dans le nom du type. */
+		typeArgs: function ()
+		{
+			this.expect("<");
+			if (this.accept(">")) { return "<>"; }
+			var a = [];
+			do
+			{
+				if (this.accept("?")) { a.push("?"); if (this.accept("extends") || this.accept("super")) { a[a.length - 1] = this.rawType(); } continue; }
+				a.push(this.rawType());
+			} while (this.accept(","));
+			this.expect(">", "pour fermer les paramètres de type");
+			return "<" + a.join(",") + ">";
+		},
+		rawType: function ()
+		{
+			var t = this.peek();
+			if (t.type !== "id" && !(t.type === "kw" && PRIM[t.v])) { throw cErr("type attendu, trouvé « " + t.v + " »", t.line); }
+			if (t.type === "kw") { throw cErr("un type de base (" + t.v + ") ne peut pas servir de paramètre de type : écris " + ({ "int": "Integer", "double": "Double", "char": "Character", "boolean": "Boolean", "long": "Long" }[t.v] || "sa classe enveloppe"), t.line); }
+			var n = this.next().v;
+			if (this.is("<")) { n += this.typeArgs(); }
+			while (this.is("[") && this.is("]", 1)) { this.next(); this.next(); n += "[]"; }
+			return n;
+		},
+		/* Essaie de lire « Type nom » sans rien consommer : sert à reconnaître ArrayList<Piece> tab. */
+		looksLikeDecl: function (needColon)
+		{
+			var save = this.p;
+			try
+			{
+				this.type();
+				if (this.peek().type !== "id") { return false; }
+				this.next();
+				return needColon ? this.is(":") : true;
+			}
+			catch (e) { return false; }
+			finally { this.p = save; }
 		},
 		member: function (cls)
 		{
@@ -1050,6 +1106,7 @@ var JavaMini = (function ()
 			{
 				this.next();
 				var params = this.params();
+				if (this.accept("throws")) { do { this.type(); } while (this.accept(",")); }
 				var body = this.block();
 				cls.ctors.push({ params: params, body: body, priv: !!m["private"], line: line, cls: cls });
 				return;
@@ -1063,9 +1120,19 @@ var JavaMini = (function ()
 			if (this.is("("))
 			{
 				var ps = this.params();
-				if (this.is(";")) { throw cErr("la méthode " + name + " n'a pas de corps : il faut écrire ses instructions entre { }", line); }
-				var b = this.block();
-				var meth = { name: name, ret: type, params: ps, body: b, stat: !!m["static"], priv: !!m["private"], line: line, cls: cls };
+				if (this.accept("throws")) { do { this.type(); } while (this.accept(",")); }
+				var b = null;
+				if (this.is(";"))
+				{
+					if (!cls.iface && !m["abstract"]) { throw cErr("la méthode " + name + " n'a pas de corps : il faut écrire ses instructions entre { }", line, "Seule une méthode abstract (ou d'une interface) s'écrit sans corps."); }
+					this.next();
+				}
+				else
+				{
+					if (m["abstract"]) { throw cErr("la méthode abstract " + name + " ne doit pas avoir de corps : termine sa déclaration par ;", line); }
+					b = this.block();
+				}
+				var meth = { name: name, ret: type, params: ps, body: b, stat: !!m["static"], priv: !!m["private"], prot: !!m["protected"], pub: !!m["public"] || cls.iface, abs: !b, line: line, cls: cls };
 				(cls.methods[name] = cls.methods[name] || []).push(meth);
 				return;
 			}
@@ -1077,7 +1144,7 @@ var JavaMini = (function ()
 				var init = null;
 				if (this.accept("=")) { init = this.is("{") ? this.arrInit() : this.expr(); }
 				if (type === "void") { throw cErr("un attribut ne peut pas être de type void", line); }
-				var f = { name: name, t: t2, init: init, stat: !!m["static"], fin: !!m["final"], priv: !!m["private"], line: line };
+				var f = { name: name, t: t2, init: init, stat: !!m["static"] || cls.iface, fin: !!m["final"] || cls.iface, priv: !!m["private"], prot: !!m["protected"], line: line };
 				if (cls.finfo[name]) { throw cErr("l'attribut " + name + " est déjà déclaré dans " + cls.name, line); }
 				cls.fields.push(f);
 				cls.finfo[name] = f;
@@ -1127,6 +1194,7 @@ var JavaMini = (function ()
 				var n1 = this.peek(1);
 				if (n1.type === "id") { return true; }
 				if (this.is("[", 1) && this.is("]", 2)) { return true; }
+				if (this.is("<", 1)) { return this.looksLikeDecl(false); }
 			}
 			return false;
 		},
@@ -1186,7 +1254,7 @@ var JavaMini = (function ()
 			if (this.accept("for"))
 			{
 				this.expect("(", "après for");
-				if (this.isDecl() && (this.peek(2).v === ":" || this.peek(4).v === ":"))
+				if (this.isDecl() && this.looksLikeDecl(true))
 				{
 					var et = this.type();
 					var en = this.ident("variable");
@@ -1315,6 +1383,12 @@ var JavaMini = (function ()
 			for (;;)
 			{
 				var t = this.peek();
+				if (lvl === 6 && t.type === "kw" && t.v === "instanceof")
+				{
+					this.next();
+					l = { k: "instof", e: l, t: this.type(), line: t.line };
+					continue;
+				}
 				if (t.type === "op" && LV[lvl].indexOf(t.v) >= 0)
 				{
 					this.next();
@@ -1342,10 +1416,23 @@ var JavaMini = (function ()
 				this.next();
 				return { k: "cast", t: ty, e: this.unary(), line: t.line };
 			}
-			if (this.is("(") && this.peek(1).type === "id" && this.peek(1).v === "String" && this.is(")", 2))
+			if (this.is("(") && this.peek(1).type === "id" && /^[A-Z]/.test(this.peek(1).v))
 			{
-				this.next(); this.next(); this.next();
-				return { k: "cast", t: "String", e: this.unary(), line: t.line };
+				var save = this.p;
+				this.next();
+				try
+				{
+					var ct = this.type();
+					var nx = this.peek(1);
+					if (this.is(")") && (nx.type === "id" || nx.type === "str" || nx.type === "int" || nx.type === "double" || nx.type === "char" ||
+						(nx.type === "kw" && /^(this|new|null|true|false|super)$/.test(nx.v)) || (nx.type === "op" && (nx.v === "(" || nx.v === "!"))))
+					{
+						this.next();
+						return { k: "cast", t: ct, e: this.unary(), line: t.line };
+					}
+				}
+				catch (e) { /* ce n'était pas une conversion */ }
+				this.p = save;
 			}
 			return this.postfix();
 		},
@@ -1415,10 +1502,12 @@ var JavaMini = (function ()
 				var bt = this.peek();
 				if (!(bt.type === "id" || (bt.type === "kw" && PRIM[bt.v]))) { throw cErr("type attendu après new", line); }
 				var base = normType(this.next().v);
+				var targs = "";
+				if (bt.type === "id" && this.is("<")) { targs = this.typeArgs(); }
 				if (this.is("("))
 				{
 					if (PRIM[base]) { throw cErr("new " + base + "(...) n'existe pas : " + base + " est un type de base", line); }
-					return { k: "new", cls: base, args: this.args(), line: line };
+					return { k: "new", cls: base, targs: targs, args: this.args(), line: line };
 				}
 				if (!this.is("[")) { throw cErr("« ( » ou « [ » attendu après new " + base, line); }
 				var dims = [], extra = 0;
@@ -1575,7 +1664,7 @@ var JavaMini = (function ()
 			{
 				c.methods[name].forEach(function (m)
 				{
-					if (m.ret !== "void" && completes(m.body))
+					if (m.ret !== "void" && m.body && completes(m.body))
 					{
 						throw cErr("instruction return manquante : la méthode " + m.name + " doit renvoyer un " + m.ret + " dans tous les cas", m.line,
 							"Chaque chemin possible de la méthode doit se terminer par return (pense au cas du else).");
@@ -1587,7 +1676,27 @@ var JavaMini = (function ()
 
 	/* ======================= 4. Exécution ======================= */
 	var BRK = { brk: 1 }, CNT = { cnt: 1 };
-	var BUILTIN = Object.assign(Object.create(null), { System: 1, Math: 1, Clavier: 1, Integer: 1, Double: 1, String: 1, Character: 1, Long: 1, Boolean: 1, Console: 1 });
+	var BUILTIN = Object.assign(Object.create(null), { System: 1, Math: 1, Clavier: 1, Integer: 1, Double: 1, String: 1, Character: 1, Long: 1, Boolean: 1, Console: 1, Collections: 1 });
+	var DEFAULTS = { niveau: 1 };
+	/* Collections du S2 : classe -> genre, et ce dont elles héritent (pour les affectations List l = new ArrayList<>()). */
+	var COLL = { ArrayList: "list", LinkedList: "list", HashMap: "map" };
+	var SUPERS = {
+		ArrayList: ["List", "Collection", "Iterable"], LinkedList: ["List", "Deque", "Queue", "Collection", "Iterable"],
+		List: ["Collection", "Iterable"], Set: ["Collection", "Iterable"], Collection: ["Iterable"], HashMap: ["Map"],
+		String: ["Comparable", "CharSequence"]
+	};
+	var KNOWN_TYPES = { List: 1, Map: 1, Set: 1, Collection: 1, Iterable: 1, Iterator: 1, Deque: 1, Queue: 1, Comparable: 1, Comparator: 1, ArrayList: 1, LinkedList: 1, HashMap: 1, CharSequence: 1 };
+	function erase(t) { return String(t).replace(/<.*>/, ""); }
+	/* hashCode de Java, pour reproduire l'ordre de parcours d'une HashMap */
+	function javaHash(v)
+	{
+		if (v.t === "String") { var h = 0, s = v.v.s; for (var i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; } return h; }
+		if (v.t === "int" || v.t === "char") { return v.v | 0; }
+		if (v.t === "boolean") { return v.v ? 1231 : 1237; }
+		if (v.t === "long") { return (v.v ^ Math.floor(v.v / 4294967296)) | 0; }
+		if (v.t === "null") { return 0; }
+		return v.v && v.v.id ? parseInt(hashOf(v.v.id), 16) | 0 : 0;
+	}
 
 	function Machine(classes, opts)
 	{
@@ -1597,8 +1706,19 @@ var JavaMini = (function ()
 		{
 			if (this.classes[classes[i].name]) { throw cErr("la classe " + classes[i].name + " est déclarée deux fois", classes[i].line); }
 			this.classes[classes[i].name] = classes[i];
-		}
-		this.out = [];
+			}
+			this.niveau = opts.niveau || DEFAULTS.niveau;
+			var self0 = this;
+			classes.forEach(function (c)
+			{
+			if (self0.niveau < 2 && (c.iface || c.abs || c.ext || c.impls.length))
+			{
+				throw cErr(c.iface ? "les interfaces ne sont pas au programme du semestre 1" : (c.abs && !c.ext && !c.impls.length ? "les classes abstraites ne sont pas au programme du semestre 1" : "l'héritage et les interfaces ne sont pas au programme du semestre 1"), c.line);
+			}
+			if (c.ext) { throw cErr("l'héritage (extends) n'est pas encore pris en charge par JavaQuest : il arrive avec l'unité Héritage", c.line); }
+			if (!c.abs) { self0.checkImplements(c); }
+			});
+			this.out = [];
 		this.outLen = 0;
 		this.inputs = (opts.inputs || []).slice();
 		this.inPos = 0;
@@ -1619,6 +1739,68 @@ var JavaMini = (function ()
 	}
 
 	Machine.prototype = {
+		/* --- Types : héritage, interfaces et collections --- */
+		superTypes: function (t)
+		{
+			var c = this.classes[t];
+			if (c) { return (c.ext ? [erase(c.ext)] : []).concat(c.impls.map(erase)); }
+			return SUPERS[t] || [];
+		},
+		isSub: function (from, to)
+		{
+			from = erase(from); to = erase(to);
+			if (from === to || to === "Object") { return true; }
+			if (from === "null") { return isRef(to); }
+			var seen = {}, todo = [from];
+			while (todo.length)
+			{
+				var x = todo.pop();
+				if (x === to) { return true; }
+				if (seen[x]) { continue; }
+				seen[x] = 1;
+				todo = todo.concat(this.superTypes(x));
+			}
+			return false;
+		},
+		assignable: function (from, to)
+		{
+			if (assignable(from, to)) { return true; }
+			return isRef(from) && isRef(to) && !num(from) && from !== "boolean" && this.isSub(from, to);
+		},
+		/* Une classe concrète doit écrire toutes les méthodes de ses interfaces, en public. */
+		checkImplements: function (c)
+		{
+			var self = this, need = [], seen = {};
+			(function collect(list)
+			{
+				list.forEach(function (it)
+				{
+					var n = erase(it);
+					if (seen[n]) { return; }
+					seen[n] = 1;
+					var ic = self.classes[n];
+					if (ic && ic.iface)
+					{
+						for (var mn in ic.methods) { ic.methods[mn].forEach(function (m) { if (m.abs) { need.push({ m: m, from: n }); } }); }
+						collect(ic.impls);
+					}
+					else if (n === "Comparable") { need.push({ m: { name: "compareTo", params: [{}] }, from: "Comparable" }); }
+					else if (n === "Comparator") { need.push({ m: { name: "compare", params: [{}, {}] }, from: "Comparator" }); }
+					else if (!ic && !KNOWN_TYPES[n]) { throw cErr("symbole introuvable : interface " + n, c.line); }
+					else if (ic && !ic.iface) { throw cErr(n + " est une classe, pas une interface : on écrit extends " + n + ", pas implements", c.line); }
+				});
+			})(c.impls);
+			need.forEach(function (r)
+			{
+				var mine = (c.methods[r.m.name] || []).filter(function (m) { return m.params.length === r.m.params.length && !m.stat; })[0];
+				if (!mine)
+				{
+					throw cErr(c.name + " n'est pas abstraite et n'écrit pas la méthode " + r.m.name + "(" + (r.m.params || []).map(function (p) { return p.t || "…"; }).join(", ") + ") de l'interface " + r.from, c.line,
+						"Une classe qui implémente une interface doit écrire toutes ses méthodes (même nom, mêmes paramètres).");
+				}
+				if (!mine.pub) { throw cErr("la méthode " + r.m.name + " de " + c.name + " doit être public : elle vient de l'interface " + r.from, mine.line, "Les méthodes d'une interface sont public ; en les écrivant, on ne peut pas réduire l'accès."); }
+			});
+		},
 		write: function (s)
 		{
 			this.out.push(s);
@@ -1686,12 +1868,13 @@ var JavaMini = (function ()
 			}
 			if (v.t === "null" && isRef(t)) { return v; }
 			if (t === "Object") { return v; }
-			if (t === "boolean" || v.t === "boolean" || t === "String" || v.t === "String" || isArr(t) || isArr(v.t) || this.classes[t] || this.classes[v.t])
+			if (isRef(v.t) && isRef(t) && !num(v.t) && v.t !== "boolean" && !num(t) && this.isSub(v.t, t)) { return v; }
+			if (t === "boolean" || v.t === "boolean" || t === "String" || v.t === "String" || isArr(t) || isArr(v.t) || this.classes[erase(t)] || this.classes[v.t] || KNOWN_TYPES[erase(t)] || KNOWN_TYPES[v.t])
 			{
 				throw cErr("types incompatibles : " + v.t + " ne peut pas être converti en " + t, line,
 					t === "String" && num(v.t) ? "Pour transformer un nombre en texte : \"\" + x." : (num(t) && v.t === "String" ? "Une chaîne n'est pas un nombre : saisis directement un int avec Clavier.lire_int()." : ""));
 			}
-			throw cErr("type inconnu : " + t, line);
+			throw cErr("symbole introuvable : type " + erase(t), line, "Vérifie le nom du type (majuscule au début) et, pour une collection, l'import (java.util.ArrayList...).");
 		},
 		/* Conversion explicite (cast). */
 		cast: function (v, t, line)
@@ -1699,6 +1882,14 @@ var JavaMini = (function ()
 			if (v.t === t) { return v; }
 			if (num(v.t) && num(t)) { return convNum(v, t); }
 			if (t === "String" && v.t === "null") { return v; }
+			if (isRef(v.t) && isRef(t) && !num(v.t) && v.t !== "boolean")
+			{
+				if (v.t === "null" || this.isSub(v.t, t)) { return v; }
+				if (this.classes[erase(t)] || this.classes[v.t] || KNOWN_TYPES[erase(t)] || t === "String")
+				{
+					throw rErr("java.lang.ClassCastException: class " + v.t + " cannot be cast to class " + erase(t), line, "L'objet n'est pas un " + erase(t) + " : vérifie avec instanceof avant de convertir.");
+				}
+			}
 			throw cErr("conversion impossible de " + v.t + " en " + t, line);
 		},
 		str: function (v, line)
@@ -1718,7 +1909,11 @@ var JavaMini = (function ()
 				var d = v.t.match(/\[\]/g).length;
 				return new Array(d + 1).join("[") + typeCode(v.t.replace(/(\[\])+$/, "")) + "@" + hashOf(v.v.id);
 			}
-			var obj = v.v, cls = obj.cls;
+			var obj = v.v, self = this;
+			if (obj.coll === "list") { return "[" + obj.data.map(function (x) { return x.v === obj ? "(this Collection)" : self.str(x, line); }).join(", ") + "]"; }
+			if (obj.coll === "map") { return "{" + this.mapOrder(obj).map(function (i) { return self.str(obj.keys[i], line) + "=" + self.str(obj.vals[i], line); }).join(", ") + "}"; }
+			if (obj.coll === "iter") { return "java.util.Iterator@" + hashOf(obj.id); }
+			var cls = obj.cls;
 			var ts = (cls.methods.toString || []).filter(function (m) { return m.params.length === 0; })[0];
 			if (ts)
 			{
@@ -1937,7 +2132,10 @@ var JavaMini = (function ()
 					return undefined;
 				case "foreach":
 					var av = this.ev(s.e, fr);
-					if (!isArr(av.t)) { throw cErr("for ( : ) parcourt un tableau", s.line); }
+					if (av.v && av.v.coll === "list") { return this.foreachList(s, av.v, fr); }
+					if (av.v && av.v.coll === "map") { throw cErr("une HashMap ne se parcourt pas directement : parcours map.keySet() ou map.values()", s.line); }
+					if (av.t === "null") { throw rErr("java.lang.NullPointerException", s.line, "La collection vaut null : elle n'a pas été créée avec new."); }
+					if (!isArr(av.t)) { throw cErr("for ( : ) parcourt un tableau ou une collection", s.line); }
 					fr.scopes.push(Object.create(null));
 					try
 					{
@@ -2054,7 +2252,7 @@ var JavaMini = (function ()
 				for (var j = 0; j < ps.length; j++)
 				{
 					if (args[j].t === ps[j].t) { score += 3; }
-					else if (assignable(args[j].t, ps[j].t)) { score += 1; }
+					else if (this.assignable(args[j].t, ps[j].t)) { score += 1; }
 					else { score = -1; break; }
 				}
 				if (score > bestScore) { best = list[i]; bestScore = score; }
@@ -2113,10 +2311,12 @@ var JavaMini = (function ()
 				throw cErr("un tableau n'a pas de méthode " + name + "()", node.line);
 			}
 			if (num(t.t) || t.t === "boolean") { throw cErr(t.t + " est un type de base : il n'a pas de méthode " + name + "()", node.line); }
+			if (t.v && t.v.coll) { return this.collCall(t, name, args, node, fr); }
 			var obj = t.v, cls = obj.cls;
 			list = cls.methods[name];
 			if (!list)
 			{
+				if (name === "hashCode" && !args.length) { return mk("int", javaHash(t)); }
 				if (name === "equals" && args.length === 1) { return mk("boolean", args[0].v === obj); }
 				if (name === "toString" && !args.length) { return mkStr(this.str(t, node.line)); }
 				throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe " + cls.name, node.line);
@@ -2314,6 +2514,7 @@ var JavaMini = (function ()
 					case "toLowerCase": return mk("char", ch.toLowerCase().charCodeAt(0));
 				}
 			}
+			if (cname === "Collections") { return this.collectionsCall(name, args, line); }
 			if (cname === "Console") { throw cErr("la classe Console n'est pas disponible dans le site : utilise System.out.print / println", line); }
 			if (cname === "System" && name === "exit") { throw JErr("exit", "", line); }
 			throw cErr(cname + "." + name + "(...) n'est pas disponible (pas d'API au S1)", line);
@@ -2372,6 +2573,216 @@ var JavaMini = (function ()
 			}
 			throw cErr("la méthode " + name + "() n'existe pas pour une String", line);
 		},
+		/* --- Collections (S2) --- */
+		eqVal: function (a, b, line)
+		{
+			if (a.t === "null" || b.t === "null") { return a.t === b.t; }
+			if (a.t === "String" && b.t === "String") { return a.v.s === b.v.s; }
+			if (num(a.t) || a.t === "boolean") { return (num(b.t) || b.t === "boolean") && a.v === b.v && (a.t === "double") === (b.t === "double"); }
+			var c = a.v && a.v.cls;
+			// comme Java : contains/indexOf/remove appellent equals(Object), pas une surcharge equals(Piece)
+			var eq = c && (c.methods.equals || []).filter(function (m) { return m.params.length === 1 && m.params[0].t === "Object"; })[0];
+			if (eq) { var r = this.invoke(eq, a.v, [b], line); return r.v === true; }
+			return a.v === b.v;
+		},
+		cmpVal: function (a, b, cmp, line)
+		{
+			if (cmp)
+			{
+				if (cmp.t === "null") { cmp = null; }
+				else
+				{
+					var cm = (cmp.v.cls && cmp.v.cls.methods.compare || []).filter(function (m) { return m.params.length === 2; })[0];
+					if (!cm) { throw cErr("le comparateur doit avoir une méthode compare(a, b)", line); }
+					var r = this.invoke(cm, cmp.v, [a, b], line);
+					return r.v;
+				}
+			}
+			if (a.t === "null" || b.t === "null") { throw rErr("java.lang.NullPointerException", line, "Une case de la liste vaut null : impossible de la comparer."); }
+			if (a.t === "String" && b.t === "String") { return this.stringCall(a, "compareTo", [b], { line: line }).v; }
+			if (num(a.t) && num(b.t)) { return a.v < b.v ? -1 : (a.v > b.v ? 1 : 0); }
+			var c = a.v && a.v.cls;
+			var ct = c && (c.methods.compareTo || []).filter(function (m) { return m.params.length === 1; })[0];
+			if (!ct || !this.isSub(c.name, "Comparable"))
+			{
+				throw cErr("impossible de trier des " + a.t + " : la classe " + a.t + " doit implémenter Comparable<" + a.t + "> (et sa méthode compareTo)", line,
+					"Ajoute implements Comparable<" + a.t + "> à la déclaration de la classe, ou donne un Comparator à sort.");
+			}
+			return this.invoke(ct, a.v, [b], line).v;
+		},
+		/* Comme javac : trier sans comparateur exige des éléments Comparable, même si la liste a 0 ou 1 élément. */
+		needComparable: function (lst, line)
+		{
+			for (var i = 0; i < lst.data.length; i++)
+			{
+				var c = lst.data[i].v && lst.data[i].v.cls;
+				if (c && !this.isSub(c.name, "Comparable"))
+				{
+					throw cErr("impossible de trier des " + c.name + " : la classe " + c.name + " doit implémenter Comparable<" + c.name + "> (et sa méthode compareTo)", line,
+						"Ajoute implements Comparable<" + c.name + "> à la déclaration de la classe, ou donne un Comparator à sort.");
+				}
+			}
+		},
+		sortList: function (lst, cmp, line)
+		{
+			var self = this, err = null;
+			if (!cmp || cmp.t === "null") { this.needComparable(lst, line); }
+			var copy = lst.data.slice().sort(function (a, b) { if (err) { return 0; } try { return self.cmpVal(a, b, cmp, line); } catch (e) { err = e; return 0; } });
+			if (err) { throw err; }
+			lst.data = copy;
+			lst.mod++;
+		},
+		foreachList: function (s, lst, fr)
+		{
+			fr.scopes.push(Object.create(null));
+			try
+			{
+				this.declare(fr, s.name, s.t, defVal(s.t), s.line);
+				var ent = this.findVar(fr, s.name), mod = lst.mod, cur = 0;
+				// comme l'itérateur de Java : on s'arrête quand le curseur atteint size(), et next() vérifie que la liste n'a pas changé
+				while (cur !== lst.data.length)
+				{
+					if (lst.mod !== mod) { throw rErr("java.util.ConcurrentModificationException", s.line, "On ne retire ni n'ajoute d'élément pendant un for ( : ) : utilise un Iterator et sa méthode remove()."); }
+					ent.val = this.conv(lst.data[cur++], s.t, s.line);
+					var r = this.sub(s.body, fr);
+					if (r === BRK) { break; }
+					if (r && r !== CNT) { return r; }
+					this.tick(s.line);
+				}
+			}
+			finally { fr.scopes.pop(); }
+			return undefined;
+		},
+		mapFind: function (mo, k, line)
+		{
+			for (var i = 0; i < mo.keys.length; i++) { if (this.eqVal(mo.keys[i], k, line)) { return i; } }
+			return -1;
+		},
+		mapPut: function (mo, k, v, line)
+		{
+			var i = this.mapFind(mo, k, line);
+			if (i >= 0) { var old = mo.vals[i]; mo.vals[i] = v; return old; }
+			mo.keys.push(k); mo.vals.push(v);
+			while (mo.keys.length > mo.cap * 0.75) { mo.cap *= 2; }
+			return NULLV;
+		},
+		/* Ordre de parcours d'une HashMap : par case (hash étalé & (capacité - 1)), puis par ordre d'arrivée. */
+		mapOrder: function (mo)
+		{
+			var idx = mo.keys.map(function (k, i) { var h = javaHash(k); return { i: i, b: ((h ^ (h >>> 16)) & (mo.cap - 1)) }; });
+			idx.sort(function (x, y) { return x.b - y.b || x.i - y.i; });
+			return idx.map(function (x) { return x.i; });
+		},
+		collectionsCall: function (name, args, line)
+		{
+			var l = args[0];
+			if (!l || !l.v || l.v.coll !== "list") { throw cErr("Collections." + name + " attend une liste", line); }
+			switch (name)
+			{
+				case "sort": if (args.length > 2) { break; } this.sortList(l.v, args[1] || null, line); return VOID;
+				case "reverse": l.v.data.reverse(); l.v.mod++; return VOID;
+				case "max": case "min":
+					if (!args[1]) { this.needComparable(l.v, line); }
+					if (!l.v.data.length) { throw rErr("java.util.NoSuchElementException", line, "La liste est vide."); }
+					var best = l.v.data[0];
+					for (var i = 1; i < l.v.data.length; i++) { var c = this.cmpVal(l.v.data[i], best, args[1] || null, line); if (name === "max" ? c > 0 : c < 0) { best = l.v.data[i]; } }
+					return best;
+			}
+			throw cErr("Collections." + name + "(...) n'est pas disponible ici (sort, reverse, max, min)", line);
+		},
+		collCall: function (t, name, args, node, fr)
+		{
+			var o = t.v, line = node.line, a0 = args[0], self = this;
+			function need(n) { if (args.length !== n) { throw cErr(t.t + "." + name + " attend " + n + " paramètre(s)", line); } }
+			function idx(v, max)
+			{
+				if (v.t !== "int" && v.t !== "char") { throw cErr(name + " attend un indice int, pas un " + v.t, line); }
+				if (v.v < 0 || v.v >= max) { throw rErr("java.lang.IndexOutOfBoundsException: Index " + v.v + " out of bounds for length " + o.data.length, line, "Les indices d'une liste vont de 0 à size() - 1 (ici " + (o.data.length ? "0 à " + (o.data.length - 1) : "la liste est vide") + ")."); }
+				return v.v;
+			}
+			function empty() { if (!o.data.length) { throw rErr("java.util.NoSuchElementException", line, "La liste est vide."); } }
+			if (o.coll === "iter")
+			{
+				var L = o.list;
+				switch (name)
+				{
+					case "hasNext": need(0); return mk("boolean", o.pos < L.data.length);
+					case "next":
+						need(0);
+						if (L.mod !== o.mod) { throw rErr("java.util.ConcurrentModificationException", line, "La liste a été modifiée sans passer par l'itérateur."); }
+						if (o.pos >= L.data.length) { throw rErr("java.util.NoSuchElementException", line, "Plus d'élément : teste hasNext() avant next()."); }
+						o.last = o.pos; return L.data[o.pos++];
+					case "remove":
+						need(0);
+						if (o.last < 0) { throw rErr("java.lang.IllegalStateException", line, "remove() s'appelle une fois après chaque next()."); }
+						L.data.splice(o.last, 1); o.pos = o.last; o.last = -1; L.mod++; o.mod = L.mod; return VOID;
+				}
+				throw cErr("un Iterator a seulement hasNext(), next() et remove()", line);
+			}
+			if (o.coll === "map")
+			{
+				var i;
+				switch (name)
+				{
+					case "put": need(2); return this.mapPut(o, a0, args[1], line);
+					case "get": need(1); i = this.mapFind(o, a0, line); return i < 0 ? NULLV : o.vals[i];
+					case "getOrDefault": need(2); i = this.mapFind(o, a0, line); return i < 0 ? args[1] : o.vals[i];
+					case "containsKey": need(1); return mk("boolean", this.mapFind(o, a0, line) >= 0);
+					case "containsValue": need(1); return mk("boolean", o.vals.some(function (v) { return self.eqVal(v, a0, line); }));
+					case "remove": need(1); i = this.mapFind(o, a0, line); if (i < 0) { return NULLV; } var old = o.vals[i]; o.keys.splice(i, 1); o.vals.splice(i, 1); return old;
+					case "size": need(0); return mk("int", o.keys.length);
+					case "isEmpty": need(0); return mk("boolean", !o.keys.length);
+					case "clear": need(0); o.keys = []; o.vals = []; return VOID;
+					case "keySet": case "values":
+						need(0);
+						var ord = this.mapOrder(o);
+						return mk(name === "keySet" ? "Set" : "Collection", { coll: "list", kind: name, view: true, data: ord.map(function (k) { return (name === "keySet" ? o.keys : o.vals)[k]; }), id: this.nextId++, mod: 0 });
+					case "toString": need(0); return mkStr(this.str(t, line));
+				}
+				throw cErr("la méthode " + name + "() n'existe pas pour une HashMap (put, get, containsKey, remove, size, keySet, values...)", line);
+			}
+			var d = o.data;
+			if (o.view && /^(add|set|remove|clear|addAll|sort)$/.test(name)) { throw cErr("on ne modifie pas une vue keySet()/values() dans JavaQuest : modifie la HashMap elle-même", line); }
+			switch (name)
+			{
+				case "add":
+					if (args.length === 1) { d.push(a0); o.mod++; return mk("boolean", true); }
+					need(2); if (a0.t !== "int") { throw cErr("add(indice, élément) : l'indice doit être un int", line); }
+					if (a0.v < 0 || a0.v > d.length) { throw rErr("java.lang.IndexOutOfBoundsException: Index: " + a0.v + ", Size: " + d.length, line); }
+					d.splice(a0.v, 0, args[1]); o.mod++; return VOID;
+				case "addAll": need(1); if (!a0.v || a0.v.coll !== "list") { throw cErr("addAll attend une collection", line); } Array.prototype.push.apply(d, a0.v.data.slice()); o.mod++; return mk("boolean", a0.v.data.length > 0);
+				case "get": need(1); return d[idx(a0, d.length)];
+				case "set": need(2); var k = idx(a0, d.length); var prev = d[k]; d[k] = args[1]; return prev;
+				case "remove":
+					need(1);
+					if (a0.t === "int" || a0.t === "char") { var j = idx(a0, d.length); var rem = d.splice(j, 1)[0]; o.mod++; return rem; }
+					for (var q = 0; q < d.length; q++) { if (this.eqVal(d[q], a0, line)) { d.splice(q, 1); o.mod++; return mk("boolean", true); } }
+					return mk("boolean", false);
+				case "size": need(0); return mk("int", d.length);
+				case "isEmpty": need(0); return mk("boolean", !d.length);
+				case "clear": need(0); d.length = 0; o.mod++; return VOID;
+				case "contains": need(1); return mk("boolean", d.some(function (x) { return self.eqVal(x, a0, line); }));
+				case "indexOf": need(1); for (var u = 0; u < d.length; u++) { if (this.eqVal(d[u], a0, line)) { return mk("int", u); } } return mk("int", -1);
+				case "lastIndexOf": need(1); for (var w = d.length - 1; w >= 0; w--) { if (this.eqVal(d[w], a0, line)) { return mk("int", w); } } return mk("int", -1);
+				case "sort": need(1); this.sortList(o, a0, line); return VOID;
+				case "iterator": need(0); return mk("Iterator", { coll: "iter", list: o, pos: 0, last: -1, mod: o.mod, id: this.nextId++ });
+				case "toString": need(0); return mkStr(this.str(t, line));
+				case "equals": need(1); return mk("boolean", !!(a0.v && a0.v.coll === "list") && a0.v.data.length === d.length && d.every(function (x, n) { return self.eqVal(x, a0.v.data[n], line); }));
+			}
+			if (o.kind === "LinkedList")
+			{
+				switch (name)
+				{
+					case "addFirst": need(1); d.unshift(a0); o.mod++; return VOID;
+					case "addLast": need(1); d.push(a0); o.mod++; return VOID;
+					case "getFirst": need(0); empty(); return d[0];
+					case "getLast": need(0); empty(); return d[d.length - 1];
+					case "removeFirst": need(0); empty(); o.mod++; return d.shift();
+					case "removeLast": need(0); empty(); o.mod++; return d.pop();
+				}
+			}
+			throw cErr("la méthode " + name + "() n'existe pas pour une " + o.kind + (o.kind === "ArrayList" && /First|Last/.test(name) ? " (addFirst, getFirst... sont des méthodes de LinkedList)" : ""), line);
+		},
 		newObj: function (node, fr)
 		{
 			var cname = node.cls;
@@ -2381,10 +2792,22 @@ var JavaMini = (function ()
 				if (!args.length) { return mkStr(""); }
 				return mkStr(this.str(args[0], node.line));
 			}
-			if (cname === "Scanner") { throw cErr("Scanner est interdit au S1 : utilise la classe Clavier (Clavier.lire_int()...)", node.line); }
+			if (cname === "Scanner") { throw cErr(this.niveau < 2 ? "Scanner est interdit au S1 : utilise la classe Clavier (Clavier.lire_int()...)" : "Scanner n'est pas disponible dans le site : utilise la classe Clavier", node.line); }
+			if (COLL[cname])
+			{
+				if (this.niveau < 2) { throw cErr(cname + " n'est pas au programme du semestre 1 (pas d'API) : utilise un tableau", node.line); }
+				if (args.length > 1 || (args.length === 1 && !(args[0].v && args[0].v.coll === COLL[cname]) && args[0].t !== "int")) { throw cErr("new " + cname + "(...) : paramètres inattendus", node.line); }
+				var src = args.length && args[0].v && args[0].v.coll ? args[0].v : null;
+				if (COLL[cname] === "list") { return mk(cname, { coll: "list", kind: cname, data: src ? src.data.slice() : [], id: this.nextId++, mod: 0 }); }
+				var mo = { coll: "map", kind: cname, keys: [], vals: [], cap: 16, id: this.nextId++ };
+				if (src) { this.mapOrder(src).forEach(function (i) { this.mapPut(mo, src.keys[i], src.vals[i]); }, this); }
+				return mk(cname, mo);
+			}
+			if (KNOWN_TYPES[cname]) { throw cErr(cname + " est une interface : on ne peut pas créer d'objet avec new " + cname + " (utilise par exemple new ArrayList<>())", node.line); }
 			if (cname === "ControleGraphique") { throw cErr("ControleGraphique (dessin) n'est pas disponible dans le site", node.line); }
 			var cls = this.classes[cname];
 			if (!cls) { throw cErr("symbole introuvable : classe " + cname, node.line, "Vérifie le nom de la classe (majuscule au début) ou qu'elle est bien écrite."); }
+			if (cls.abs) { throw cErr(cname + " est " + (cls.iface ? "une interface" : "abstraite") + " : on ne peut pas créer d'objet avec new " + cname, node.line, "On crée un objet d'une classe concrète qui " + (cls.iface ? "implémente l'interface." : "hérite de " + cname + ".")); }
 			var obj = { cls: cls, f: {}, finit: {}, id: this.nextId++ };
 			var self = this;
 			cls.fields.forEach(function (f) { if (!f.stat) { obj.f[f.name] = defVal(f.t); } });
@@ -2475,6 +2898,10 @@ var JavaMini = (function ()
 				case "newArrInit": return this.arrInit(n.init, n.t, fr);
 				case "arrInit": throw cErr("{ ... } s'utilise seulement dans la déclaration du tableau (ou après new type[])", n.line);
 				case "cast": return this.cast(this.ev(n.e, fr), n.t, n.line);
+				case "instof":
+					v = this.ev(n.e, fr);
+					if (num(v.t) || v.t === "boolean") { throw cErr("instanceof s'applique à un objet, pas à un " + v.t, n.line); }
+					return mk("boolean", v.t !== "null" && this.isSub(v.t, n.t));
 				case "cond":
 					return this.cond(n.c, fr) ? this.ev(n.a, fr) : this.ev(n.b, fr);
 				case "un":
@@ -2544,7 +2971,7 @@ var JavaMini = (function ()
 				else if (a.t === "boolean" && b.t === "boolean") { eq = a.v === b.v; }
 				else if (isRef(a.t) && isRef(b.t))
 				{
-					if (a.t !== "null" && b.t !== "null" && a.t !== b.t) { throw cErr("types incomparables : " + a.t + " et " + b.t, line); }
+					if (a.t !== "null" && b.t !== "null" && a.t !== b.t && (a.t === "String" || b.t === "String" || isArr(a.t) || isArr(b.t)) && !this.isSub(a.t, b.t) && !this.isSub(b.t, a.t)) { throw cErr("types incomparables : " + a.t + " et " + b.t, line); }
 					eq = a.v === b.v;
 				}
 				else { throw cErr("types incomparables : " + a.t + " et " + b.t, line, (a.t === "String" || b.t === "String") ? "Une chaîne ne se compare pas à un nombre ou un caractère." : ""); }
@@ -2787,7 +3214,9 @@ var JavaMini = (function ()
 		return msgs;
 	}
 
-	return { run: run, check: check, parse: parse, lex: lex, fmtDouble: fmtDouble };
+	/* Niveau par défaut des exécutions : 1 (S1, sans API) ou 2 (S2 : collections, interfaces...). */
+	function setNiveau(n) { DEFAULTS.niveau = n || 1; }
+	return { run: run, check: check, parse: parse, lex: lex, fmtDouble: fmtDouble, setNiveau: setNiveau };
 })();
 
 if (typeof module !== "undefined") { module.exports = JavaMini; }
@@ -10199,6 +10628,873 @@ h1
 });
 
 /* ==========================================================================
+   JavaQuest : Dév Objets (R2.01, semestre 2)
+   --------------------------------------------------------------------------
+   Une unité par TP, dans l'ordre du cours. Même format que CHAPITRES
+   (voir contenu-1.js). Les ids commencent par « o » : ils servent à la
+   sauvegarde, ne jamais les réutiliser.
+   Le code s'exécute au niveau 2 de l'interpréteur (collections, interfaces).
+   Les exemples sont réécrits à partir des TP, jamais recopiés.
+   ========================================================================== */
+var OBJETS_UNITES = [];
+
+/* ---------------------------------------------------------------- 1 (TP1) */
+OBJETS_UNITES.push({
+	id: "o01", num: 1, titre: "Attributs de classe et d'instance", badge: "Maître du static",
+	idee: [
+		"Un attribut **d'instance** existe une fois **par objet** : chaque voiture a son propre compteur de kilomètres. Un attribut **de classe** (`static`) existe une seule fois, **partagé** par tous les objets de la classe.",
+		"On écrit un attribut de classe avec le **nom de la classe** devant : `Vehicule.nbVehicules`. `this.nbVehicules` compile aussi, mais il fait croire que chaque objet a le sien. Une méthode `static` n'a pas de `this`.",
+		"En UML, un membre de classe est **souligné**. Dans le schéma mémoire, l'attribut `static` est rangé à part, avec la classe, et pas dans chaque objet."
+	],
+	exemple: {
+		java: T(`
+public class Vehicule
+{
+    private static int nbVehicules = 0;   // un seul pour toute la classe
+
+    private boolean moteurEnMarche;          // un par objet
+    private int     nbKm;                    // un par objet
+
+    public Vehicule()
+    {
+        this.moteurEnMarche = false;
+        this.nbKm           = 0;
+        Vehicule.nbVehicules++;
+    }
+
+    public void contact()
+    {
+        this.moteurEnMarche = !this.moteurEnMarche;
+    }
+
+    public void avancer()
+    {
+        if (this.moteurEnMarche)
+        {
+            this.nbKm++;
+        }
+    }
+
+    public static int getNbVehicules()
+    {
+        return Vehicule.nbVehicules;
+    }
+
+    public String toString()
+    {
+        return (this.moteurEnMarche ? "Marche" : "Arret ") + " " + String.format("%06d", this.nbKm);
+    }
+}`),
+		note: "Avec `Vehicule v1 = new Vehicule();` puis `v1.contact(); v1.avancer();`, seul `v1` avance. `Vehicule.getNbVehicules()` s'appelle sur la classe : il compte tous les véhicules créés."
+	},
+	exos: [
+		{ id: "o01.def", k: "qcm", q: "La classe `Vehicule` a `private static int nbVehicules;` et `private int nbKm;`. On crée 3 véhicules. Combien de cases `nbVehicules` et `nbKm` existent en mémoire ?",
+			opts: ["1 case nbVehicules et 3 cases nbKm", "3 cases nbVehicules et 3 cases nbKm", "1 case nbVehicules et 1 case nbKm", "3 cases nbVehicules et 1 case nbKm"], a: 0,
+			expl: "`static` : une seule case pour toute la classe. Sans `static`, chaque objet a la sienne : 3 objets, 3 cases `nbKm`." },
+		{ id: "o01.partage", k: "predict",
+			q: "Ici, `moteurEnMarche` a été déclaré `static` par erreur (exercice 2 du TP1). Qu'affiche le programme ?",
+			code: T(`
+public class Circuit
+{
+    public static void main(String[] args)
+    {
+        Vehicule v1 = new Vehicule();
+        Vehicule v2 = new Vehicule();
+        v1.contact();
+        v1.avancer();
+        v2.avancer();
+        v2.contact();
+        v1.avancer();
+        v2.avancer();
+        System.out.println(v1.getNbKm() + " " + v2.getNbKm());
+    }
+}
+
+class Vehicule
+{
+    private static boolean moteurEnMarche;
+    private int nbKm;
+
+    public void contact()
+    {
+        Vehicule.moteurEnMarche = !Vehicule.moteurEnMarche;
+    }
+
+    public void avancer()
+    {
+        if (Vehicule.moteurEnMarche)
+        {
+            this.nbKm++;
+        }
+    }
+
+    public int getNbKm()
+    {
+        return this.nbKm;
+    }
+}`),
+			expl: "Il n'y a qu'**un** moteur pour tous les véhicules. `v1.contact()` le démarre : `v1` et `v2` avancent (1 et 1). `v2.contact()` l'arrête pour tout le monde : les deux derniers `avancer()` ne font rien. Résultat : `1 1`." },
+		{ id: "o01.uml", k: "qcm", q: "Dans un diagramme de classes UML, comment reconnaît-on un attribut ou une méthode `static` ?",
+			opts: ["Il est souligné", "Il est en italique", "Il commence par un `#`", "Il est écrit en majuscules"], a: 0,
+			expl: "Souligné = membre de classe. L'italique sert aux méthodes abstraites, et `#` veut dire `protected`." },
+		{ id: "o01.this", k: "bug",
+			code: T(`
+public class Compteur
+{
+    private static int total = 0;
+    private int valeur;
+
+    public void incrementer()
+    {
+        this.valeur++;
+        Compteur.total++;
+    }
+
+    public static int getTotal()
+    {
+        return this.total;
+    }
+}`),
+			ligne: 14, fix: ["return Compteur.total;"],
+			expl: "Une méthode `static` s'appelle sur la classe (`Compteur.getTotal()`), sans objet : `this` n'existe pas dedans. On écrit `Compteur.total`." },
+		{ id: "o01.prefixe", k: "qcm", q: "Dans une méthode d'instance de `Livre`, quelle écriture est conseillée pour l'attribut de classe `nbInstances` ?",
+			opts: ["`Livre.nbInstances`", "`this.nbInstances`", "`nbInstances`, sans rien devant", "`super.nbInstances`"], a: 0,
+			expl: "Les trois premières compilent. Mais préfixer par le nom de la classe montre tout de suite que l'attribut est partagé : c'est la règle demandée dans le TP." },
+		{ id: "o01.fill", k: "fill", q: "Complète la classe : chaque `new Livre(...)` doit augmenter le nombre de livres créés.",
+			code: T(`
+public class Livre
+{
+    private ___ int nbInstances = 0;
+    private String titre;
+
+    public Livre(String titre)
+    {
+        this.titre = titre;
+        ___.nbInstances++;
+    }
+
+    public ___ int getNbInstances()
+    {
+        return Livre.nbInstances;
+    }
+}`),
+			trous: [["static"], ["Livre"], ["static"]],
+			expl: "Le compteur est partagé : `static`. On le préfixe par la classe. La méthode qui le lit est aussi `static`, pour s'appeler `Livre.getNbInstances()` sans avoir de livre." },
+		{ id: "o01.mem", k: "memory", q: "Complète le schéma mémoire **après** la dernière ligne. L'attribut `static` est dans la zone de la classe.",
+			code: T(`
+Vehicule v1 = new Vehicule();
+Vehicule v2 = new Vehicule();
+v1.contact();
+v1.avancer();
+v1.avancer();
+v2.avancer();`),
+			classe: [{ nom: "Vehicule", vars: [{ n: "nbVehicules", a: "2" }] }],
+			pile: [{ cadre: "main", vars: [{ n: "v1", aref: "obj1" }, { n: "v2", aref: "obj2" }] }],
+			tas: [{ id: "obj1", type: "Vehicule", champs: [{ n: "moteurEnMarche", a: "true" }, { n: "nbKm", a: "2" }] },
+				{ id: "obj2", type: "Vehicule", champs: [{ n: "moteurEnMarche", a: "false" }, { n: "nbKm", a: "0" }] }],
+			expl: "Deux objets, donc deux `moteurEnMarche` et deux `nbKm`, mais un seul `nbVehicules`, qui vaut 2. Seul `v1` a démarré : `v2.avancer()` ne fait rien.",
+			verif: T(`
+public class V
+{
+    public static void main(String[] args)
+    {
+        Vehicule v1 = new Vehicule();
+        Vehicule v2 = new Vehicule();
+        v1.contact();
+        v1.avancer();
+        v1.avancer();
+        v2.avancer();
+        System.out.println("Vehicule.nbVehicules=" + Vehicule.getNbVehicules());
+        System.out.println("main.v1->obj1");
+        System.out.println("main.v2->obj2");
+        System.out.println("obj1.moteurEnMarche=" + v1.enMarche());
+        System.out.println("obj1.nbKm=" + v1.getNbKm());
+        System.out.println("obj2.moteurEnMarche=" + v2.enMarche());
+        System.out.println("obj2.nbKm=" + v2.getNbKm());
+    }
+}
+
+class Vehicule
+{
+    private static int nbVehicules = 0;
+    private boolean moteurEnMarche;
+    private int nbKm;
+
+    public Vehicule()
+    {
+        Vehicule.nbVehicules++;
+    }
+
+    public void contact()
+    {
+        this.moteurEnMarche = !this.moteurEnMarche;
+    }
+
+    public void avancer()
+    {
+        if (this.moteurEnMarche)
+        {
+            this.nbKm++;
+        }
+    }
+
+    public boolean enMarche()
+    {
+        return this.moteurEnMarche;
+    }
+
+    public int getNbKm()
+    {
+        return this.nbKm;
+    }
+
+    public static int getNbVehicules()
+    {
+        return Vehicule.nbVehicules;
+    }
+}`) },
+		{ id: "o01.livre", k: "code", mode: "class", fichier: "Livre.java",
+			enonce: "Écris la classe `Livre` (exercice 3 du TP1) : un attribut d'instance `titre` et un attribut de classe `nbInstances`. Le constructeur `Livre(String titre)` augmente `nbInstances`. `getNbInstances()` est `static`, et `toString()` renvoie le titre.",
+			regles: ["allman"],
+			harness: T(`
+public class Bibliotheque
+{
+    public static void main(String[] args)
+    {
+        Livre[] ensLivres = new Livre[3];
+        System.out.println("il y a eu " + Livre.getNbInstances() + " instance(s) créée(s)");
+        ensLivres[0] = new Livre("Le secret du janissaire");
+        ensLivres[1] = new Livre("Pavillon noir");
+        ensLivres[2] = new Livre("L'archipel du danger");
+        for (int cpt = 0; cpt < ensLivres.length; cpt++)
+        {
+            System.out.println(ensLivres[cpt]);
+        }
+        ensLivres[0] = new Livre("Jean sans Lune");
+        System.out.println(ensLivres[0]);
+        System.out.println("il y a eu " + Livre.getNbInstances() + " instance(s) créée(s)");
+    }
+}`),
+			depart: T(`
+public class Livre
+{
+
+}`),
+			solution: T(`
+public class Livre
+{
+    private static int nbInstances = 0;
+
+    private String titre;
+
+    public Livre(String titre)
+    {
+        this.titre = titre;
+        Livre.nbInstances++;
+    }
+
+    public static int getNbInstances()
+    {
+        return Livre.nbInstances;
+    }
+
+    public String toString()
+    {
+        return this.titre;
+    }
+}`),
+			indices: ["Le compteur est partagé par tous les livres : `private static int nbInstances = 0;`. Le titre est propre à chaque livre : pas de `static`.",
+				"Dans le constructeur, `Livre.nbInstances++;`. La méthode `public static int getNbInstances()` renvoie `Livre.nbInstances`. Remplacer un livre dans le tableau en crée un nouveau : le compteur ne redescend pas."] },
+		{ id: "o01.ticket", k: "code", mode: "class", fichier: "Ticket.java",
+			enonce: "Écris la classe `Ticket` : chaque ticket reçoit à sa création un **numéro** unique (1 pour le premier, 2 pour le suivant...). Utilise un attribut de classe `dernierNumero` et un attribut d'instance `numero`. Ajoute `getNumero()` et `toString()`, qui renvoie `Ticket n°3 : café`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestTicket
+{
+    public static void main(String[] args)
+    {
+        Ticket a = new Ticket("café");
+        Ticket b = new Ticket("thé");
+        Ticket c = new Ticket("chocolat");
+        System.out.println(a);
+        System.out.println(c);
+        System.out.println(b.getNumero() + a.getNumero());
+    }
+}`),
+			depart: T(`
+public class Ticket
+{
+    private static int dernierNumero = 0;
+
+}`),
+			solution: T(`
+public class Ticket
+{
+    private static int dernierNumero = 0;
+
+    private int    numero;
+    private String produit;
+
+    public Ticket(String produit)
+    {
+        Ticket.dernierNumero++;
+        this.numero  = Ticket.dernierNumero;
+        this.produit = produit;
+    }
+
+    public int getNumero()
+    {
+        return this.numero;
+    }
+
+    public String toString()
+    {
+        return "Ticket n°" + this.numero + " : " + this.produit;
+    }
+}`),
+			indices: ["Le compteur partagé avance à chaque création : `Ticket.dernierNumero++;` dans le constructeur.",
+				"Juste après, chaque ticket **recopie** la valeur du moment dans son propre attribut : `this.numero = Ticket.dernierNumero;`. Ainsi le numéro du ticket ne change plus ensuite."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 2 (TP2) */
+OBJETS_UNITES.push({
+	id: "o02", num: 2, titre: "Tableaux d'objets et formatage", badge: "Plaque d'or",
+	idee: [
+		"`new Voiture[5]` crée un tableau de 5 **cases vides** (`null`), pas 5 voitures. Chaque voiture se crée ensuite avec son propre `new`. Utiliser une case encore `null` provoque une `NullPointerException`.",
+		"`String.format` construit un texte bien aligné : `%03d` affiche un entier sur 3 chiffres avec des zéros (`007`), `%-8s` aligne un texte à gauche sur 8 caractères, `%.2f` garde 2 décimales (avec une virgule en français).",
+		"L'**encapsulation** : attributs `private`, accès par des méthodes. Un accesseur (`getPrix()`) lit l'attribut ; un modificateur (`setPrix(...)`) peut **refuser** une valeur impossible."
+	],
+	exemple: {
+		java: T(`
+public class Plaque
+{
+    private String debut;
+    private int    num;
+    private String fin;
+
+    public Plaque(String debut, int num, String fin)
+    {
+        this.debut = debut;
+        this.num   = num;
+        this.fin   = fin;
+    }
+
+    public void suivante()
+    {
+        this.num++;
+        if (this.num > 999)
+        {
+            this.num = 1;
+        }
+    }
+
+    public String toString()
+    {
+        return this.debut + "-" + String.format("%03d", this.num) + "-" + this.fin;
+    }
+
+    public static void main(String[] args)
+    {
+        Plaque[] parking = new Plaque[3];          // 3 cases à null
+        for (int i = 0; i < parking.length; i++)
+        {
+            parking[i] = new Plaque("AB", 7 * i + 1, "CD");
+        }
+        parking[2].suivante();
+        for (int i = 0; i < parking.length; i++)
+        {
+            System.out.println(parking[i]);
+        }
+    }
+}`),
+		note: "Affiche `AB-001-CD`, `AB-008-CD` puis `AB-016-CD`. Sans la boucle de création, `parking[2].suivante()` lèverait une `NullPointerException`."
+	},
+	exos: [
+		{ id: "o02.null", k: "qcm", q: "Après `Voiture[] garage = new Voiture[4];`, que contient `garage[0]` ?",
+			opts: ["`null` : aucune voiture n'a encore été créée", "Une voiture créée avec le constructeur sans paramètre", "0", "Rien : la ligne ne compile pas"], a: 0,
+			expl: "Un tableau d'objets contient des **références**, toutes à `null` au départ. Il faut un `new Voiture(...)` par case." },
+		{ id: "o02.npe", k: "predict",
+			q: "Qu'affiche ce programme ? (S'il s'arrête sur une erreur, écris ce qui a été affiché avant.)",
+			code: T(`
+public class Garage
+{
+    public static void main(String[] args)
+    {
+        String[] noms = new String[3];
+        noms[0] = "Clio";
+        noms[2] = "Twingo";
+        int total = 0;
+        for (int i = 0; i < noms.length; i++)
+        {
+            if (noms[i] != null)
+            {
+                total = total + noms[i].length();
+                System.out.println(i + " : " + noms[i]);
+            }
+        }
+        System.out.println("total " + total);
+    }
+}`),
+			expl: "`noms[1]` vaut `null` : le test `!= null` évite d'appeler `length()` dessus (ce qui lèverait une `NullPointerException`). On affiche les cases 0 et 2, et 4 + 6 = 10 lettres." },
+		{ id: "o02.format", k: "predict",
+			q: "Qu'affiche ce programme ? Les espaces comptent.",
+			code: T(`
+public class Formats
+{
+    public static void main(String[] args)
+    {
+        System.out.println("[" + String.format("%03d", 7) + "]");
+        System.out.println("[" + String.format("%5d", 42) + "]");
+        System.out.println("[" + String.format("%-6s", "ab") + "]");
+        System.out.println("[" + String.format("%06d", 1234) + "]");
+    }
+}`),
+			expl: "`%03d` : 3 chiffres complétés par des zéros. `%5d` : 5 caractères, complétés à gauche par des espaces. `%-6s` : 6 caractères, texte collé à gauche. `%06d` : 6 chiffres avec des zéros." },
+		{ id: "o02.setter", k: "bug",
+			code: T(`
+public class Article
+{
+    private String nom;
+    private double prix;
+
+    public Article(String nom, double prix)
+    {
+        this.nom = nom;
+        prix = prix;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+}`),
+			ligne: 9, fix: ["this.prix = prix;"],
+			expl: "Sans `this.`, `prix` désigne le **paramètre** : on le recopie dans lui-même, et l'attribut reste à 0.0. Avec `this.prix`, on remplit l'attribut de l'objet." },
+		{ id: "o02.fillformat", k: "fill", q: "Complète `toString()` pour obtenir `V007 | Clio      | 12,50 €` (numéro sur 3 chiffres, nom sur 10 caractères collé à gauche, prix avec 2 décimales).",
+			code: T(`
+public String toString()
+{
+    return "V" + String.format("___", this.numero) + " | "
+         + String.format("___", this.nom) + " | "
+         + String.format("___", this.prix) + " €";
+}`),
+			trous: [["%03d"], ["%-10s"], ["%.2f", "%4.2f", "%5.2f"]],
+			expl: "`%03d` complète avec des zéros, `%-10s` aligne à gauche sur 10 caractères, et `%.2f` arrondit à 2 décimales (Java met une virgule sur un poste réglé en français)." },
+		{ id: "o02.voiture", k: "code", mode: "class", fichier: "Voiture.java",
+			enonce: "Écris la classe `Voiture` (version 2 du TP2) : chaque voiture a un **numéro** donné à sa création (1, 2, 3...) et une `classe` (\"1re\" ou \"2nde\"). `toString()` renvoie `voiture n°002 de 1re classe` (numéro sur 3 chiffres).",
+			regles: ["allman"],
+			harness: T(`
+public class Train
+{
+    public static void main(String[] args)
+    {
+        Voiture[] ensVoitures = new Voiture[5];
+        for (int cpt = 0; cpt < ensVoitures.length; cpt++)
+        {
+            ensVoitures[cpt] = new Voiture(cpt < 2 ? "1re" : "2nde");
+            System.out.println("création de " + ensVoitures[cpt]);
+        }
+        System.out.println("tête du train : " + ensVoitures[0]);
+    }
+}`),
+			depart: T(`
+public class Voiture
+{
+
+}`),
+			solution: T(`
+public class Voiture
+{
+    private static int nbVoitures = 0;
+
+    private int    numero;
+    private String classe;
+
+    public Voiture(String classe)
+    {
+        Voiture.nbVoitures++;
+        this.numero = Voiture.nbVoitures;
+        this.classe = classe;
+    }
+
+    public String toString()
+    {
+        return "voiture n°" + String.format("%03d", this.numero) + " de " + this.classe + " classe";
+    }
+}`),
+			indices: ["Il faut un compteur partagé (`static`) et un numéro propre à chaque voiture. Si tu affiches le compteur partagé dans `toString()`, toutes les voitures auront le même numéro à la fin.",
+				"Dans le constructeur : `Voiture.nbVoitures++;` puis `this.numero = Voiture.nbVoitures;`. Dans `toString()`, `String.format(\"%03d\", this.numero)`."] },
+		{ id: "o02.compte", k: "code", mode: "class", fichier: "Compte.java",
+			enonce: "Écris la classe `Compte` : un `titulaire` et un `solde` (double), privés. `deposer(double m)` ajoute `m` seulement s'il est positif. `retirer(double m)` renvoie `true` et retire `m` si le solde suffit, sinon renvoie `false` sans rien changer. `toString()` renvoie `Léa : 120,50 €` (2 décimales).",
+			regles: ["allman"],
+			harness: T(`
+public class TestCompte
+{
+    public static void main(String[] args)
+    {
+        Compte c = new Compte("Léa");
+        c.deposer(150);
+        c.deposer(-40);
+        System.out.println(c);
+        System.out.println(c.retirer(29.5));
+        System.out.println(c.retirer(500));
+        System.out.println(c);
+        System.out.println(c.getSolde() > 100);
+    }
+}`),
+			depart: T(`
+public class Compte
+{
+    private String titulaire;
+    private double solde;
+
+}`),
+			solution: T(`
+public class Compte
+{
+    private String titulaire;
+    private double solde;
+
+    public Compte(String titulaire)
+    {
+        this.titulaire = titulaire;
+        this.solde     = 0;
+    }
+
+    public double getSolde()
+    {
+        return this.solde;
+    }
+
+    public void deposer(double m)
+    {
+        if (m > 0)
+        {
+            this.solde = this.solde + m;
+        }
+    }
+
+    public boolean retirer(double m)
+    {
+        if (m > this.solde)
+        {
+            return false;
+        }
+        this.solde = this.solde - m;
+        return true;
+    }
+
+    public String toString()
+    {
+        return this.titulaire + " : " + String.format("%.2f", this.solde) + " €";
+    }
+}`),
+			indices: ["Le constructeur reçoit seulement le titulaire : le solde démarre à 0. Pense aussi à `getSolde()`, utilisé par le test.",
+				"`retirer` : si `m > this.solde`, renvoie `false` tout de suite. Sinon, enlève `m` et renvoie `true`. Pour l'affichage : `String.format(\"%.2f\", this.solde)`."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 3 (TP3) */
+OBJETS_UNITES.push({
+	id: "o03", num: 3, titre: "Comparer et ranger des objets", badge: "Trieur d'objets",
+	idee: [
+		"`p1 == p2` compare les **références** : est-ce le même objet ? Pour comparer le **contenu**, on écrit une méthode `equals`. `compareTo` renvoie un nombre **négatif**, **0** ou **positif** selon que l'objet courant est avant, égal ou après l'autre.",
+		"Une `ArrayList<Piece>` est une liste qui **grandit toute seule** : `add`, `get(i)`, `size()`, `remove`, et `for (Piece p : liste)`. Elle ne contient que des objets : on écrit `ArrayList<Integer>`, pas `ArrayList<int>`. Il faut `import java.util.ArrayList;`.",
+		"Avec `implements Comparable<Piece>` et une méthode `compareTo`, `Collections.sort(liste)` trie la liste. Une classe utilitaire (comme `Util`) ne contient que des méthodes `static`."
+	],
+	exemple: {
+		java: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class Piece implements Comparable<Piece>
+{
+    private String forme;
+    private String couleur;
+    private int    taille;
+
+    public Piece(String forme, String couleur, int taille)
+    {
+        this.forme   = forme;
+        this.couleur = couleur;
+        this.taille  = taille;
+    }
+
+    public boolean equals(Piece p)
+    {
+        return this.forme.equals(p.forme) && this.couleur.equals(p.couleur);
+    }
+
+    public int compareTo(Piece p)
+    {
+        return this.taille - p.taille;
+    }
+
+    public String toString()
+    {
+        return "[" + this.forme + " : " + this.couleur + " (" + this.taille + " cm)]";
+    }
+
+    public static void main(String[] args)
+    {
+        ArrayList<Piece> boite = new ArrayList<Piece>();
+        boite.add(new Piece("Cube", "Rouge", 7));
+        boite.add(new Piece("Sphère", "Mauve", 2));
+        boite.add(new Piece("Pyramide", "Verte", 4));
+        Collections.sort(boite);
+        for (Piece p : boite)
+        {
+            System.out.println(p);
+        }
+    }
+}`),
+		note: "Après le tri, les pièces sortent de la plus petite à la plus grande : Sphère (2), Pyramide (4), Cube (7). `compareTo` décide de l'ordre."
+	},
+	exos: [
+		{ id: "o03.egal", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Test
+{
+    public static void main(String[] args)
+    {
+        Piece p1 = new Piece("Cube", "Rouge", 6);
+        Piece p2 = new Piece("Cube", "Rouge", 6);
+        Piece p3 = p1;
+        System.out.println(p1 == p2);
+        System.out.println(p1.equals(p2));
+        System.out.println(p1 == p3);
+    }
+}
+
+class Piece
+{
+    private String forme;
+    private String couleur;
+    private int taille;
+
+    public Piece(String forme, String couleur, int taille)
+    {
+        this.forme = forme;
+        this.couleur = couleur;
+        this.taille = taille;
+    }
+
+    public boolean equals(Piece p)
+    {
+        return this.forme.equals(p.forme) && this.couleur.equals(p.couleur) && this.taille == p.taille;
+    }
+}`),
+			expl: "`p1` et `p2` sont deux objets différents (deux `new`) : `==` donne `false`, même si leur contenu est identique. `equals` compare le contenu : `true`. `p3 = p1` copie la référence : même objet, `true`." },
+		{ id: "o03.cmp", k: "qcm", q: "`compareTo` renvoie `this.taille - p.taille`. Que vaut `a.compareTo(b)` si `a` mesure 4 cm et `b` 7 cm ?",
+			opts: ["-3 : a vient avant b", "3 : a vient après b", "0 : ils sont égaux", "`false`"], a: 0,
+			expl: "4 - 7 = -3. Un résultat négatif veut dire « l'objet courant est avant l'autre ». C'est tout ce que `Collections.sort` a besoin de savoir." },
+		{ id: "o03.liste", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.util.ArrayList;
+
+public class Courses
+{
+    public static void main(String[] args)
+    {
+        ArrayList<String> liste = new ArrayList<String>();
+        liste.add("pain");
+        liste.add("lait");
+        liste.add("oeufs");
+        liste.add(1, "beurre");
+        liste.remove("lait");
+        System.out.println(liste.size() + " " + liste.get(1));
+        System.out.println(liste);
+    }
+}`),
+			expl: "Après les trois `add` : [pain, lait, oeufs]. `add(1, \"beurre\")` insère à l'indice 1 : [pain, beurre, lait, oeufs]. On retire \"lait\" : [pain, beurre, oeufs]. Taille 3, case 1 = beurre." },
+		{ id: "o03.size", k: "bug",
+			code: T(`
+import java.util.ArrayList;
+
+public class Notes
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Integer> notes = new ArrayList<Integer>();
+        notes.add(12);
+        notes.add(15);
+        int somme = 0;
+        for (int i = 0; i < notes.length; i++)
+        {
+            somme = somme + notes.get(i);
+        }
+        System.out.println(somme);
+    }
+}`),
+			ligne: 11, fix: ["for (int i = 0; i < notes.size(); i++)"],
+			expl: "`length` est pour les **tableaux**. Une `ArrayList` donne son nombre d'éléments avec la méthode `size()`." },
+		{ id: "o03.int", k: "qcm", q: "Pourquoi `ArrayList<int> l = new ArrayList<int>();` ne compile-t-il pas ?",
+			opts: ["Une ArrayList ne contient que des objets : il faut la classe enveloppe Integer", "Il manque la taille de la liste", "int s'écrit Int dans une liste", "Il faut importer java.lang.int"], a: 0,
+			expl: "On écrit `ArrayList<Integer>`. Java convertit ensuite tout seul entre `int` et `Integer` : `l.add(5)` et `int x = l.get(0)` marchent." },
+		{ id: "o03.contains", k: "qcm", q: "La classe `Piece` a seulement `public boolean equals(Piece p)`. Une liste contient une pièce \"Cube Rouge\", et on teste `liste.contains(new Piece(\"Cube\", \"Rouge\", 6))`. Qu'obtient-on ?",
+			opts: ["`false` : contains utilise equals(Object), que Piece ne redéfinit pas", "`true` : contains utilise le equals de Piece", "Une erreur de compilation", "Une NullPointerException"], a: 0,
+			expl: "`contains`, `indexOf` et `remove(objet)` appellent `equals(Object o)`. `equals(Piece p)` est une **autre** méthode (une surcharge) : elles ne la voient pas, et comparent donc les références. Pour qu'elles marchent, il faut écrire `equals(Object o)` (on le verra avec le polymorphisme)." },
+		{ id: "o03.fill", k: "fill", q: "Complète pour pouvoir trier une liste de `Colis` du plus léger au plus lourd avec `Collections.sort(liste)`.",
+			code: T(`
+public class Colis ___ Comparable<___>
+{
+    private int masse;
+
+    public Colis(int masse)
+    {
+        this.masse = masse;
+    }
+
+    public int ___(Colis c)
+    {
+        return this.masse - c.masse;
+    }
+}`),
+			trous: [["implements"], ["Colis"], ["compareTo"]],
+			expl: "`implements Comparable<Colis>` annonce que les colis sont comparables entre eux. Java demande alors la méthode `public int compareTo(Colis c)`, que `Collections.sort` appelle pour ranger la liste." },
+		{ id: "o03.piece", k: "code", mode: "class", fichier: "Piece.java",
+			enonce: "Écris la classe `Piece` (exercices 7 à 9 du TP3) : `forme`, `couleur` (String) et `taille` (int), privés, avec un constructeur à 3 paramètres. `equals(Piece p)` est vrai si la forme **et** la couleur sont les mêmes. Elle implémente `Comparable<Piece>` : `compareTo` compare les tailles. `toString()` renvoie `[Cube : Rouge (6 cm)]`.",
+			regles: ["allman"],
+			harness: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class Test9
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Piece> tab = new ArrayList<Piece>();
+        tab.add(new Piece("Cube", "Rouge", 6));
+        tab.add(new Piece("Sphere", "Mauve", 2));
+        tab.add(new Piece("Pyramide", "Rouge", 4));
+        tab.add(new Piece("Cube", "Rouge", 1));
+        System.out.println(tab.get(0).equals(tab.get(3)));
+        System.out.println(tab.get(0).equals(tab.get(2)));
+        System.out.println(tab.get(1).compareTo(tab.get(2)) < 0);
+        Collections.sort(tab);
+        for (Piece p : tab)
+        {
+            System.out.println(p);
+        }
+    }
+}`),
+			depart: T(`
+public class Piece implements Comparable<Piece>
+{
+    private String forme;
+    private String couleur;
+    private int    taille;
+
+}`),
+			solution: T(`
+public class Piece implements Comparable<Piece>
+{
+    private String forme;
+    private String couleur;
+    private int    taille;
+
+    public Piece(String forme, String couleur, int taille)
+    {
+        this.forme   = forme;
+        this.couleur = couleur;
+        this.taille  = taille;
+    }
+
+    public boolean equals(Piece p)
+    {
+        return this.forme.equals(p.forme) && this.couleur.equals(p.couleur);
+    }
+
+    public int compareTo(Piece p)
+    {
+        return this.taille - p.taille;
+    }
+
+    public String toString()
+    {
+        return "[" + this.forme + " : " + this.couleur + " (" + this.taille + " cm)]";
+    }
+}`),
+			indices: ["Compare les chaînes avec `equals`, jamais avec `==` : `this.forme.equals(p.forme) && this.couleur.equals(p.couleur)`.",
+				"`compareTo` doit être `public int compareTo(Piece p)` et renvoyer `this.taille - p.taille`. Sans `public`, Java refuse : la méthode vient de l'interface `Comparable`."] },
+		{ id: "o03.panier", k: "code", mode: "class", fichier: "Panier.java",
+			enonce: "Écris la classe `Panier`, qui range des prix (`double`) dans une `ArrayList<Double>`. `ajouter(double prix)` ajoute un prix ; `getNbArticles()` renvoie le nombre de prix ; `total()` renvoie leur somme ; `plusCher()` renvoie le plus grand prix (0 si le panier est vide).",
+			regles: ["allman"],
+			harness: T(`
+public class TestPanier
+{
+    public static void main(String[] args)
+    {
+        Panier p = new Panier();
+        System.out.println(p.getNbArticles() + " " + p.total() + " " + p.plusCher());
+        p.ajouter(2.5);
+        p.ajouter(12.0);
+        p.ajouter(4.25);
+        System.out.println(p.getNbArticles() + " " + p.total() + " " + p.plusCher());
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+
+public class Panier
+{
+    private ArrayList<Double> prix;
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+
+public class Panier
+{
+    private ArrayList<Double> prix;
+
+    public Panier()
+    {
+        this.prix = new ArrayList<Double>();
+    }
+
+    public void ajouter(double p)
+    {
+        this.prix.add(p);
+    }
+
+    public int getNbArticles()
+    {
+        return this.prix.size();
+    }
+
+    public double total()
+    {
+        double somme = 0;
+        for (double p : this.prix)
+        {
+            somme = somme + p;
+        }
+        return somme;
+    }
+
+    public double plusCher()
+    {
+        double max = 0;
+        for (double p : this.prix)
+        {
+            if (p > max)
+            {
+                max = p;
+            }
+        }
+        return max;
+    }
+}`),
+			indices: ["L'attribut est seulement déclaré : il faut créer la liste dans le constructeur, `this.prix = new ArrayList<Double>();`. Sinon, le premier `add` lève une `NullPointerException`.",
+				"Parcours la liste avec `for (double p : this.prix)`. Pour le plus cher, pars de `max = 0` et garde chaque prix plus grand."] }
+	]
+});
+
+/* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
    format que CHAPITRES), puis l'ajouter ici.
@@ -10209,7 +11505,7 @@ h1
    ========================================================================== */
 var LANGUES = [
 	{ id: "java", nom: "Algo & Java", groupe: "Semestre 1", icone: "☕", mode: "java", runner: "java", desc: "Bases de l'algorithmique en Java (R1.01)", unites: CHAPITRES, controles: CONTROLES, bonus: EVALS },
-	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", desc: "Classes, héritage, interfaces, collections (R2.01)", bientot: true },
+	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", niveau: 2, desc: "Classes, collections, interfaces (R2.01) · TP1 à 3 pour l'instant", unites: OBJETS_UNITES },
 	{ id: "ihm", nom: "Dév IHM", groupe: "Semestre 2", icone: "🪟", mode: "java", runner: "swing", desc: "Fenêtres Swing, layouts, événements (R2.02)", bientot: true },
 	{ id: "html", nom: "HTML & CSS", groupe: "Web et autres langages", icone: "🌐", mode: "html", runner: "web", desc: "Construire des pages web", unites: HTML_UNITES, bientot: true }, // prêt, masqué pour l'instant : retirer bientot pour l'ouvrir
 	{ id: "sql", nom: "SQL", groupe: "Web et autres langages", icone: "🗄️", bientot: true },
@@ -10276,7 +11572,7 @@ function para(txt) { return String(txt).split(/\n\n/).map(function (p) { return 
 /* ---------- Coloration syntaxique, une expression par langage ----------
    Groupes : 1 commentaire, 2-3 chaîne, 4 nombre, 5 mot-clé, 6 type/balise.  */
 var SYNTAX = {
-	java: /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*")|('(?:[^'\\\n]|\\.)*')|\b(\d+(?:\.\d+)?[LdDf]?)\b|\b(public|private|protected|static|final|void|int|double|char|boolean|long|short|float|byte|class|new|return|if|else|while|do|for|switch|case|default|break|continue|this|null|true|false|import)\b|\b(String|Clavier|System|Math|Integer|Double|Character)\b/g,
+	java: /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*")|('(?:[^'\\\n]|\\.)*')|\b(\d+(?:\.\d+)?[LdDf]?)\b|\b(public|private|protected|static|final|void|int|double|char|boolean|long|short|float|byte|class|new|return|if|else|while|do|for|switch|case|default|break|continue|this|null|true|false|import|abstract|interface|extends|implements|instanceof|super|try|catch|finally|throw|throws|enum)\b|\b(String|Clavier|System|Math|Integer|Double|Character|Object|ArrayList|LinkedList|HashMap|List|Map|Set|Iterator|Collections|Comparable|Comparator|Exception|RuntimeException)\b/g,
 	pseudo: /(\/\/[^\n]*)|("(?:[^"\n])*")|('(?:[^'\n])*')|\b(\d+(?:[.,]\d+)?)\b|(\b(?:ALGORITHME|DEBUT|FIN|CONSTANTE|CONSTANTES|VARIABLE|VARIABLES|si|alors|sinon|fsi|tant que|ftq|faire|pour|de|à|pas|fpour|répéter|jusqu'à|selon|cas|autrement|fselon|lire|écrire|et|ou|non|vrai|faux|retourner|fonction|procédure|fin|entier|réel|caractère|chaîne|booléen|tableau)\b|←)/g,
 	html: /(<!--[\s\S]*?-->|\/\*[\s\S]*?\*\/)|("(?:[^"\n])*")|('(?:[^'\n])*')|(#[0-9a-fA-F]{3,6}\b|\b\d+(?:\.\d+)?(?:px|em|rem|%)?)|(<\/?[a-zA-Z][a-zA-Z0-9]*|\/?>)|(\b[a-z-]+(?==)|\b[a-z-]+(?=\s*:))/g
 };
@@ -10470,6 +11766,7 @@ function useLang(L)
 	CT = L.controles || [];
 	EV = L.bonus || [];
 	curMode = L.mode || "java";
+	if (window.JavaMini && JavaMini.setNiveau) { JavaMini.setNiveau(L.niveau || 1); }
 }
 useLang(lang());
 
@@ -10901,6 +12198,17 @@ function updateTabs(hsh)
 				return h("div", { "class": "mrow" }, h("span", { text: v.n }), cell(v, o.id + ", " + v.n));
 			}));
 		}) : h("p", { "class": "small muted", text: "(aucun objet)" }));
+		// Attributs de classe (static) : une seule case par classe, hors des objets
+		if (e.classe && e.classe.length)
+		{
+			box.appendChild(h("div", { "class": "memclass" }, h("h3", { text: "Attributs de classe (static)" }), e.classe.map(function (c)
+			{
+				return h("div", { "class": "obj" }, h("div", { "class": "oname", text: c.nom }), c.vars.map(function (v)
+				{
+					return h("div", { "class": "mrow" }, h("span", { text: v.n }), cell(v, c.nom + ", attribut de classe " + v.n));
+				}));
+			})));
+		}
 		box.appendChild(h("div", { "class": "mem" }, pile, tas));
 		box.appendChild(h("div", { "class": "toolbar" }, h("button", { "class": "btn", text: "Vérifier", on: { click: check } })));
 		function clean(s) { return String(s).trim().replace(/^["']|["']$/g, "").replace(/,/g, ".").toLowerCase(); }
