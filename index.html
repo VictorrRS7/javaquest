@@ -10204,12 +10204,16 @@ h1
    format que CHAPITRES), puis l'ajouter ici.
    mode   : coloration du code (java, html)
    runner : façon d'exécuter le code ("java" : interpréteur, "web" : aperçu)
+   groupe : rubrique de l'écran « Que veux-tu apprendre ? » (une matière par
+            entrée : en cours, Dév Objets et Dév IHM sont deux matières distinctes)
    ========================================================================== */
 var LANGUES = [
-	{ id: "java", nom: "Java", icone: "☕", mode: "java", runner: "java", desc: "Le langage des TP de l'IUT", unites: CHAPITRES, controles: CONTROLES, bonus: EVALS },
-	{ id: "html", nom: "HTML & CSS", icone: "🌐", mode: "html", runner: "web", desc: "Construire des pages web", unites: HTML_UNITES, bientot: true }, // prêt, masqué pour l'instant : retirer bientot pour l'ouvrir
-	{ id: "sql", nom: "SQL", icone: "🗄️", bientot: true },
-	{ id: "php", nom: "PHP", icone: "🐘", bientot: true }
+	{ id: "java", nom: "Algo & Java", groupe: "Semestre 1", icone: "☕", mode: "java", runner: "java", desc: "Bases de l'algorithmique en Java (R1.01)", unites: CHAPITRES, controles: CONTROLES, bonus: EVALS },
+	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", desc: "Classes, héritage, interfaces, collections (R2.01)", bientot: true },
+	{ id: "ihm", nom: "Dév IHM", groupe: "Semestre 2", icone: "🪟", mode: "java", runner: "swing", desc: "Fenêtres Swing, layouts, événements (R2.02)", bientot: true },
+	{ id: "html", nom: "HTML & CSS", groupe: "Web et autres langages", icone: "🌐", mode: "html", runner: "web", desc: "Construire des pages web", unites: HTML_UNITES, bientot: true }, // prêt, masqué pour l'instant : retirer bientot pour l'ouvrir
+	{ id: "sql", nom: "SQL", groupe: "Web et autres langages", icone: "🗄️", bientot: true },
+	{ id: "php", nom: "PHP", groupe: "Web et autres langages", icone: "🐘", bientot: true }
 ];
 
 </script>
@@ -11809,7 +11813,7 @@ function renderPath()
 {
 	var L = lang();
 	app.appendChild(h("div", { "class": "row between", style: "margin-bottom:6px" },
-		h("button", { "class": "chip", "aria-label": "Langue : " + L.nom + ", changer", on: { click: function () { go("#/langues"); } } }, L.icone + " " + L.nom + " ▾"),
+		h("button", { "class": "chip", "aria-label": "Matière : " + L.nom + ", changer", on: { click: function () { go("#/langues"); } } }, L.icone + " " + L.nom + " ▾"),
 		h("span", { "class": "small muted", text: "Objectif du jour : " + todayXp() + "/" + state.goal + " XP" })));
 	app.appendChild(h("h1", { "class": "sr", text: "Parcours " + L.nom }));
 
@@ -12314,12 +12318,18 @@ function renderProfil()
 
 	renderInstall();
 	renderBackup();
+	if (SUPPORT_URL)
+	{
+		app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "☕ Soutenir le projet" }),
+			h("p", { "class": "small muted", text: "JavaQuest est gratuit et sans pub. Si l'appli t'aide, tu peux soutenir son développement." }),
+			h("a", { "class": "btn ghost", href: SUPPORT_URL, target: "_blank", rel: "noopener", text: "Soutenir JavaQuest" })));
+	}
 
 	var themeSel = h("select", { id: "themeSel" }, [["auto", "Automatique"], ["light", "Clair"], ["dark", "Sombre"]].map(function (o) { return h("option", { value: o[0], text: o[1], selected: state.theme === o[0] }); }));
 	themeSel.addEventListener("change", function () { state.theme = themeSel.value; applyTheme(); save(); });
 	app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "Réglages" }),
 		h("button", { "class": "card rowcard flat", on: { click: function () { go("#/langues"); } } },
-			h("span", { "class": "rowicon", "aria-hidden": "true", text: L.icone }), h("span", { "class": "grow" }, h("strong", { text: "Langue : " + L.nom }), h("br"), h("span", { "class": "small muted", text: "Changer de langage" })), h("span", { "aria-hidden": "true", text: "›" })),
+			h("span", { "class": "rowicon", "aria-hidden": "true", text: L.icone }), h("span", { "class": "grow" }, h("strong", { text: "Matière : " + L.nom }), h("br"), h("span", { "class": "small muted", text: "Changer de matière" })), h("span", { "aria-hidden": "true", text: "›" })),
 		h("label", { "class": "fld", "for": "themeSel", text: "Thème" }), themeSel,
 		h("label", { "class": "row", style: "margin-top:8px" },
 			h("input", { type: "checkbox", checked: !!state.unlockAll, on: { change: function (e) { state.unlockAll = e.target.checked; save(); } } }),
@@ -12335,6 +12345,8 @@ function renderProfil()
 
 /* ---------- Installer l'appli (seulement dans la version hébergée, voir build.js) ---------- */
 var APP_URL = "https://victorrrs7.github.io/javaquest/";
+/* Lien du bouton « Soutenir le projet » (Ko-fi, PayPal.me...). Vide : le bouton est caché. */
+var SUPPORT_URL = "";
 var installPrompt = null;
 window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installPrompt = e; });
 function isStandalone() { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
@@ -12427,9 +12439,16 @@ function renderLangues()
 {
 	app.appendChild(h("div", { "class": "crumb" }, h("button", { "class": "btn ghost small", text: "← Retour", on: { click: function () { go("#/"); } } })));
 	app.appendChild(h("h1", { text: "Que veux-tu apprendre ?" }));
-	var grid = h("div", { "class": "lang-grid" });
+	var grid = null, groupe = null;
 	ALL_LANGS.forEach(function (L)
 	{
+		if (!grid || L.groupe !== groupe)
+		{
+			groupe = L.groupe;
+			if (groupe) { app.appendChild(h("h2", { "class": "section-h", text: groupe })); }
+			grid = h("div", { "class": "lang-grid" });
+			app.appendChild(grid);
+		}
 		var on = !L.bientot && L.id === state.langue;
 		var n = 0, d = 0;
 		if (!L.bientot) { (L.unites || []).forEach(function (c) { lessonsOf(c).forEach(function (l) { n++; if (lessonDone(l.id)) { d++; } }); }); }
@@ -12437,10 +12456,9 @@ function renderLangues()
 			on: { click: function () { if (!L.bientot) { state.langue = L.id; save(); go("#/"); } } } },
 			h("span", { "class": "langicon", "aria-hidden": "true", text: L.icone }),
 			h("strong", { text: L.nom }),
-			h("span", { "class": "small muted", text: L.bientot ? "Bientôt" : L.desc }),
+			h("span", { "class": "small muted", text: L.bientot ? (L.desc ? L.desc + " · bientôt" : "Bientôt") : L.desc }),
 			L.bientot ? null : h("span", { "class": "small", text: d + "/" + n + " leçons" })));
 	});
-	app.appendChild(grid);
 }
 
 /* ---------- Routes ---------- */
