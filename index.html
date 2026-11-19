@@ -990,12 +990,17 @@ var JavaMini = (function ()
 		program: function ()
 		{
 			var classes = [];
+			classes.imports = [];
+			classes.toks = this.toks;
 			while (this.peek().type !== "eof")
 			{
+				var isImport = this.is("import");
 				if (this.accept("import") || this.accept("package"))
 				{
-					while (!this.is(";") && this.peek().type !== "eof") { this.next(); }
+					var path = "";
+					while (!this.is(";") && this.peek().type !== "eof") { path += this.next().v; }
 					this.expect(";");
+					if (isImport) { classes.imports.push(path); }
 					continue;
 				}
 				classes.push(this.classDecl());
@@ -1018,6 +1023,7 @@ var JavaMini = (function ()
 		{
 			var m = this.mods();
 			var t = this.peek();
+			if (this.is("enum")) { throw cErr("enum arrive avec l'unité Énumérations : pas encore disponible dans JavaQuest", t.line); }
 			var iface = !!this.accept("interface");
 			if (!iface)
 			{
@@ -1287,6 +1293,7 @@ var JavaMini = (function ()
 				return { k: "return", e: e, line: line };
 			}
 			if (this.is("case") || this.is("default")) { throw cErr("case en dehors d'un switch", line); }
+			if (this.is("try") || this.is("throw") || this.is("catch")) { throw cErr("try / catch / throw arrivent avec l'unité Exceptions : pas encore disponibles dans JavaQuest", line); }
 			if (this.isDecl()) { s = this.varDecl(); this.expect(";", "après la déclaration"); return s; }
 			var ex = this.expr();
 			if (!/^(assign|pre|post|call|new|thisCall)$/.test(ex.k))
@@ -1489,6 +1496,7 @@ var JavaMini = (function ()
 					if (this.is("(")) { return { k: "call", target: null, name: t.v, args: this.args(), line: line }; }
 					return { k: "name", name: t.v, line: line };
 			}
+			if (this.is("super")) { throw cErr("super arrive avec l'unité Héritage : pas encore disponible dans JavaQuest", line); }
 			if (this.accept("true")) { return { k: "lit", val: { t: "boolean", v: true }, line: line }; }
 			if (this.accept("false")) { return { k: "lit", val: { t: "boolean", v: false }, line: line }; }
 			if (this.accept("null")) { return { k: "lit", val: { t: "null", v: null }, line: line }; }
@@ -3057,6 +3065,7 @@ var JavaMini = (function ()
 				}
 			}
 			checkReturns(classes);
+			if ((opts.niveau || DEFAULTS.niveau) >= 2) { checkImports(classes); }
 			m = new Machine(classes, opts);
 			m.start();
 			return { out: m.out.join(""), error: null, steps: m.steps };
@@ -3077,6 +3086,23 @@ var JavaMini = (function ()
 		}
 	}
 
+	/* Comme javac : ArrayList, HashMap... ne sont connues qu'après import java.util.XXX; (ou java.util.*). */
+	var UTIL = { ArrayList: 1, LinkedList: 1, HashMap: 1, List: 1, Map: 1, Set: 1, Collections: 1, Iterator: 1, Comparator: 1, Collection: 1 };
+	function checkImports(classes)
+	{
+		var mine = {}, imp = classes.imports || [];
+		classes.forEach(function (c) { mine[c.name] = 1; });
+		(classes.toks || []).forEach(function (t, i)
+		{
+			var prev = classes.toks[i - 1];
+			if (t.type !== "id" || !UTIL[t.v] || mine[t.v] || (prev && prev.v === ".")) { return; }
+			if (imp.indexOf("java.util." + t.v) < 0 && imp.indexOf("java.util.*") < 0)
+			{
+				throw cErr("symbole introuvable : classe " + t.v, t.line, "Ajoute en haut du fichier : import java.util." + t.v + ";");
+			}
+		});
+	}
+	
 	/* Parcours générique de l'arbre syntaxique. */
 	function walk(node, fn)
 	{
@@ -11015,7 +11041,7 @@ public class Plaque
 			opts: ["`null` : aucune voiture n'a encore été créée", "Une voiture créée avec le constructeur sans paramètre", "0", "Rien : la ligne ne compile pas"], a: 0,
 			expl: "Un tableau d'objets contient des **références**, toutes à `null` au départ. Il faut un `new Voiture(...)` par case." },
 		{ id: "o02.npe", k: "predict",
-			q: "Qu'affiche ce programme ? (S'il s'arrête sur une erreur, écris ce qui a été affiché avant.)",
+			q: "Qu'affiche ce programme ?",
 			code: T(`
 public class Garage
 {
@@ -11769,6 +11795,9 @@ function useLang(L)
 	if (window.JavaMini && JavaMini.setNiveau) { JavaMini.setNiveau(L.niveau || 1); }
 }
 useLang(lang());
+/* Niveau de l'interpréteur pour un exercice : celui de sa matière (S1 : 1, Dév Objets : 2),
+   même quand on l'ouvre depuis la révision ou une autre matière. */
+function niveauOf(e) { var x = e && EX[e.id]; return (x && x.langue && x.langue.niveau) || lang().niveau || 1; }
 
 /* ---------- En-tête ---------- */
 var app = document.getElementById("app");
@@ -11963,7 +11992,7 @@ function updateTabs(hsh)
 		else if (e.k === "bug") { d.appendChild(h("p", null, "Ligne " + e.ligne + " : ", h("code", { "class": "inline", text: e.fix[0] }))); }
 		else if (e.k === "predict")
 		{
-			var r = JavaMini.run(wrapSnippet(e.code), { inputs: e.inputs || [], seed: 7 });
+			var r = JavaMini.run(wrapSnippet(e.code), { niveau: niveauOf(e), inputs: e.inputs || [], seed: 7 });
 			d.appendChild(outputBlock(r.error ? "ERREUR : " + r.error.msg : r.out, "Sortie attendue"));
 		}
 		else if (e.k === "code" || e.k === "web") { d.appendChild(codeBlock(e.solution, e.k === "web" ? "html" : undefined, "Solution")); }
@@ -12017,7 +12046,7 @@ function updateTabs(hsh)
 		box.appendChild(h("p", { "class": "q" }, rich(e.q || "Qu'affiche ce programme ? Écris la sortie exacte, une ligne par ligne affichée.")));
 		box.appendChild(codeBlock(e.code));
 		if (e.inputs) { box.appendChild(h("p", { "class": "small muted" }, "Saisies au clavier, dans l'ordre : ", h("strong", { text: e.inputs.join(", ") }))); }
-		var res = JavaMini.run(wrapSnippet(e.code), { inputs: e.inputs || [], seed: 7 });
+		var res = JavaMini.run(wrapSnippet(e.code), { niveau: niveauOf(e), inputs: e.inputs || [], seed: 7 });
 		var expected = res.error ? "ERREUR : " + res.error.msg : res.out;
 		var id = "ans-" + e.id;
 		box.appendChild(h("label", { "class": "fld", "for": id, text: "Ta réponse" + (e.inputs ? " (les saisies s'affichent aussi, comme dans le terminal)" : "") }));
@@ -12262,7 +12291,7 @@ function updateTabs(hsh)
 		if (!expCache[key])
 		{
 			var b = buildSource(e, e.solution);
-			var r = JavaMini.run(b.src, { inputs: t["in"] || [], markInput: true, seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
+			var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: t["in"] || [], markInput: true, seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
 			expCache[key] = r.error ? "(erreur dans la solution : " + r.error.msg + ")" : r.out;
 		}
 		return expCache[key];
@@ -12359,7 +12388,7 @@ function updateTabs(hsh)
 		{
 			var b = buildSource(e, ed.value);
 			var ins = inBox.value === "" ? [] : inBox.value.split("\n");
-			var r = JavaMini.run(b.src, { inputs: ins, markInput: true, seed: 7 });
+			var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: ins, markInput: true, seed: 7 });
 			clear(out);
 			out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Sortie de ton programme" })));
 			out.appendChild(outputBlock(r.out));
@@ -12373,7 +12402,7 @@ function updateTabs(hsh)
 			for (var i = 0; i < tests.length; i++)
 			{
 				var t = tests[i];
-				var r = JavaMini.run(b.src, { inputs: t["in"] || [], markInput: true, seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
+				var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: t["in"] || [], markInput: true, seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
 				var exp = expectedOut(e, t, i);
 				var label = (t["in"] && t["in"].length) ? "avec les saisies " + t["in"].join(", ") : (tests.length > 1 ? "test " + (i + 1) : "");
 				if (r.error)
@@ -12962,7 +12991,7 @@ function adminVerif()
 			if (e.k === "bug" && (e.ligne < 1 || e.ligne > e.code.split("\n").length)) { pb.push(id + " : ligne fautive hors du code"); }
 			if (e.k === "predict")
 			{
-				var rp = JavaMini.run(wrapSnippet(e.code), { inputs: e.inputs || [], seed: 7 });
+				var rp = JavaMini.run(wrapSnippet(e.code), { niveau: niveauOf(e), inputs: e.inputs || [], seed: 7 });
 				if (rp.error) { pb.push(id + " : " + rp.error.msg); }
 			}
 			if (e.k === "code")
@@ -12973,7 +13002,7 @@ function adminVerif()
 				if (regles.length) { pb.push(id + " : la solution viole ses règles (" + regles.join(" ; ") + ")"); }
 				(e.tests || [{ "in": [] }]).forEach(function (t)
 				{
-					var r = JavaMini.run(b.src, { inputs: t["in"] || [], seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
+					var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: t["in"] || [], seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
 					if (r.error) { pb.push(id + " (" + (t["in"] || []).join(", ") + ") : " + r.error.msg); }
 				});
 			}
@@ -13126,7 +13155,7 @@ function renderPath()
 	app.appendChild(h("h1", { "class": "sr", text: "Parcours " + L.nom }));
 
 	var st = stats();
-	app.appendChild(bigProgress("Parcours " + L.nom, st.lecons[0], st.lecons[1], st.lecons[0] + "/" + st.lecons[1] + " leçons · " + st.code[0] + "/" + st.code[1] + " exercices de code · " + st.controles[0] + "/" + st.controles[1] + " contrôles réussis"));
+	app.appendChild(bigProgress("Parcours " + L.nom, st.lecons[0], st.lecons[1], st.lecons[0] + "/" + st.lecons[1] + " leçons · " + st.code[0] + "/" + st.code[1] + " exercices de code" + (st.controles[1] ? " · " + st.controles[0] + "/" + st.controles[1] + " contrôles réussis" : "")));
 	var nx = nextLesson();
 	var hero = h("section", { "class": "card hero-card" });
 	if (nx)
@@ -13407,7 +13436,7 @@ function renderPratique()
 		h("span", { "aria-hidden": "true", text: "›" })));
 
 	var st = stats();
-	app.appendChild(bigProgress("Exercices de code réussis", st.code[0], st.code[1], "Projets : " + st.projets[0] + "/" + st.projets[1] + " étapes · contrôles : " + st.controles[0] + "/" + st.controles[1] + " · bonus : " + st.bonus[0] + "/" + st.bonus[1] + " étapes"));
+	app.appendChild(bigProgress("Exercices de code réussis", st.code[0], st.code[1], [st.projets[1] ? "Projets : " + st.projets[0] + "/" + st.projets[1] + " étapes" : "", st.controles[1] ? "contrôles : " + st.controles[0] + "/" + st.controles[1] : "", st.bonus[1] ? "bonus : " + st.bonus[0] + "/" + st.bonus[1] + " étapes" : ""].filter(Boolean).join(" · ")));
 	app.appendChild(h("h2", { "class": "section-h", text: "Exercices de code" }));
 	CH.forEach(function (c)
 	{
@@ -13563,7 +13592,7 @@ function renderSandbox()
 	ed.addEventListener("input", function () { state.code[key] = ed.value; save(); if (web) { clearTimeout(t0); t0 = setTimeout(refresh, 300); } });
 	function run()
 	{
-		var r = JavaMini.run(ed.value, { inputs: inBox.value === "" ? [] : inBox.value.split("\n"), markInput: true, seed: Date.now() % 100000 });
+		var r = JavaMini.run(ed.value, { niveau: lang().niveau || 1, inputs: inBox.value === "" ? [] : inBox.value.split("\n"), markInput: true, seed: Date.now() % 100000 });
 		clear(out);
 		out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Sortie" })));
 		out.appendChild(outputBlock(r.out));
@@ -13610,9 +13639,9 @@ function renderProfil()
 		progRow("Leçons terminées", st.lecons[0], st.lecons[1]),
 		progRow("Questions réussies", st.quiz[0], st.quiz[1]),
 		progRow("Exercices de code réussis", st.code[0], st.code[1]),
-		progRow("Étapes de projets", st.projets[0], st.projets[1]),
-		progRow("Contrôles réussis dans le temps", st.controles[0], st.controles[1]),
-		progRow("Sujets bonus (étapes)", st.bonus[0], st.bonus[1])));
+		st.projets[1] ? progRow("Étapes de projets", st.projets[0], st.projets[1]) : null,
+		st.controles[1] ? progRow("Contrôles réussis dans le temps", st.controles[0], st.controles[1]) : null,
+		st.bonus[1] ? progRow("Sujets bonus (étapes)", st.bonus[0], st.bonus[1]) : null));
 	var prog = h("section", { "class": "card" }, h("h2", { text: "Progression par unité" }));
 	CH.forEach(function (c)
 	{

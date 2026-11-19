@@ -1,5 +1,5 @@
 // Généré par site-src/build.js : ne pas modifier à la main
-var CACHE = "javaquest-a7b6de47f6";
+var CACHE = "javaquest-00f5f104f3";
 var FILES = ["./", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/favicon-32.png"];
 self.addEventListener("install", function (e)
 {
