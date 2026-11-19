@@ -227,6 +227,7 @@ main { max-width: 860px; margin: 0 auto; padding: 20px 16px 64px; outline: none;
 	color: var(--accent-ink);
 	cursor: pointer;
 }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; align-self: flex-start; }
 .btn:hover { filter: brightness(1.06); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; filter: none; }
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
@@ -12332,13 +12333,22 @@ function renderProfil()
 }
 
 /* ---------- Installer l'appli (seulement dans la version hébergée, voir build.js) ---------- */
+var APP_URL = "https://victorrrs7.github.io/javaquest/";
 var installPrompt = null;
 window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installPrompt = e; });
 function isStandalone() { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
 function isIos() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
 function renderInstall()
 {
-	if (!window.JQ_PWA || isStandalone()) { return; }
+	if (isStandalone()) { return; }
+	if (!window.JQ_PWA)
+	{
+		// Artefact claude.ai : renvoyer vers la version installable
+		app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "📲 L'appli JavaQuest" }),
+			h("p", { "class": "small muted", text: "JavaQuest existe aussi en appli à installer sur ton téléphone (plein écran, sans connexion). Crée d'abord ton code de sauvegarde ci-dessous pour y retrouver ta progression." }),
+			h("a", { "class": "btn", href: APP_URL, target: "_blank", rel: "noopener", text: "Ouvrir l'appli" })));
+		return;
+	}
 	var card = h("section", { "class": "card stack" }, h("h2", { text: "📲 Installer l'appli" }));
 	if (installPrompt)
 	{
