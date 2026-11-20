@@ -825,7 +825,10 @@ var JavaMini = (function ()
 	function cErr(msg, line, hint) { return JErr("compile", msg, line, hint); }
 	function rErr(exc, line, hint)
 	{
-		return JErr("runtime", 'Exception in thread "main" ' + exc, line, hint);
+		var e = JErr("runtime", 'Exception in thread "main" ' + exc, line, hint);
+		var m = /^([\w.$]+)(?::\s?([\s\S]*))?$/.exec(exc);
+		if (m) { e.excFull = m[1]; e.exc = m[1].split(".").pop(); e.excMsg = m[2] === undefined ? null : m[2]; }
+		return e;
 	}
 
 	/* ======================= 1. Analyse lexicale ======================= */
@@ -1023,7 +1026,34 @@ var JavaMini = (function ()
 		{
 			var m = this.mods();
 			var t = this.peek();
-			if (this.is("enum")) { throw cErr("enum arrive avec l'unité Énumérations : pas encore disponible dans JavaQuest", t.line); }
+			if (this.accept("enum"))
+			{
+				var en = this.ident("énumération"), eimpl = [];
+				if (this.is("extends")) { throw cErr("un enum ne peut pas hériter d'une classe (extends interdit)", t.line); }
+				if (this.accept("implements")) { do { eimpl.push(this.type()); } while (this.accept(",")); }
+				var ec = { name: en, pub: !!m["public"], line: t.line, fields: [], methods: Object.create(null), ctors: [], statics: Object.create(null), finfo: Object.create(null),
+					iface: false, abs: false, ext: null, impls: eimpl, tparams: [], isEnum: true, consts: [] };
+				this.expect("{", "après le nom de l'enum");
+				while (this.peek().type === "id")
+				{
+					var ct = this.next();
+					var cargs = this.is("(") ? this.args() : [];
+					if (this.is("{")) { throw cErr("les constantes avec un corps ne sont pas au programme", ct.line); }
+					if (ec.finfo[ct.v]) { throw cErr("la constante " + ct.v + " est déjà déclarée dans " + en, ct.line); }
+					ec.consts.push({ name: ct.v, args: cargs, line: ct.line });
+					ec.finfo[ct.v] = { name: ct.v, t: en, init: null, stat: true, fin: true, priv: false, prot: false, line: ct.line, isConst: true };
+					if (!this.accept(",")) { break; }
+				}
+				if (!this.accept(";") && !this.is("}")) { throw cErr("« ; » attendu après la liste des constantes de " + en, this.prevLine()); }
+				while (!this.is("}"))
+				{
+					if (this.peek().type === "eof") { throw cErr("accolade } manquante à la fin de l'enum " + en, this.prevLine()); }
+					this.member(ec);
+				}
+				this.next();
+				ec.ctors.forEach(function (k) { if (k.pub) { throw cErr("le constructeur d'un enum ne peut pas être public (il est private)", k.line); } k.priv = true; });
+				return ec;
+			}
 			var iface = !!this.accept("interface");
 			if (!iface)
 			{
@@ -1112,9 +1142,10 @@ var JavaMini = (function ()
 			{
 				this.next();
 				var params = this.params();
-				if (this.accept("throws")) { do { this.type(); } while (this.accept(",")); }
+				var cthr = [];
+				if (this.accept("throws")) { do { cthr.push(this.type()); } while (this.accept(",")); }
 				var body = this.block();
-				cls.ctors.push({ params: params, body: body, priv: !!m["private"], line: line, cls: cls });
+				cls.ctors.push({ params: params, body: body, priv: !!m["private"], pub: !!m["public"], line: line, cls: cls, throws: cthr });
 				return;
 			}
 			if (this.peek().type === "id" && this.is("(", 1))
@@ -1126,7 +1157,8 @@ var JavaMini = (function ()
 			if (this.is("("))
 			{
 				var ps = this.params();
-				if (this.accept("throws")) { do { this.type(); } while (this.accept(",")); }
+				var thr = [];
+				if (this.accept("throws")) { do { thr.push(this.type()); } while (this.accept(",")); }
 				var b = null;
 				if (this.is(";"))
 				{
@@ -1138,7 +1170,7 @@ var JavaMini = (function ()
 					if (m["abstract"]) { throw cErr("la méthode abstract " + name + " ne doit pas avoir de corps : termine sa déclaration par ;", line); }
 					b = this.block();
 				}
-				var meth = { name: name, ret: type, params: ps, body: b, stat: !!m["static"], priv: !!m["private"], prot: !!m["protected"], pub: !!m["public"] || cls.iface, abs: !b, line: line, cls: cls };
+				var meth = { name: name, ret: type, params: ps, body: b, stat: !!m["static"], priv: !!m["private"], prot: !!m["protected"], pub: !!m["public"] || cls.iface, abs: !b, line: line, cls: cls, throws: thr };
 				(cls.methods[name] = cls.methods[name] || []).push(meth);
 				return;
 			}
@@ -1293,10 +1325,34 @@ var JavaMini = (function ()
 				return { k: "return", e: e, line: line };
 			}
 			if (this.is("case") || this.is("default")) { throw cErr("case en dehors d'un switch", line); }
-			if (this.is("try") || this.is("throw") || this.is("catch")) { throw cErr("try / catch / throw arrivent avec l'unité Exceptions : pas encore disponibles dans JavaQuest", line); }
+			if (this.accept("try"))
+			{
+				if (this.is("(")) { throw cErr("le try avec ressources n'est pas au programme", line); }
+				var tb = this.block(), catches = [], fin = null;
+				while (this.is("catch"))
+				{
+					var cl = this.next().line;
+					this.expect("(", "après catch");
+					var types = [this.type()];
+					while (this.accept("|")) { types.push(this.type()); }
+					var cn = this.ident("variable de l'exception");
+					this.expect(")");
+					catches.push({ types: types, name: cn, body: this.block(), line: cl });
+				}
+				if (this.accept("finally")) { fin = this.block(); }
+				if (!catches.length && !fin) { throw cErr("un try doit être suivi d'au moins un catch ou d'un finally", line); }
+				return { k: "try", body: tb, catches: catches, fin: fin, line: line };
+			}
+			if (this.is("catch")) { throw cErr("catch sans try", line); }
+			if (this.accept("throw"))
+			{
+				var te = this.expr();
+				this.expect(";", "après throw");
+				return { k: "throw", e: te, line: line };
+			}
 			if (this.isDecl()) { s = this.varDecl(); this.expect(";", "après la déclaration"); return s; }
 			var ex = this.expr();
-			if (!/^(assign|pre|post|call|new|thisCall)$/.test(ex.k))
+			if (!/^(assign|pre|post|call|new|thisCall|superCall)$/.test(ex.k))
 			{
 				throw cErr("cette ligne calcule une valeur mais n'en fait rien (ce n'est pas une instruction)", line,
 					"Une instruction est une affectation, un appel de méthode, i++... Vérifie s'il ne manque pas un = ou un ;.");
@@ -1496,7 +1552,14 @@ var JavaMini = (function ()
 					if (this.is("(")) { return { k: "call", target: null, name: t.v, args: this.args(), line: line }; }
 					return { k: "name", name: t.v, line: line };
 			}
-			if (this.is("super")) { throw cErr("super arrive avec l'unité Héritage : pas encore disponible dans JavaQuest", line); }
+			if (this.accept("super"))
+			{
+				if (this.is("(")) { return { k: "superCall", args: this.args(), line: line }; }
+				this.expect(".", "après super");
+				var sn = this.ident("membre");
+				if (this.is("(")) { return { k: "call", target: { k: "super", line: line }, name: sn, args: this.args(), line: line }; }
+				return { k: "field", obj: { k: "this", line: line }, name: sn, line: line };
+			}
 			if (this.accept("true")) { return { k: "lit", val: { t: "boolean", v: true }, line: line }; }
 			if (this.accept("false")) { return { k: "lit", val: { t: "boolean", v: false }, line: line }; }
 			if (this.accept("null")) { return { k: "lit", val: { t: "null", v: null }, line: line }; }
@@ -1647,7 +1710,10 @@ var JavaMini = (function ()
 		if (!s) { return true; }
 		switch (s.k)
 		{
-			case "return": return false;
+			case "return": case "throw": return false;
+			case "try":
+				if (s.fin && !completes(s.fin)) { return false; }
+				return completes(s.body) || s.catches.some(function (c) { return completes(c.body); });
 			case "block":
 				for (var i = 0; i < s.body.length; i++) { if (!completes(s.body[i])) { return false; } }
 				return true;
@@ -1694,6 +1760,17 @@ var JavaMini = (function ()
 		String: ["Comparable", "CharSequence"]
 	};
 	var KNOWN_TYPES = { List: 1, Map: 1, Set: 1, Collection: 1, Iterable: 1, Iterator: 1, Deque: 1, Queue: 1, Comparable: 1, Comparator: 1, ArrayList: 1, LinkedList: 1, HashMap: 1, CharSequence: 1 };
+	/* Exceptions prédéfinies : classe -> classe mère (pour catch et instanceof) */
+	var EXC = {
+		Throwable: "", Exception: "Throwable", Error: "Throwable", RuntimeException: "Exception",
+		ArithmeticException: "RuntimeException", NullPointerException: "RuntimeException", ClassCastException: "RuntimeException",
+		IllegalArgumentException: "RuntimeException", NumberFormatException: "IllegalArgumentException", IllegalStateException: "RuntimeException",
+		IndexOutOfBoundsException: "RuntimeException", ArrayIndexOutOfBoundsException: "IndexOutOfBoundsException", StringIndexOutOfBoundsException: "IndexOutOfBoundsException",
+		UnsupportedOperationException: "RuntimeException", NoSuchElementException: "RuntimeException", ConcurrentModificationException: "RuntimeException",
+		InputMismatchException: "NoSuchElementException", NegativeArraySizeException: "RuntimeException", StackOverflowError: "Error"
+	};
+	var EXC_PKG = { NoSuchElementException: "java.util", ConcurrentModificationException: "java.util", InputMismatchException: "java.util" };
+	Object.keys(EXC).forEach(function (k) { KNOWN_TYPES[k] = 1; if (EXC[k]) { SUPERS[k] = [EXC[k]]; } });
 	function erase(t) { return String(t).replace(/<.*>/, ""); }
 	/* hashCode de Java, pour reproduire l'ordre de parcours d'une HashMap */
 	function javaHash(v)
@@ -1719,13 +1796,21 @@ var JavaMini = (function ()
 			var self0 = this;
 			classes.forEach(function (c)
 			{
+			if (self0.niveau < 2 && c.isEnum) { throw cErr("les enum ne sont pas au programme du semestre 1 : utilise des constantes (static final int)", c.line); }
 			if (self0.niveau < 2 && (c.iface || c.abs || c.ext || c.impls.length))
 			{
 				throw cErr(c.iface ? "les interfaces ne sont pas au programme du semestre 1" : (c.abs && !c.ext && !c.impls.length ? "les classes abstraites ne sont pas au programme du semestre 1" : "l'héritage et les interfaces ne sont pas au programme du semestre 1"), c.line);
 			}
-			if (c.ext) { throw cErr("l'héritage (extends) n'est pas encore pris en charge par JavaQuest : il arrive avec l'unité Héritage", c.line); }
-			if (!c.abs) { self0.checkImplements(c); }
+			if (c.ext)
+			{
+				var pe = erase(c.ext), pc = self0.classes[pe];
+				if (pc && pc.iface) { throw cErr(pe + " est une interface : une classe écrit implements " + pe + ", pas extends", c.line); }
+				if (!pc && EXC[pe] === undefined && pe !== "Object") { throw cErr("symbole introuvable : classe " + pe + " (après extends)", c.line); }
+				for (var x = pc, n = 0; x && x.ext; x = self0.classes[erase(x.ext)]) { if (++n > 50 || erase(x.ext) === c.name) { throw cErr("héritage circulaire : " + c.name + " hérite d'elle-même", c.line); } }
+			}
 			});
+			classes.forEach(function (c) { if (!c.abs) { self0.checkImplements(c); } });
+			this.checkChecked(classes);
 			this.out = [];
 		this.outLen = 0;
 		this.inputs = (opts.inputs || []).slice();
@@ -1751,7 +1836,7 @@ var JavaMini = (function ()
 		superTypes: function (t)
 		{
 			var c = this.classes[t];
-			if (c) { return (c.ext ? [erase(c.ext)] : []).concat(c.impls.map(erase)); }
+			if (c) { return (c.ext ? [erase(c.ext)] : c.isEnum ? ["Comparable"] : []).concat(c.impls.map(erase)); }
 			return SUPERS[t] || [];
 		},
 		isSub: function (from, to)
@@ -1775,6 +1860,90 @@ var JavaMini = (function ()
 			if (assignable(from, to)) { return true; }
 			return isRef(from) && isRef(to) && !num(from) && from !== "boolean" && this.isSub(from, to);
 		},
+		/* Chaîne d'héritage (classes écrites dans le programme) : la classe, sa mère, sa grand-mère... */
+		chain: function (cls)
+		{
+			var out = [];
+			for (var c = cls; c && out.length < 60; c = c.ext ? this.classes[erase(c.ext)] : null) { out.push(c); }
+			return out;
+		},
+		findField: function (cls, n)
+		{
+			var ch = this.chain(cls);
+			for (var i = 0; i < ch.length; i++) { if (ch[i].finfo[n]) { return { f: ch[i].finfo[n], owner: ch[i] }; } }
+			return null;
+		},
+		/* Méthodes d'un nom donné, vues depuis cls : une méthode redéfinie cache celle de la mère (liaison dynamique). */
+		methodsOf: function (cls, name)
+		{
+			var seen = {}, out = [];
+			this.chain(cls).forEach(function (c)
+			{
+				(c.methods[name] || []).forEach(function (m)
+				{
+					var sig = m.params.map(function (p) { return erase(p.t); }).join(",");
+					if (seen[sig]) { return; }
+					seen[sig] = 1;
+					out.push(m);
+				});
+			});
+			return out;
+		},
+		isThrowable: function (t) { return this.isSub(t, "Throwable"); },
+		/* Comme javac : une exception contrôlée (pas RuntimeException) doit être attrapée ou annoncée par throws. */
+		checkChecked: function (classes)
+		{
+			var self = this;
+			function checked(t) { t = erase(t); return (self.classes[t] || EXC[t] !== undefined) && self.isSub(t, "Exception") && !self.isSub(t, "RuntimeException"); }
+			function verify(m, t, line, stack)
+			{
+				if (!checked(t)) { return; }
+				if (stack.some(function (c) { return self.isSub(t, c); })) { return; }
+				if ((m.throws || []).some(function (d) { return self.isSub(t, d); })) { return; }
+				throw cErr("exception " + erase(t) + " non signalée : attrape-la avec try / catch, ou ajoute throws " + erase(t) + " à " + (m.isCtorDecl ? "ce constructeur" : "la méthode " + m.name), line,
+					"Une exception qui hérite de Exception (et pas de RuntimeException) est « contrôlée » : Java oblige à la traiter ou à l'annoncer.");
+			}
+			function thrownBy(name, n, ctorOf)
+			{
+				var cands = [];
+				if (ctorOf) { var c = self.classes[ctorOf]; if (c) { cands = c.ctors.filter(function (k) { return k.params.length === n; }); } }
+				else { classes.forEach(function (c) { (c.methods[name] || []).forEach(function (mm) { if (mm.params.length === n) { cands.push(mm); } }); }); }
+				if (!cands.length) { return []; }
+				return (cands[0].throws || []).filter(function (t) { return cands.every(function (k) { return (k.throws || []).some(function (u) { return erase(u) === erase(t); }); }); });
+			}
+			function walkN(node, m, stack)
+			{
+				if (!node || typeof node !== "object") { return; }
+				if (Array.isArray(node)) { node.forEach(function (x) { walkN(x, m, stack); }); return; }
+				if ((node.k === "try" || node.k === "throw") && self.niveau < 2) { throw cErr("try / catch / throw ne sont pas au programme du semestre 1", node.line); }
+				if (node.k === "try")
+				{
+					var inner = stack.concat([].concat.apply([], node.catches.map(function (c) { return c.types; })));
+					walkN(node.body, m, inner);
+					node.catches.forEach(function (c) { walkN(c.body, m, stack); });
+					walkN(node.fin, m, stack);
+					return;
+				}
+				if (node.k === "throw" && node.e && node.e.k === "new") { verify(m, node.e.cls, node.line, stack); }
+				if (node.k === "call" && (!node.target || node.target.k === "this" || node.target.k === "super" || node.target.k === "name" || node.target.k === "field" || node.target.k === "call"))
+				{
+					thrownBy(node.name, node.args.length).forEach(function (t) { verify(m, t, node.line, stack); });
+				}
+				if (node.k === "new") { thrownBy(null, node.args.length, node.cls).forEach(function (t) { verify(m, t, node.line, stack); }); }
+				if (node.k === "superCall" || node.k === "thisCall") { /* constructeurs : vérifiés à leur déclaration */ }
+				for (var key in node)
+				{
+					if (key === "val" || key === "cls" || key === "line" || key === "k") { continue; }
+					var v = node[key];
+					if (v && typeof v === "object") { walkN(v, m, stack); }
+				}
+			}
+			classes.forEach(function (c)
+			{
+				for (var n in c.methods) { c.methods[n].forEach(function (m) { if (m.body) { walkN(m.body, m, []); } }); }
+				c.ctors.forEach(function (k) { k.isCtorDecl = true; k.name = c.name; walkN(k.body, k, []); });
+			});
+		},
 		/* Une classe concrète doit écrire toutes les méthodes de ses interfaces, en public. */
 		checkImplements: function (c)
 		{
@@ -1797,16 +1966,21 @@ var JavaMini = (function ()
 					else if (!ic && !KNOWN_TYPES[n]) { throw cErr("symbole introuvable : interface " + n, c.line); }
 					else if (ic && !ic.iface) { throw cErr(n + " est une classe, pas une interface : on écrit extends " + n + ", pas implements", c.line); }
 				});
-			})(c.impls);
+			})([].concat.apply([], self.chain(c).map(function (k) { return k.impls; })));
+			self.chain(c).slice(1).forEach(function (k)
+			{
+				if (!k.abs) { return; }
+				for (var mn in k.methods) { k.methods[mn].forEach(function (m) { if (m.abs) { need.push({ m: m, from: k.name, cls: true }); } }); }
+			});
 			need.forEach(function (r)
 			{
-				var mine = (c.methods[r.m.name] || []).filter(function (m) { return m.params.length === r.m.params.length && !m.stat; })[0];
+				var mine = self.methodsOf(c, r.m.name).filter(function (m) { return m.params.length === r.m.params.length && !m.stat && !m.abs; })[0];
 				if (!mine)
 				{
-					throw cErr(c.name + " n'est pas abstraite et n'écrit pas la méthode " + r.m.name + "(" + (r.m.params || []).map(function (p) { return p.t || "…"; }).join(", ") + ") de l'interface " + r.from, c.line,
-						"Une classe qui implémente une interface doit écrire toutes ses méthodes (même nom, mêmes paramètres).");
+					throw cErr(c.name + " n'est pas abstraite et n'écrit pas la méthode " + r.m.name + "(" + (r.m.params || []).map(function (p) { return p.t || "…"; }).join(", ") + ") " + (r.cls ? "déclarée abstract dans " : "de l'interface ") + r.from, c.line,
+						r.cls ? "Une classe qui hérite d'une classe abstraite doit écrire ses méthodes abstract, ou être elle-même abstract." : "Une classe qui implémente une interface doit écrire toutes ses méthodes (même nom, mêmes paramètres).");
 				}
-				if (!mine.pub) { throw cErr("la méthode " + r.m.name + " de " + c.name + " doit être public : elle vient de l'interface " + r.from, mine.line, "Les méthodes d'une interface sont public ; en les écrivant, on ne peut pas réduire l'accès."); }
+				if (!mine.pub && !r.cls) { throw cErr("la méthode " + r.m.name + " de " + c.name + " doit être public : elle vient de l'interface " + r.from, mine.line, "Les méthodes d'une interface sont public ; en les écrivant, on ne peut pas réduire l'accès."); }
 			});
 		},
 		write: function (s)
@@ -1831,6 +2005,19 @@ var JavaMini = (function ()
 			this.order.forEach(function (cls)
 			{
 				cls.fields.forEach(function (f) { if (f.stat) { cls.statics[f.name] = { t: f.t, val: defVal(f.t), init: true, fin: f.fin }; } });
+				(cls.consts || []).forEach(function (k) { cls.statics[k.name] = { t: cls.name, val: NULLV, init: true, fin: true }; });
+				});
+			// Constantes d'enum d'abord : elles doivent exister avant les attributs static des autres classes.
+			this.order.forEach(function (cls)
+			{
+				var efr = self.frame(cls, null, null);
+				(cls.consts || []).forEach(function (k, i)
+				{
+					var obj = { cls: cls, f: {}, finit: {}, id: self.nextId++, ord: i, ename: k.name };
+					cls.fields.forEach(function (f) { if (!f.stat) { obj.f[f.name] = defVal(f.t); } });
+					self.construct(cls, obj, self.evArgs(k.args, efr), k.line, { cls: cls });
+					cls.statics[k.name].val = mk(cls.name, obj);
+				});
 			});
 			this.order.forEach(function (cls)
 			{
@@ -1921,8 +2108,11 @@ var JavaMini = (function ()
 			if (obj.coll === "list") { return "[" + obj.data.map(function (x) { return x.v === obj ? "(this Collection)" : self.str(x, line); }).join(", ") + "]"; }
 			if (obj.coll === "map") { return "{" + this.mapOrder(obj).map(function (i) { return self.str(obj.keys[i], line) + "=" + self.str(obj.vals[i], line); }).join(", ") + "}"; }
 			if (obj.coll === "iter") { return "java.util.Iterator@" + hashOf(obj.id); }
+			if (obj.exc) { return this.excText(v); }
 			var cls = obj.cls;
-			var ts = (cls.methods.toString || []).filter(function (m) { return m.params.length === 0; })[0];
+			var ts = this.methodsOf(cls, "toString").filter(function (m) { return m.params.length === 0; })[0];
+			if (!ts && obj.ename !== undefined) { return obj.ename; }
+			if (!ts && this.isThrowable(cls.name)) { return this.excText(v); }
 			if (ts)
 			{
 				var r = this.invoke(ts, obj, [], line);
@@ -2015,7 +2205,7 @@ var JavaMini = (function ()
 		},
 		fieldRef: function (cls, obj, n, line, fr, implicit, viaClass)
 		{
-			var f = cls.finfo[n];
+			var found = this.findField(cls, n), f = found && found.f, owner = found ? found.owner : cls;
 			if (!f)
 			{
 				if (implicit)
@@ -2025,13 +2215,13 @@ var JavaMini = (function ()
 				}
 				throw cErr("symbole introuvable : " + n + " n'est pas un attribut de " + cls.name, line);
 			}
-			if (f.priv && fr.cls !== cls)
+			if (f.priv && fr.cls !== owner)
 			{
-				throw cErr(n + " a un accès private dans " + cls.name, line, "Un attribut private ne se lit que depuis sa classe : passe par un accesseur (get" + n.charAt(0).toUpperCase() + n.slice(1) + "()).");
+				throw cErr(n + " a un accès private dans " + owner.name, line, owner !== cls ? "Un attribut private de la classe mère n'est pas accessible dans la classe fille : déclare-le protected, ou passe par un accesseur." : "Un attribut private ne se lit que depuis sa classe : passe par un accesseur (get" + n.charAt(0).toUpperCase() + n.slice(1) + "()).");
 			}
 			if (f.stat)
 			{
-				var st = cls.statics[n];
+				var st = owner.statics[n];
 				return { t: f.t, get: function () { return st.val; }, set: function (v) { if (f.fin) { throw cErr("impossible de modifier " + n + " : c'est une constante (final)", line); } st.val = v; } };
 			}
 			if (viaClass) { throw cErr("l'attribut " + n + " n'est pas static : il faut un objet (" + cls.name + "." + n + " est impossible)", line); }
@@ -2050,7 +2240,7 @@ var JavaMini = (function ()
 		inCtor: function (fr, obj) { return fr.self === obj && fr.meth && fr.meth.isCtor; },
 		evTarget: function (node, fr)
 		{
-			if (node.k === "name" && !this.findVar(fr, node.name) && !(fr.cls.finfo[node.name]) && (this.classes[node.name] || BUILTIN[node.name]))
+			if (node.k === "name" && !this.findVar(fr, node.name) && !this.findField(fr.cls, node.name) && (this.classes[node.name] || BUILTIN[node.name]))
 			{
 				return mk("class", node.name);
 			}
@@ -2161,6 +2351,12 @@ var JavaMini = (function ()
 					finally { fr.scopes.pop(); }
 					return undefined;
 				case "switch": return this.execSwitch(s, fr);
+				case "throw":
+					var tv = this.ev(s.e, fr);
+					if (tv.t === "null") { throw rErr("java.lang.NullPointerException", s.line, "throw null : il faut lancer un objet exception (throw new ...)."); }
+					if (!(tv.v && (tv.v.exc || (tv.v.cls && this.isThrowable(tv.v.cls.name))))) { throw cErr("on ne peut lancer (throw) qu'une exception, pas un " + tv.t, s.line); }
+					throw { jthrow: tv, line: s.line };
+				case "try": return this.execTry(s, fr);
 				case "break": return BRK;
 				case "continue": return CNT;
 				case "return":
@@ -2183,10 +2379,97 @@ var JavaMini = (function ()
 			if (s.k === "block") { return this.block(s.body, fr); }
 			return this.exec(s, fr);
 		},
+		/* Exception Java correspondant à une erreur JS, ou null si elle ne doit pas être attrapée (compilation, boucle infinie...). */
+		javaExc: function (e)
+		{
+			if (e && e.jthrow) { return e.jthrow; }
+			if (e && e.isJava && e.kind === "runtime" && e.exc)
+			{
+				if (!e.jval) { e.jval = mk(e.exc, { exc: e.exc, full: e.excFull, msg: e.excMsg === null ? NULLV : mkStr(e.excMsg), id: this.nextId++ }); }
+				return e.jval;
+			}
+			if (e instanceof RangeError) { return mk("StackOverflowError", { exc: "StackOverflowError", full: "java.lang.StackOverflowError", msg: NULLV, id: this.nextId++ }); }
+			return null;
+		},
+		execTry: function (s, fr)
+		{
+			var result, pending = null;
+			try { result = this.block(s.body.body, fr); }
+			catch (e)
+			{
+				var ex = this.javaExc(e), self = this, cc = null;
+				if (ex) { cc = s.catches.filter(function (c) { return c.types.some(function (t) { return self.isSub(ex.t, t); }); })[0]; }
+				if (!cc) { pending = e; }
+				else
+				{
+					fr.scopes.push(Object.create(null));
+					try
+					{
+						fr.scopes[fr.scopes.length - 1][cc.name] = { t: cc.types.length === 1 ? cc.types[0] : "Exception", val: ex, init: true };
+						result = this.block(cc.body.body, fr);
+					}
+					catch (e2) { pending = e2; }
+					finally { fr.scopes.pop(); }
+				}
+			}
+			if (s.fin)
+			{
+				var fres = this.block(s.fin.body, fr);
+				if (fres) { return fres; }
+			}
+			if (pending) { throw pending; }
+			return result;
+		},
+		classOf: function (o)
+		{
+			var n = o.cls ? o.cls.name : o.exc;
+			this.classObjs = this.classObjs || {};
+			if (!this.classObjs[n]) { this.classObjs[n] = mk("Class", { isClass: true, cname: n, id: this.nextId++ }); }
+			return this.classObjs[n];
+		},
+		enumCall: function (t, name, args, line)
+		{
+			var o = t.v;
+			if (name === "compareTo" || name === "equals")
+			{
+				if (args.length !== 1) { throw cErr(name + " attend un paramètre", line); }
+				if (name === "equals") { return mk("boolean", args[0].v === o); }
+				if (args[0].t === "null") { throw rErr("java.lang.NullPointerException", line); }
+				if (args[0].t !== t.t) { throw cErr("compareTo : il faut comparer deux " + t.t, line); }
+				return mk("int", o.ord - args[0].v.ord);
+			}
+			if (args.length) { throw cErr(name + "() ne prend pas de paramètre", line); }
+			if (name === "ordinal") { return mk("int", o.ord); }
+			if (name === "hashCode") { return mk("int", parseInt(hashOf(o.id), 16) | 0); }
+			return mkStr(name === "name" ? o.ename : this.str(t, line));
+		},
+		excName: function (v)
+		{
+			if (v.v.exc) { return v.v.full || ((EXC_PKG[v.v.exc] || "java.lang") + "." + v.v.exc); }
+			return v.v.cls.name;
+		},
+		excText: function (v)
+		{
+			var msg = v.v.msg;
+			return this.excName(v) + (msg && msg.t !== "null" ? ": " + this.str(msg) : "");
+		},
+		throwableCall: function (t, name, args, line)
+		{
+			if (args.length) { throw cErr(name + "() ne prend pas de paramètre ici", line); }
+			switch (name)
+			{
+				case "getMessage": return t.v.msg || NULLV;
+				case "toString": return mkStr(this.excText(t));
+				case "printStackTrace": return VOID; // la trace part sur la sortie d'erreur
+			}
+			throw cErr("la méthode " + name + "() n'est pas disponible pour une exception (getMessage, toString, printStackTrace)", line);
+		},
 		execSwitch: function (s, fr)
 		{
 			var v = this.ev(s.e, fr);
-			if (!(v.t === "int" || v.t === "char" || v.t === "String")) { throw cErr("switch accepte un int, un char ou une String, pas un " + v.t, s.line); }
+			if (v.t === "null") { throw rErr("java.lang.NullPointerException", s.line, "La valeur testée par le switch vaut null."); }
+			var ecls = this.classes[v.t] && this.classes[v.t].isEnum ? this.classes[v.t] : null;
+			if (!(v.t === "int" || v.t === "char" || v.t === "String" || ecls)) { throw cErr("switch accepte un int, un char, une String ou un enum, pas un " + v.t, s.line); }
 			var start = -1, def = -1, i, j, r;
 			for (i = 0; i < s.cases.length && start < 0; i++)
 			{
@@ -2194,7 +2477,15 @@ var JavaMini = (function ()
 				if (!c.labels) { def = i; continue; }
 				for (j = 0; j < c.labels.length; j++)
 				{
-					var lv = this.ev(c.labels[j], fr);
+					var lb = c.labels[j], lv;
+					if (ecls)
+					{
+						var ln = lb.k === "name" ? lb.name : (lb.k === "field" ? lb.name : null);
+						if (!ln || !ecls.finfo[ln] || !ecls.finfo[ln].isConst) { throw cErr("case : il faut une constante de " + ecls.name, c.line); }
+						if (v.v === ecls.statics[ln].val.v) { start = i; break; }
+						continue;
+					}
+					lv = this.ev(lb, fr);
 					var eq = v.t === "String" ? (lv.t === "String" && lv.v.s === v.v.s) : (num(lv.t) && lv.v === v.v);
 					if (v.t === "String" && lv.t !== "String") { throw cErr("case " + this.str(lv) + " : il faut une String dans ce switch", c.line); }
 					if (eq) { start = i; break; }
@@ -2228,6 +2519,7 @@ var JavaMini = (function ()
 		{
 			if (++this.depth > 600)
 			{
+				this.depth--;
 				throw rErr("java.lang.StackOverflowError", line, "La méthode s'appelle sans fin (récursivité sans condition d'arrêt ?).");
 			}
 			var fr = this.frame(m.cls, obj, m);
@@ -2284,8 +2576,18 @@ var JavaMini = (function ()
 			var name = node.name, args, list;
 			if (!node.target)
 			{
-				list = fr.cls.methods[name];
-				if (!list)
+				var privs = (fr.cls.methods[name] || []).filter(function (m) { return m.priv; });
+				list = privs.length ? fr.cls.methods[name] : this.methodsOf(fr.self && !(fr.meth && fr.meth.stat) ? fr.self.cls : fr.cls, name);
+				if (!list.length) { list = this.methodsOf(fr.cls, name); }
+				if (!list.length && fr.cls.isEnum && (name === "values" || name === "valueOf")) { return this.staticCall(fr.cls.name, name, this.evArgs(node.args, fr), node, fr); }
+				if (!list.length && name === "getClass" && !node.args.length && fr.self && !(fr.meth && fr.meth.stat)) { return this.classOf(fr.self); }
+				if (!list.length && fr.self && !(fr.meth && fr.meth.stat))
+				{
+					var sv = mk(fr.self.cls.name, fr.self);
+					if (fr.self.cls.isEnum && /^(ordinal|name|toString|compareTo|equals|hashCode)$/.test(name)) { return this.enumCall(sv, name, this.evArgs(node.args, fr), node.line); }
+					if (this.isThrowable(fr.self.cls.name) && /^(getMessage|toString|printStackTrace)$/.test(name)) { return this.throwableCall(sv, name, this.evArgs(node.args, fr), node.line); }
+				}
+				if (!list.length)
 				{
 					throw cErr("symbole introuvable : méthode " + name + "(...)", node.line,
 						"Vérifie le nom (majuscules comprises). Pour une méthode d'une autre classe : NomClasse." + name + "(...).");
@@ -2300,6 +2602,30 @@ var JavaMini = (function ()
 				return this.invoke(m, m.stat ? null : fr.self, args, node.line);
 			}
 			var tg = node.target;
+			if (tg.k === "super")
+			{
+				if (!fr.self) { throw cErr("super n'existe pas dans une méthode static", node.line); }
+				var here = fr.meth && fr.meth.cls ? fr.meth.cls : fr.cls;
+				var parent = here.ext ? this.classes[erase(here.ext)] : null;
+				args = this.evArgs(node.args, fr);
+				if (!parent)
+				{
+					if (here.ext && EXC[erase(here.ext)] !== undefined) { return this.throwableCall(mk(fr.self.cls.name, fr.self), name, args, node.line); }
+					if (name === "toString" && !args.length) { return mkStr(fr.self.cls.name + "@" + hashOf(fr.self.id)); }
+					if (name === "equals" && args.length === 1) { return mk("boolean", args[0].v === fr.self); }
+					throw cErr(here.name + " n'a pas de classe mère qui définit " + name + "(...)", node.line);
+				}
+				var sl = this.methodsOf(parent, name);
+				if (!sl.length)
+				{
+					if (name === "toString" && !args.length) { return mkStr(fr.self.cls.name + "@" + hashOf(fr.self.id)); }
+					throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe mère " + parent.name, node.line);
+				}
+				var sm = this.pick(sl, args, "la méthode " + name, node.line);
+				if (sm.abs) { throw cErr("la méthode " + name + " est abstract dans " + parent.name + " : super." + name + "(...) n'a rien à exécuter", node.line); }
+				if (sm.priv) { throw cErr(name + "(...) a un accès private dans " + parent.name, node.line); }
+				return this.invoke(sm, sm.stat ? null : fr.self, args, node.line);
+			}
 			if (tg.k === "field" && tg.obj.k === "name" && tg.obj.name === "System" && !this.findVar(fr, "System"))
 			{
 				if (tg.name === "out" || tg.name === "err") { return this.printCall(node, fr); }
@@ -2320,17 +2646,26 @@ var JavaMini = (function ()
 			}
 			if (num(t.t) || t.t === "boolean") { throw cErr(t.t + " est un type de base : il n'a pas de méthode " + name + "()", node.line); }
 			if (t.v && t.v.coll) { return this.collCall(t, name, args, node, fr); }
-			var obj = t.v, cls = obj.cls;
-			list = cls.methods[name];
-			if (!list)
+			if (t.v && t.v.isClass)
 			{
+				if (args.length || !/^(getSimpleName|getName)$/.test(name)) { throw cErr("sur un objet Class, seules getSimpleName() et getName() sont disponibles ici", node.line); }
+				return mkStr(t.v.cname);
+			}
+			if (name === "getClass" && !args.length && t.v && (t.v.cls || t.v.exc)) { return this.classOf(t.v); }
+			if (t.v && t.v.exc) { return this.throwableCall(t, name, args, node.line); }
+			var obj = t.v, cls = obj.cls;
+			list = this.methodsOf(cls, name);
+			if (!list.length)
+			{
+				if (this.isThrowable(cls.name) && /^(getMessage|toString|printStackTrace)$/.test(name)) { return this.throwableCall(t, name, args, node.line); }
+				if (cls.isEnum && /^(ordinal|name|toString|compareTo|equals|hashCode)$/.test(name)) { return this.enumCall(t, name, args, node.line); }
 				if (name === "hashCode" && !args.length) { return mk("int", javaHash(t)); }
 				if (name === "equals" && args.length === 1) { return mk("boolean", args[0].v === obj); }
 				if (name === "toString" && !args.length) { return mkStr(this.str(t, node.line)); }
 				throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe " + cls.name, node.line);
 			}
 			var mm = this.pick(list, args, "la méthode " + name, node.line);
-			if (mm.priv && fr.cls !== cls) { throw cErr(name + "(...) a un accès private dans " + cls.name, node.line); }
+			if (mm.priv && fr.cls !== mm.cls) { throw cErr(name + "(...) a un accès private dans " + mm.cls.name, node.line); }
 			return this.invoke(mm, mm.stat ? null : obj, args, node.line);
 		},
 		printCall: function (node, fr)
@@ -2433,11 +2768,22 @@ var JavaMini = (function ()
 			var cls = this.classes[cname];
 			if (cls)
 			{
-				var list = cls.methods[name];
-				if (!list) { throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe " + cname, line); }
+				var list = this.methodsOf(cls, name);
+				if (cls.isEnum && name === "values" && !args.length)
+				{
+					return mk(cname + "[]", { data: cls.consts.map(function (k) { return cls.statics[k.name].val; }), id: this.nextId++ });
+				}
+				if (cls.isEnum && name === "valueOf" && args.length === 1 && (args[0].t === "String" || args[0].t === "null") && !list.some(function (mm) { return mm.params.length === 1 && erase(mm.params[0].t) === "String"; }))
+				{
+					if (args[0].t === "null") { throw rErr("java.lang.NullPointerException: Name is null", line); }
+					var kc = cls.consts.filter(function (k) { return k.name === args[0].v.s; })[0];
+					if (!kc) { throw rErr("java.lang.IllegalArgumentException: No enum constant " + cname + "." + args[0].v.s, line); }
+					return cls.statics[kc.name].val;
+				}
+				if (!list.length) { throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe " + cname, line); }
 				var m = this.pick(list, args, "la méthode " + cname + "." + name, line);
 				if (!m.stat) { throw cErr("la méthode " + name + " n'est pas static : il faut l'appeler sur un objet, pas sur la classe " + cname, line); }
-				if (m.priv && fr.cls !== cls) { throw cErr(name + "(...) a un accès private dans " + cname, line); }
+				if (m.priv && fr.cls !== m.cls) { throw cErr(name + "(...) a un accès private dans " + m.cls.name, line); }
 				return this.invoke(m, null, args, line);
 			}
 			if (cname === "Clavier")
@@ -2495,7 +2841,14 @@ var JavaMini = (function ()
 					return mk(name === "parseInt" ? "int" : "long", parseInt(a0.v.s, 10));
 				}
 				if (name === "toString") { need(1); return mkStr(this.str(a0, line)); }
-			}
+				if (name === "valueOf" && this.niveau >= 2)
+				{
+					need(1);
+					if (a0.t === "String") { return this.staticCall(cname, cname === "Integer" ? "parseInt" : "parseLong", args, node, fr); }
+					if (a0.t !== "int" && a0.t !== "char" && a0.t !== "long") { throw cErr(cname + ".valueOf attend un entier ou une String", line); }
+					return { t: cname === "Integer" ? "int" : "long", v: a0.t === "char" ? a0.v : a0.v, boxed: true };
+				}
+				}
 			if (cname === "Double" && name === "parseDouble")
 			{
 				need(1, ["String"]);
@@ -2610,7 +2963,8 @@ var JavaMini = (function ()
 			if (a.t === "String" && b.t === "String") { return this.stringCall(a, "compareTo", [b], { line: line }).v; }
 			if (num(a.t) && num(b.t)) { return a.v < b.v ? -1 : (a.v > b.v ? 1 : 0); }
 			var c = a.v && a.v.cls;
-			var ct = c && (c.methods.compareTo || []).filter(function (m) { return m.params.length === 1; })[0];
+			if (c && c.isEnum && b.v && b.v.cls === c) { return a.v.ord - b.v.ord; }
+			var ct = c && this.methodsOf(c, "compareTo").filter(function (m) { return m.params.length === 1; })[0];
 			if (!ct || !this.isSub(c.name, "Comparable"))
 			{
 				throw cErr("impossible de trier des " + a.t + " : la classe " + a.t + " doit implémenter Comparable<" + a.t + "> (et sa méthode compareTo)", line,
@@ -2763,7 +3117,7 @@ var JavaMini = (function ()
 				case "set": need(2); var k = idx(a0, d.length); var prev = d[k]; d[k] = args[1]; return prev;
 				case "remove":
 					need(1);
-					if (a0.t === "int" || a0.t === "char") { var j = idx(a0, d.length); var rem = d.splice(j, 1)[0]; o.mod++; return rem; }
+					if ((a0.t === "int" || a0.t === "char") && !a0.boxed) { var j = idx(a0, d.length); var rem = d.splice(j, 1)[0]; o.mod++; return rem; }
 					for (var q = 0; q < d.length; q++) { if (this.eqVal(d[q], a0, line)) { d.splice(q, 1); o.mod++; return mk("boolean", true); } }
 					return mk("boolean", false);
 				case "size": need(0); return mk("int", d.length);
@@ -2811,16 +3165,19 @@ var JavaMini = (function ()
 				if (src) { this.mapOrder(src).forEach(function (i) { this.mapPut(mo, src.keys[i], src.vals[i]); }, this); }
 				return mk(cname, mo);
 			}
+			if (EXC[cname] !== undefined)
+			{
+				if (args.length > 1 || (args.length === 1 && args[0].t !== "String" && args[0].t !== "null")) { throw cErr("new " + cname + "(...) attend au plus un message (String)", node.line); }
+				return mk(cname, { exc: cname, msg: args.length ? args[0] : NULLV, id: this.nextId++ });
+			}
 			if (KNOWN_TYPES[cname]) { throw cErr(cname + " est une interface : on ne peut pas créer d'objet avec new " + cname + " (utilise par exemple new ArrayList<>())", node.line); }
 			if (cname === "ControleGraphique") { throw cErr("ControleGraphique (dessin) n'est pas disponible dans le site", node.line); }
 			var cls = this.classes[cname];
 			if (!cls) { throw cErr("symbole introuvable : classe " + cname, node.line, "Vérifie le nom de la classe (majuscule au début) ou qu'elle est bien écrite."); }
 			if (cls.abs) { throw cErr(cname + " est " + (cls.iface ? "une interface" : "abstraite") + " : on ne peut pas créer d'objet avec new " + cname, node.line, "On crée un objet d'une classe concrète qui " + (cls.iface ? "implémente l'interface." : "hérite de " + cname + ".")); }
+			if (cls.isEnum) { throw cErr("on ne peut pas créer d'objet d'un enum avec new : utilise ses constantes (" + cname + "." + (cls.consts[0] ? cls.consts[0].name : "X") + ")", node.line); }
 			var obj = { cls: cls, f: {}, finit: {}, id: this.nextId++ };
-			var self = this;
-			cls.fields.forEach(function (f) { if (!f.stat) { obj.f[f.name] = defVal(f.t); } });
-			var ifr = this.frame(cls, obj, { name: cname, isCtor: true, ret: "void" });
-			cls.fields.forEach(function (f) { if (!f.stat && f.init) { obj.f[f.name] = self.initVal(f.init, f.t, ifr); obj.finit[f.name] = true; } });
+			this.chain(cls).forEach(function (c) { c.fields.forEach(function (f) { if (!f.stat) { obj.f[f.name] = defVal(f.t); } }); });
 			this.construct(cls, obj, args, node.line, fr);
 			return mk(cname, obj);
 		},
@@ -2829,6 +3186,8 @@ var JavaMini = (function ()
 			if (!cls.ctors.length)
 			{
 				if (args.length) { throw cErr("la classe " + cls.name + " n'a pas de constructeur avec paramètres", line); }
+				this.superInit(cls, obj, [], line, false);
+				this.initFields(cls, obj);
 				return;
 			}
 			var c = this.pick(cls.ctors, args, "le constructeur " + cls.name, line);
@@ -2836,7 +3195,63 @@ var JavaMini = (function ()
 			c.name = cls.name;
 			c.isCtor = true;
 			c.ret = "void";
-			this.invoke(c, obj, args, line);
+			this.runCtor(c, cls, obj, args, line);
+		},
+		/* Un constructeur : this(...) ou super(...) d'abord (super() implicite sinon), puis les initialisations d'attributs, puis le reste. */
+		runCtor: function (c, cls, obj, args, line)
+		{
+			if (++this.depth > 600) { this.depth--; throw rErr("java.lang.StackOverflowError", line, "Les constructeurs s'appellent sans fin."); }
+			var fr = this.frame(cls, obj, c);
+			try
+			{
+				for (var i = 0; i < c.params.length; i++) { fr.scopes[0][c.params[i].name] = { t: c.params[i].t, val: this.conv(args[i], c.params[i].t, line), init: true }; }
+				var body = c.body.body, first = body[0], start = 0;
+				if (first && first.k === "expr" && first.e.k === "thisCall")
+				{
+					this.construct(cls, obj, this.evArgs(first.e.args, fr), first.line, fr);
+					start = 1;
+				}
+				else
+				{
+					var sargs = [], explicit = false;
+					if (first && first.k === "expr" && first.e.k === "superCall") { sargs = this.evArgs(first.e.args, fr); explicit = true; start = 1; }
+					this.superInit(cls, obj, sargs, explicit ? first.line : c.line, explicit, fr);
+					this.initFields(cls, obj);
+				}
+				var r = this.block(body.slice(start), fr);
+				if (r === BRK || r === CNT) { throw cErr("break ou continue en dehors d'une boucle", c.line); }
+				return VOID;
+			}
+			finally { this.depth--; }
+		},
+		superInit: function (cls, obj, sargs, line, explicit, fr)
+		{
+			if (!cls.ext)
+			{
+				if (explicit && sargs.length) { throw cErr(cls.name + " n'a pas de classe mère : super(...) ne prend pas de paramètre ici", line); }
+				return;
+			}
+			var pn = erase(cls.ext), pc = this.classes[pn];
+			if (pc)
+			{
+				if (!explicit && pc.ctors.length && !pc.ctors.some(function (k) { return k.params.length === 0; }))
+				{
+					throw cErr("le constructeur de " + cls.name + " doit commencer par super(...) : la classe mère " + pn + " n'a pas de constructeur sans paramètre", line,
+						"Le constructeur d'une classe fille appelle d'abord celui de la mère. Écris super(...) avec les paramètres attendus par " + pn + ", en première ligne.");
+				}
+				this.construct(pc, obj, sargs, line, fr || { cls: cls });
+				return;
+			}
+			if (EXC[pn] !== undefined)
+			{
+				if (sargs.length > 1) { throw cErr("super(...) : une exception reçoit au plus un message", line); }
+				obj.msg = sargs.length ? sargs[0] : NULLV;
+			}
+		},
+		initFields: function (cls, obj)
+		{
+			var self = this, ifr = this.frame(cls, obj, { name: cls.name, isCtor: true, ret: "void" });
+			cls.fields.forEach(function (f) { if (!f.stat && f.init) { obj.f[f.name] = self.initVal(f.init, f.t, ifr); obj.finit[f.name] = true; } });
 		},
 		newArray: function (base, sizes, k, extra, line)
 		{
@@ -2890,10 +3305,9 @@ var JavaMini = (function ()
 					return this.ref({ k: "field", obj: { k: "lit", val: tgt, line: n.line }, name: n.name, line: n.line }, fr).get();
 				case "idx": return this.ref(n, fr).get();
 				case "call": return this.call(n, fr);
-				case "thisCall":
-					if (!fr.meth || !fr.meth.isCtor || !fr.self) { throw cErr("this(...) ne s'utilise qu'au début d'un constructeur", n.line); }
-					this.construct(fr.self.cls, fr.self, this.evArgs(n.args, fr), n.line, fr);
-					return VOID;
+				case "thisCall": throw cErr("this(...) doit être la première instruction d'un constructeur", n.line);
+				case "superCall": throw cErr("super(...) doit être la première instruction d'un constructeur", n.line);
+				case "super": throw cErr("super s'utilise avec un point : super.methode(...)", n.line);
 				case "new": return this.newObj(n, fr);
 				case "newArr":
 					var sizes = n.dims.map(function (d)
@@ -3073,6 +3487,13 @@ var JavaMini = (function ()
 		catch (e)
 		{
 			if (e && e.kind === "exit") { return { out: m.out.join(""), error: null, steps: m.steps }; }
+			if (e && e.jthrow && m)
+			{
+				var txt;
+				try { txt = m.str(e.jthrow, e.line); } catch (x) { txt = e.jthrow.t; }
+				if (e.jthrow.v && e.jthrow.v.cls) { txt = m.excText(e.jthrow); }
+				e = JErr("runtime", 'Exception in thread "main" ' + txt, e.line, "Cette exception n'a été attrapée par aucun catch.");
+			}
 			if (!e || !e.isJava)
 			{
 				if (e instanceof RangeError) { e = JErr("runtime", 'Exception in thread "main" java.lang.StackOverflowError', 0, "Trop d'appels imbriqués."); }
@@ -11520,6 +11941,3981 @@ public class Panier
 	]
 });
 
+/* ---------------------------------------------------------------- 4 (TP4) */
+OBJETS_UNITES.push({
+	id: "o04", num: 4, titre: "Des objets qui en rangent d'autres", badge: "Chef de région",
+	idee: [
+		"Un objet peut ranger d'autres objets dans un attribut tableau : une `Region` garde ses départements dans `Departement[] tabDept`, avec un compteur `nbDept` des cases déjà remplies. Le tableau a une taille fixe ; le compteur dit où ajouter le suivant.",
+		"Un calcul global se fait en **déléguant** : pour sa population, la région parcourt ses `nbDept` départements et demande à chacun `getPopulation()`. Jamais jusqu'à `tabDept.length` : les cases vides valent `null`.",
+		"Une appli bien rangée sépare trois rôles : le **Métier** (données et calculs, aucun affichage), l'**IHM** (affichage et saisies) et le **Contrôleur** (il crée les deux et enchaîne le menu)."
+	],
+	exemple: {
+		java: T(`
+public class Region
+{
+    private String        nom;
+    private Departement[] tabDept;
+    private int           nbDept;
+
+    public Region(String nom, int nbDeptTotal)
+    {
+        this.nom     = nom;
+        this.tabDept = new Departement[nbDeptTotal];
+        this.nbDept  = 0;
+    }
+
+    public boolean ajouterDepartement(Departement dep)
+    {
+        if (dep == null || this.nbDept == this.tabDept.length)
+        {
+            return false;
+        }
+        this.tabDept[this.nbDept] = dep;
+        this.nbDept++;
+        return true;
+    }
+
+    public int getPopulation()
+    {
+        int total = 0;
+        for (int cpt = 0; cpt < this.nbDept; cpt++)
+        {
+            total += this.tabDept[cpt].getPopulation();
+        }
+        return total;
+    }
+}
+
+class Departement
+{
+    private String nom;
+    private int    population;
+
+    public Departement(String nom, int population)
+    {
+        this.nom        = nom;
+        this.population = population;
+    }
+
+    public int getPopulation()
+    {
+        return this.population;
+    }
+}`),
+		note: "`ajouterDepartement` renvoie `false` quand la région est pleine : c'est l'appelant qui décide quoi faire. Dans l'appli complète, le `Metier` charge toutes les régions, l'`IHM` les affiche avec `String.format`, et le `Controleur` boucle sur le menu."
+	},
+	exos: [
+		{ id: "o04.cases", k: "qcm", q: "On crée `new Region(\"Bretagne\", 4)` puis on ajoute 3 départements. Que valent `tabDept.length` et `nbDept` ?",
+			opts: ["4 et 3", "3 et 3", "4 et 4", "3 et 4"], a: 0,
+			expl: "`tabDept.length` est la taille fixée à la création (4 cases). `nbDept` compte les cases remplies (3). La 4e case vaut encore `null`." },
+		{ id: "o04.ajout", k: "fill", q: "Complète `ajouterDepartement` : refuser si la région est pleine, sinon ranger le département dans la première case libre.",
+			code: T(`
+public boolean ajouterDepartement(Departement dep)
+{
+    if (dep == null || this.nbDept == this.tabDept.___)
+    {
+        return false;
+    }
+    this.tabDept[this.nbDept___] = dep;
+    return true;
+}`),
+			trous: [["length"], ["++"]],
+			expl: "La région est pleine quand `nbDept` atteint la taille du tableau. `tabDept[nbDept++] = dep` range dans la case `nbDept` **puis** augmente le compteur." },
+		{ id: "o04.somme", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class TestRegion
+{
+    public static void main(String[] args)
+    {
+        Region r = new Region("Normandie", 5);
+        r.ajouterDepartement(new Departement("Calvados", 700));
+        r.ajouterDepartement(new Departement("Manche", 500));
+        r.ajouterDepartement(null);
+        r.ajouterDepartement(new Departement("Orne", 280));
+        System.out.println(r.getNbDept() + " " + r.getPopulation());
+    }
+}
+
+class Region
+{
+    private String        nom;
+    private Departement[] tabDept;
+    private int           nbDept;
+
+    public Region(String nom, int nbDeptTotal)
+    {
+        this.nom     = nom;
+        this.tabDept = new Departement[nbDeptTotal];
+    }
+
+    public boolean ajouterDepartement(Departement dep)
+    {
+        if (dep == null || this.nbDept == this.tabDept.length)
+        {
+            return false;
+        }
+        this.tabDept[this.nbDept++] = dep;
+        return true;
+    }
+
+    public int getNbDept()
+    {
+        return this.nbDept;
+    }
+
+    public int getPopulation()
+    {
+        int total = 0;
+        for (int cpt = 0; cpt < this.nbDept; cpt++)
+        {
+            total += this.tabDept[cpt].getPopulation();
+        }
+        return total;
+    }
+}
+
+class Departement
+{
+    private String nom;
+    private int    population;
+
+    public Departement(String nom, int population)
+    {
+        this.nom        = nom;
+        this.population = population;
+    }
+
+    public int getPopulation()
+    {
+        return this.population;
+    }
+}`),
+			expl: "L'ajout de `null` est refusé : il y a 3 départements. La région additionne 700 + 500 + 280 = 1480." },
+		{ id: "o04.boucle", k: "bug",
+			code: T(`
+public class Test
+{
+    public static void main(String[] args)
+    {
+        Region r = new Region(4);
+        r.ajouter(new Departement(120));
+        r.ajouter(new Departement(80));
+        System.out.println(r.getPopulation());
+    }
+}
+
+class Region
+{
+    private Departement[] tabDept;
+    private int           nbDept;
+
+    public Region(int nbDeptTotal)
+    {
+        this.tabDept = new Departement[nbDeptTotal];
+    }
+
+    public void ajouter(Departement d)
+    {
+        this.tabDept[this.nbDept++] = d;
+    }
+
+    public int getPopulation()
+    {
+        int total = 0;
+        for (int cpt = 0; cpt < this.tabDept.length; cpt++)
+        {
+            total += this.tabDept[cpt].getPopulation();
+        }
+        return total;
+    }
+}
+
+class Departement
+{
+    private int population;
+
+    public Departement(int population)
+    {
+        this.population = population;
+    }
+
+    public int getPopulation()
+    {
+        return this.population;
+    }
+}`),
+			ligne: 30, fix: ["for (int cpt = 0; cpt < this.nbDept; cpt++)"],
+			expl: "La boucle va jusqu'à `tabDept.length` (4) alors que seules 2 cases sont remplies : `tabDept[2]` vaut `null`, et `null.getPopulation()` lève une `NullPointerException`. On s'arrête à `nbDept`." },
+		{ id: "o04.format", k: "predict",
+			q: "Les crochets montrent les largeurs. Qu'affiche ce programme ?",
+			code: T(`
+public class Format
+{
+    public static void main(String[] args)
+    {
+        String num = "14";
+        String nom = "Calvados";
+        int    pop = 694905;
+        double dens = 125.3478;
+        System.out.println("[" + String.format("%3s", num) + "][" + String.format("%-10s", nom) + "]");
+        System.out.println("[" + String.format("%8d", pop) + "][" + String.format("%7.2f", dens) + "]");
+    }
+}`),
+			expl: "`%3s` cale à droite sur 3 caractères (` 14`), `%-10s` cale à gauche sur 10. `%8d` met 8 caractères pour l'entier, `%7.2f` 7 caractères en tout, dont 2 décimales (virgule en français)." },
+		{ id: "o04.mvc", k: "qcm", q: "Dans l'appli démographie, où doit se trouver l'affichage du menu (`System.out.println(\"1 - Lister les départements\")`) ?",
+			opts: ["Dans l'IHM", "Dans le Métier", "Dans le Contrôleur", "Dans la classe Departement"], a: 0,
+			expl: "Tout ce qui se voit ou se saisit va dans l'IHM. Le Métier ne fait que des calculs : on pourrait le réutiliser tel quel avec une fenêtre graphique." },
+		{ id: "o04.ctrl", k: "qcm", q: "Quel est le rôle du Contrôleur ?",
+			opts: ["Créer le Métier et l'IHM, puis enchaîner le menu et les actions", "Charger les données depuis le fichier", "Calculer les densités", "Mettre en forme les tableaux avec String.format"], a: 0,
+			expl: "Le Contrôleur fait le lien : il demande un choix à l'IHM, puis appelle la bonne méthode. Le chargement et les calculs sont au Métier, la mise en forme à l'IHM." },
+		{ id: "o04.dept", k: "code", mode: "class", fichier: "Departement.java",
+			enonce: "Écris la classe `Departement` : attributs `numero` (String), `nom`, `population` et `superficie` (int), un constructeur, les accesseurs `getPopulation()` et `getSuperficie()`, `densite()` (habitants par km², en `double`) et `toString()`, qui renvoie le numéro sur 3 caractères calé à droite, deux espaces, le nom sur 12 caractères calé à gauche, puis la densité sur 8 caractères avec 1 décimale et ` hab/km²`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestDepartement
+{
+    public static void main(String[] args)
+    {
+        Departement d1 = new Departement("14", "Calvados", 694905, 5548);
+        Departement d2 = new Departement("2A", "Corse-du-Sud", 158507, 4014);
+        System.out.println(d1);
+        System.out.println(d2);
+        System.out.println(d1.getPopulation() + d2.getPopulation());
+    }
+}`),
+			depart: T(`
+public class Departement
+{
+
+}`),
+			solution: T(`
+public class Departement
+{
+    private String numero;
+    private String nom;
+    private int    population;
+    private int    superficie;
+
+    public Departement(String numero, String nom, int population, int superficie)
+    {
+        this.numero     = numero;
+        this.nom        = nom;
+        this.population = population;
+        this.superficie = superficie;
+    }
+
+    public int getPopulation()
+    {
+        return this.population;
+    }
+
+    public int getSuperficie()
+    {
+        return this.superficie;
+    }
+
+    public double densite()
+    {
+        return (double) this.population / this.superficie;
+    }
+
+    public String toString()
+    {
+        return String.format("%3s", this.numero) + "  " + String.format("%-12s", this.nom) + String.format("%8.1f", this.densite()) + " hab/km²";
+    }
+}`),
+			indices: ["Attention à la division : `this.population / this.superficie` entre deux `int` perd les décimales. Écris `(double) this.population / this.superficie`.",
+				"`String.format(\"%3s\", numero)`, `String.format(\"%-12s\", nom)` (le `-` cale à gauche) et `String.format(\"%8.1f\", densite())`."] },
+		{ id: "o04.region", k: "code", mode: "class", fichier: "Region.java",
+			enonce: "Écris la classe `Region` : un `nom`, un tableau de `Departement` dont la taille est donnée au constructeur `Region(String nom, int nbDeptTotal)`, et le compteur `nbDept`. Méthodes : `ajouterDepartement(Departement d)` (renvoie `false` si `d` est `null` ou si la région est pleine), `getNbDept()`, `getPopulation()`, `getSuperficie()` et `densite()` (population / superficie de la région).",
+			regles: ["allman"],
+			harness: T(`
+public class TestRegion
+{
+    public static void main(String[] args)
+    {
+        Region r = new Region("Normandie", 3);
+        System.out.println(r.ajouterDepartement(new Departement("Calvados", 694905, 5548)));
+        System.out.println(r.ajouterDepartement(null));
+        r.ajouterDepartement(new Departement("Manche", 495045, 5938));
+        r.ajouterDepartement(new Departement("Orne", 279942, 6103));
+        System.out.println(r.ajouterDepartement(new Departement("Eure", 599507, 6040)));
+        System.out.println(r.getNbDept() + " départements");
+        System.out.println(r.getPopulation() + " habitants sur " + r.getSuperficie() + " km²");
+        System.out.println(String.format("%.2f", r.densite()));
+    }
+}
+
+class Departement
+{
+    private String nom;
+    private int    population;
+    private int    superficie;
+
+    public Departement(String nom, int population, int superficie)
+    {
+        this.nom        = nom;
+        this.population = population;
+        this.superficie = superficie;
+    }
+
+    public int getPopulation()
+    {
+        return this.population;
+    }
+
+    public int getSuperficie()
+    {
+        return this.superficie;
+    }
+}`),
+			depart: T(`
+public class Region
+{
+    private String        nom;
+    private Departement[] tabDept;
+    private int           nbDept;
+
+}`),
+			solution: T(`
+public class Region
+{
+    private String        nom;
+    private Departement[] tabDept;
+    private int           nbDept;
+
+    public Region(String nom, int nbDeptTotal)
+    {
+        this.nom     = nom;
+        this.tabDept = new Departement[nbDeptTotal];
+        this.nbDept  = 0;
+    }
+
+    public boolean ajouterDepartement(Departement d)
+    {
+        if (d == null || this.nbDept == this.tabDept.length)
+        {
+            return false;
+        }
+        this.tabDept[this.nbDept] = d;
+        this.nbDept++;
+        return true;
+    }
+
+    public int getNbDept()
+    {
+        return this.nbDept;
+    }
+
+    public int getPopulation()
+    {
+        int total = 0;
+        for (int cpt = 0; cpt < this.nbDept; cpt++)
+        {
+            total += this.tabDept[cpt].getPopulation();
+        }
+        return total;
+    }
+
+    public int getSuperficie()
+    {
+        int total = 0;
+        for (int cpt = 0; cpt < this.nbDept; cpt++)
+        {
+            total += this.tabDept[cpt].getSuperficie();
+        }
+        return total;
+    }
+
+    public double densite()
+    {
+        return (double) this.getPopulation() / this.getSuperficie();
+    }
+}`),
+			indices: ["Le constructeur crée le tableau : `this.tabDept = new Departement[nbDeptTotal];`. Pour ajouter : refuser si `d == null || nbDept == tabDept.length`, sinon `tabDept[nbDept] = d; nbDept++;`.",
+				"Les sommes parcourent seulement les cases remplies : `for (int cpt = 0; cpt < this.nbDept; cpt++)`. `densite()` réutilise `getPopulation()` et `getSuperficie()`, avec un `(double)` pour garder les décimales."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 5 (TP6) */
+OBJETS_UNITES.push({
+	id: "o05", num: 5, titre: "Paquetages et plateau de jeu", badge: "Maître du plateau",
+	idee: [
+		"Un **paquetage** range des classes dans un dossier : `package quarto.metier;` en toute première ligne, et le fichier va dans `quarto/metier/`. Pour utiliser une classe d'un autre paquetage : `import quarto.metier.Plateau;` (ou `import quarto.metier.*;`).",
+		"Sans `public`, une classe ou un membre n'est visible **que dans son paquetage**. `Piece` peut ainsi rester cachée dans `quarto.metier` : l'IHM ne parle qu'au `Plateau`, qui lui donne des `String`.",
+		"Un plateau de jeu est un tableau à deux dimensions d'objets : `Piece[][] tab = new Piece[4][4];`. Toutes les cases valent `null` au départ : on teste `tab[lig][col] == null` avant d'appeler une méthode dessus."
+	],
+	exemple: {
+		java: T(`
+public class Plateau
+{
+    private Piece[][] tabPiece;
+
+    public Plateau()
+    {
+        this.tabPiece = new Piece[4][4];      // 16 cases à null
+    }
+
+    public boolean poser(int lig, int col, Piece p)
+    {
+        if (lig < 0 || lig >= 4 || col < 0 || col >= 4 || this.tabPiece[lig][col] != null)
+        {
+            return false;
+        }
+        this.tabPiece[lig][col] = p;
+        return true;
+    }
+
+    public String getPiece(int lig, int col)
+    {
+        if (this.tabPiece[lig][col] == null)
+        {
+            return null;
+        }
+        return this.tabPiece[lig][col].toString();
+    }
+}
+
+class Piece                                    // pas public : cachée dans le paquetage
+{
+    private String code;                       // par exemple "BCGR" : bleue, creuse, grande, ronde
+
+    public Piece(String code)
+    {
+        this.code = code;
+    }
+
+    public String toString()
+    {
+        return this.code;
+    }
+}`),
+		note: "Dans le vrai projet, les deux classes commencent par `package quarto.metier;` et la fenêtre est dans `quarto.ihm`. Le site exécute tout dans un seul fichier, sans paquetage."
+	},
+	exos: [
+		{ id: "o05.pkg", k: "qcm", q: "Où écrit-on `package quarto.ihm;` dans le fichier `FramePlateau.java` ?",
+			opts: ["Tout en haut, avant les import", "Juste après les import", "Juste avant la déclaration de la classe, après les commentaires d'import", "Dans le constructeur"], a: 0,
+			expl: "La déclaration `package` est la première instruction du fichier (seuls des commentaires peuvent la précéder). Les `import` viennent ensuite." },
+		{ id: "o05.dossier", k: "qcm", q: "La classe `Plateau` déclare `package quarto.metier;`. Où doit se trouver son fichier ?",
+			opts: ["quarto/metier/Plateau.java", "metier/quarto/Plateau.java", "quarto.metier.Plateau.java", "N'importe où, le package suffit"], a: 0,
+			expl: "Chaque partie du nom du paquetage est un dossier : `quarto/metier/`. On compile et on lance depuis le dossier qui contient `quarto`." },
+		{ id: "o05.etoile", k: "qcm", q: "Que donne `import quarto.*;` ?",
+			opts: ["Les classes publiques du paquetage quarto, mais pas celles de quarto.metier ni de quarto.ihm", "Toutes les classes de quarto et de ses sous-paquetages", "Uniquement la classe quarto", "Une erreur : l'étoile est interdite"], a: 0,
+			expl: "L'étoile importe les classes d'**un** paquetage. Les sous-paquetages sont des paquetages à part : il faut `import quarto.metier.*;`." },
+		{ id: "o05.visible", k: "qcm", q: "`Piece` est déclarée `class Piece` (sans `public`) dans `quarto.metier`. Dans `quarto.ihm.PanelPlateau`, on écrit `Piece p = null;`. Que se passe-t-il ?",
+			opts: ["Erreur de compilation : Piece n'est pas visible hors de son paquetage", "Ça compile, car Piece est importée par import quarto.metier.*", "Ça compile, mais p ne pourra jamais recevoir d'objet", "Erreur seulement à l'exécution"], a: 0,
+			expl: "Sans `public`, la visibilité est limitée au paquetage, même avec un `import`. C'est voulu : l'IHM passe par le `Plateau`, qui renvoie des `String`." },
+		{ id: "o05.compte", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class TestPlateau
+{
+    public static void main(String[] args)
+    {
+        String[][] tab = new String[3][4];
+        tab[0][1] = "A";
+        tab[2][3] = "B";
+        tab[2][0] = "C";
+        int nb = 0;
+        for (int lig = 0; lig < tab.length; lig++)
+        {
+            for (int col = 0; col < tab[lig].length; col++)
+            {
+                if (tab[lig][col] == null)
+                {
+                    System.out.print(".");
+                }
+                else
+                {
+                    System.out.print(tab[lig][col]);
+                    nb++;
+                }
+            }
+            System.out.println();
+        }
+        System.out.println(nb + " / " + tab.length * tab[0].length);
+    }
+}`),
+			expl: "`tab.length` vaut 3 (les lignes), `tab[lig].length` vaut 4 (les colonnes). Les cases non remplies valent `null` et s'affichent `.`. 3 cases occupées sur 12." },
+		{ id: "o05.npe", k: "bug",
+			code: T(`
+public class Affichage
+{
+    public static void main(String[] args)
+    {
+        Piece[][] plateau = new Piece[2][2];
+        plateau[0][0] = new Piece("BCGR");
+        plateau[1][1] = new Piece("RPPC");
+        for (int lig = 0; lig < plateau.length; lig++)
+        {
+            for (int col = 0; col < plateau[lig].length; col++)
+            {
+                System.out.print(plateau[lig][col].toString() + " ");
+            }
+            System.out.println();
+        }
+    }
+}
+
+class Piece
+{
+    private String code;
+
+    public Piece(String code)
+    {
+        this.code = code;
+    }
+
+    public String toString()
+    {
+        return this.code;
+    }
+}`),
+			ligne: 12, fix: ["System.out.print((plateau[lig][col] == null ? \"....\" : plateau[lig][col].toString()) + \" \");"],
+			expl: "`plateau[0][1]` vaut `null` : appeler `toString()` dessus lève une `NullPointerException`. Il faut tester la case avant (ici avec l'opérateur `? :`)." },
+		{ id: "o05.fill", k: "fill", q: "Complète `estPlein()` : le plateau est plein quand aucune case ne vaut `null`.",
+			code: T(`
+public boolean estPlein()
+{
+    for (int lig = 0; lig < this.tabPiece.___; lig++)
+    {
+        for (int col = 0; col < this.tabPiece[___].length; col++)
+        {
+            if (this.tabPiece[lig][col] == ___)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}`),
+			trous: [["length"], ["lig"], ["null"]],
+			expl: "Première dimension : `tabPiece.length` lignes. Deuxième : `tabPiece[lig].length` colonnes. Dès qu'une case est vide, on peut répondre `false`." },
+		{ id: "o05.map", k: "qcm", q: "Le contrôleur du Quarto range dans une `HashMap<String, String>` le nom de l'image de chaque pièce (`\"BCGR\"` → `\"bleu_creux_grand_rond\"`). Que renvoie `hmImage.get(\"XXXX\")` si cette clé n'a jamais été ajoutée ?",
+			opts: ["null", "Une chaîne vide", "Une exception", "La dernière valeur ajoutée"], a: 0,
+			expl: "`get` renvoie la valeur associée à la clé, ou `null` si la clé est absente. `containsKey(cle)` permet de tester avant." },
+		{ id: "o05.mapcode", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.util.HashMap;
+
+public class Images
+{
+    public static void main(String[] args)
+    {
+        HashMap<String, String> hmImage = new HashMap<String, String>();
+        hmImage.put("BCGR", "bleu_creux_grand_rond");
+        hmImage.put("RPPC", "rouge_plein_petit_carre");
+        hmImage.put("BCGR", "bleu_creux_grand_rond_v2");
+        System.out.println(hmImage.size());
+        System.out.println(hmImage.get("BCGR"));
+        System.out.println(hmImage.get("RCPC") + " " + hmImage.containsKey("RPPC"));
+        String fichier = "img/" + hmImage.get("RPPC") + ".png";
+        System.out.println(fichier);
+    }
+}`),
+			expl: "Une clé n'existe qu'une fois : le second `put(\"BCGR\", ...)` **remplace** la valeur, la table garde 2 entrées. Une clé absente donne `null`. La table sert de dictionnaire : code de la pièce → nom du fichier image." },
+		{ id: "o05.quarto", k: "code", mode: "class", fichier: "Plateau.java",
+			enonce: "Écris la classe `Plateau` du Quarto (4 × 4 cases). Méthodes : `poser(int lig, int col, Piece p)` (renvoie `false` si la case est hors du plateau ou déjà prise), `estPlein()` et `ligneGagnante(int lig)` : vrai si la ligne a ses 4 pièces **et** qu'elles partagent au moins une caractéristique (`getCarac(i)` identique pour un même `i` entre 0 et 3).",
+			regles: ["allman"],
+			harness: T(`
+public class TestQuarto
+{
+    public static void main(String[] args)
+    {
+        Plateau p = new Plateau();
+        System.out.println(p.poser(0, 0, new Piece("BCGR")));
+        System.out.println(p.poser(0, 0, new Piece("RPPC")));
+        System.out.println(p.poser(4, 1, new Piece("RPPC")));
+        p.poser(0, 1, new Piece("RPGC"));
+        p.poser(0, 2, new Piece("BPGC"));
+        System.out.println(p.ligneGagnante(0));
+        p.poser(0, 3, new Piece("RCGR"));
+        System.out.println(p.ligneGagnante(0));
+        p.poser(1, 0, new Piece("BCPR"));
+        p.poser(1, 1, new Piece("RPPR"));
+        p.poser(1, 2, new Piece("BPGC"));
+        p.poser(1, 3, new Piece("RCGC"));
+        System.out.println(p.ligneGagnante(1));
+        System.out.println(p.estPlein());
+    }
+}
+
+class Piece
+{
+    private String code;
+
+    public Piece(String code)
+    {
+        this.code = code;
+    }
+
+    public char getCarac(int i)
+    {
+        return this.code.charAt(i);
+    }
+
+    public String toString()
+    {
+        return this.code;
+    }
+}`),
+			depart: T(`
+public class Plateau
+{
+    private Piece[][] tabPiece;
+
+    public Plateau()
+    {
+        this.tabPiece = new Piece[4][4];
+    }
+
+}`),
+			solution: T(`
+public class Plateau
+{
+    private Piece[][] tabPiece;
+
+    public Plateau()
+    {
+        this.tabPiece = new Piece[4][4];
+    }
+
+    public boolean poser(int lig, int col, Piece p)
+    {
+        if (lig < 0 || lig >= this.tabPiece.length || col < 0 || col >= this.tabPiece[0].length)
+        {
+            return false;
+        }
+        if (this.tabPiece[lig][col] != null)
+        {
+            return false;
+        }
+        this.tabPiece[lig][col] = p;
+        return true;
+    }
+
+    public boolean estPlein()
+    {
+        for (int lig = 0; lig < this.tabPiece.length; lig++)
+        {
+            for (int col = 0; col < this.tabPiece[lig].length; col++)
+            {
+                if (this.tabPiece[lig][col] == null)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public boolean ligneGagnante(int lig)
+    {
+        for (int col = 0; col < 4; col++)
+        {
+            if (this.tabPiece[lig][col] == null)
+            {
+                return false;
+            }
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            char c = this.tabPiece[lig][0].getCarac(i);
+            boolean commune = true;
+            for (int col = 1; col < 4; col++)
+            {
+                if (this.tabPiece[lig][col].getCarac(i) != c)
+                {
+                    commune = false;
+                }
+            }
+            if (commune)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}`),
+			indices: ["Dans `poser`, teste d'abord les bornes (sinon `tabPiece[4][1]` lève une exception), puis que la case vaut `null`.",
+				"Pour `ligneGagnante` : si une case de la ligne est vide, c'est perdu. Sinon, pour chaque caractéristique `i`, compare `getCarac(i)` des colonnes 1 à 3 avec celle de la colonne 0 ; si les 4 sont égales, la ligne gagne."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 6 (TP7) */
+OBJETS_UNITES.push({
+	id: "o06", num: 6, titre: "Des objets qui se connaissent", badge: "Généalogiste",
+	idee: [
+		"Un attribut peut **désigner un autre objet**, même de la même classe : une `Personne` connaît sa `mere` et son `pere`. Ces liens valent `null` tant qu'on ne les a pas donnés avec `setParents`.",
+		"Pour savoir si deux personnes sont liées, on compare des **références** avec `==` : `this.mere == p.mere` veut dire « exactement la même personne ». Attention : `null == null` est vrai aussi !",
+		"On remonte les liens en **chaînant** : `this.mere.pere` est le grand-père maternel. Avant chaque point, demande-toi si la référence peut valoir `null`."
+	],
+	exemple: {
+		java: T(`
+public class Personne
+{
+    private String   nom;
+    private Personne mere;
+    private Personne pere;
+
+    public Personne(String nom)
+    {
+        this.nom  = nom;
+        this.mere = null;
+        this.pere = null;
+    }
+
+    public void setParents(Personne mere, Personne pere)
+    {
+        this.mere = mere;
+        this.pere = pere;
+    }
+
+    public boolean estParent(Personne p)
+    {
+        return p != null && (p.mere == this || p.pere == this);
+    }
+
+    public boolean estAdelphe(Personne p)
+    {
+        if (p == null || p == this || this.mere == null || this.pere == null)
+        {
+            return false;
+        }
+        return this.mere == p.mere && this.pere == p.pere;
+    }
+
+    public String toString()
+    {
+        return this.nom;
+    }
+}`),
+		note: "Avec `Personne lea = new Personne(\"Léa\"); lea.setParents(ines, marc);`, l'objet `lea` ne contient pas Inès et Marc : il contient deux **flèches** vers leurs objets. `ines.estParent(lea)` vaut `true`."
+	},
+	exos: [
+		{ id: "o06.null", k: "qcm", q: "On écrit `Personne p = new Personne(\"Hugo\");` sans appeler `setParents`. Que vaut l'attribut `mere` de `p` ?",
+			opts: ["null", "Un objet Personne vide", "Hugo", "Le programme ne compile pas"], a: 0,
+			expl: "Un attribut objet non initialisé vaut `null` : aucune flèche. Il faut un `new` (ou un `setParents`) pour qu'il désigne une personne." },
+		{ id: "o06.mem", k: "memory", q: "Complète le schéma mémoire **après** la dernière ligne.",
+			code: T(`
+Personne ines = new Personne("Inès");
+Personne marc = new Personne("Marc");
+Personne lea  = new Personne("Léa");
+lea.setParents(ines, marc);`),
+			pile: [{ cadre: "main", vars: [{ n: "ines", aref: "obj1" }, { n: "marc", aref: "obj2" }, { n: "lea", aref: "obj3" }] }],
+			tas: [{ id: "obj1", type: "Personne", champs: [{ n: "nom", v: "\"Inès\"" }, { n: "mere", aref: "null" }, { n: "pere", aref: "null" }] },
+				{ id: "obj2", type: "Personne", champs: [{ n: "nom", v: "\"Marc\"" }, { n: "mere", aref: "null" }, { n: "pere", aref: "null" }] },
+				{ id: "obj3", type: "Personne", champs: [{ n: "nom", v: "\"Léa\"" }, { n: "mere", aref: "obj1" }, { n: "pere", aref: "obj2" }] }],
+			expl: "`setParents` recopie deux **références** : les attributs de Léa pointent vers les objets déjà créés pour Inès et Marc. Inès et Marc n'ont pas de parents connus : `null`.",
+			verif: T(`
+public class V
+{
+    public static void main(String[] args)
+    {
+        Personne ines = new Personne("Inès");
+        Personne marc = new Personne("Marc");
+        Personne lea  = new Personne("Léa");
+        lea.setParents(ines, marc);
+        System.out.println("main.ines->obj1");
+        System.out.println("main.marc->obj2");
+        System.out.println("main.lea->obj3");
+        System.out.println("obj1.nom=" + ines.getNom());
+        System.out.println("obj2.nom=" + marc.getNom());
+        System.out.println("obj3.nom=" + lea.getNom());
+        System.out.println("obj1.mere->" + (ines.getMere() == null ? "null" : "?"));
+        System.out.println("obj1.pere->" + (ines.getPere() == null ? "null" : "?"));
+        System.out.println("obj2.mere->" + (marc.getMere() == null ? "null" : "?"));
+        System.out.println("obj2.pere->" + (marc.getPere() == null ? "null" : "?"));
+        System.out.println("obj3.mere->" + (lea.getMere() == ines ? "obj1" : "?"));
+        System.out.println("obj3.pere->" + (lea.getPere() == marc ? "obj2" : "?"));
+    }
+}
+
+class Personne
+{
+    private String   nom;
+    private Personne mere;
+    private Personne pere;
+
+    public Personne(String nom)
+    {
+        this.nom = nom;
+    }
+
+    public void setParents(Personne mere, Personne pere)
+    {
+        this.mere = mere;
+        this.pere = pere;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public Personne getMere()
+    {
+        return this.mere;
+    }
+
+    public Personne getPere()
+    {
+        return this.pere;
+    }
+}`) },
+		{ id: "o06.famille", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Famille
+{
+    public static void main(String[] args)
+    {
+        Personne ines = new Personne("Inès");
+        Personne marc = new Personne("Marc");
+        Personne paul = new Personne("Paul");
+        Personne lea  = new Personne("Léa");
+        Personne tom  = new Personne("Tom");
+        Personne zoe  = new Personne("Zoé");
+        lea.setParents(ines, marc);
+        tom.setParents(ines, marc);
+        zoe.setParents(ines, paul);
+        System.out.println(lea.estAdelphe(tom) + " " + lea.estAdelphe(zoe));
+        System.out.println(ines.estParent(zoe) + " " + marc.estParent(zoe));
+        System.out.println(lea.estAdelphe(lea));
+    }
+}
+
+class Personne
+{
+    private String   nom;
+    private Personne mere;
+    private Personne pere;
+
+    public Personne(String nom)
+    {
+        this.nom = nom;
+    }
+
+    public void setParents(Personne mere, Personne pere)
+    {
+        this.mere = mere;
+        this.pere = pere;
+    }
+
+    public boolean estParent(Personne p)
+    {
+        return p != null && (p.mere == this || p.pere == this);
+    }
+
+    public boolean estAdelphe(Personne p)
+    {
+        if (p == null || p == this || this.mere == null || this.pere == null)
+        {
+            return false;
+        }
+        return this.mere == p.mere && this.pere == p.pere;
+    }
+}`),
+			expl: "Léa et Tom ont les mêmes deux parents : adelphes. Zoé n'a que la même mère (demi-sœur) : `false`. Inès est la mère de Zoé, Marc n'est pas son père. Enfin, on n'est pas son propre frère : le test `p == this` renvoie `false`." },
+		{ id: "o06.inconnus", k: "bug",
+			code: T(`
+public class Test
+{
+    public static void main(String[] args)
+    {
+        Personne a = new Personne("Ana");
+        Personne b = new Personne("Bob");
+        System.out.println(a.estAdelphe(b));
+    }
+}
+
+class Personne
+{
+    private String   nom;
+    private Personne mere;
+    private Personne pere;
+
+    public Personne(String nom)
+    {
+        this.nom = nom;
+    }
+
+    public boolean estAdelphe(Personne p)
+    {
+        if (p == null || p == this)
+        {
+            return false;
+        }
+        return this.mere == p.mere && this.pere == p.pere;
+    }
+}`),
+			ligne: 28, fix: ["return this.mere != null && this.pere != null && this.mere == p.mere && this.pere == p.pere;"],
+			expl: "Ana et Bob n'ont aucun parent connu : `null == null` est vrai deux fois, et le programme affiche `true` ! Deux inconnus ne sont pas frère et sœur : il faut que les parents existent." },
+		{ id: "o06.egal", k: "qcm", q: "`Personne a = new Personne(\"Léo\"); Personne b = new Personne(\"Léo\");` Que vaut `a == b` ?",
+			opts: ["false : ce sont deux objets différents", "true : ils ont le même nom", "true : ils sont de la même classe", "Erreur : on ne compare pas des objets avec =="], a: 0,
+			expl: "`==` compare les **flèches**. Deux `new` créent deux objets, même s'ils se ressemblent. C'est exactement ce qu'on veut pour les liens de parenté : la *même* personne." },
+		{ id: "o06.chaine", k: "qcm", q: "Dans la classe `Personne`, que désigne `this.mere.pere` ?",
+			opts: ["Le grand-père maternel", "Le grand-père paternel", "Le beau-père", "Le père de la personne"], a: 0,
+			expl: "On suit les flèches de gauche à droite : la mère, puis le père de la mère. Si `this.mere` vaut `null`, l'expression lève une `NullPointerException`." },
+		{ id: "o06.parent", k: "fill", q: "Complète `estEnfant` : la personne courante est l'enfant de `p` si `p` est sa mère ou son père.",
+			code: T(`
+public boolean estEnfant(Personne p)
+{
+    if (p == null)
+    {
+        return false;
+    }
+    return this.___ == p || this.___ == p;
+}`),
+			trous: [["mere"], ["pere"]],
+			expl: "C'est l'inverse de `estParent` : ici on regarde **nos** attributs, et on les compare à `p` avec `==`." },
+		{ id: "o06.cousin", k: "code", mode: "class", fichier: "Personne.java",
+			enonce: "Écris la classe `Personne` (TP7) : un `nom`, une `mere` et un `pere`, `setParents(mere, pere)`, `toString()` (le nom) et ces tests : `estParent(p)`, `estAdelphe(p)` (mêmes mère **et** père, connus, et pas soi-même), `estGrandParent(p)` (parent d'un parent de `p`) et `estCousin(p)` (un parent de la personne est adelphe d'un parent de `p`).",
+			regles: ["allman"],
+			harness: T(`
+public class TestArbre
+{
+    public static void main(String[] args)
+    {
+        Personne gm = new Personne("Rose");
+        Personne gp = new Personne("Henri");
+        Personne ines = new Personne("Inès");
+        Personne paul = new Personne("Paul");
+        Personne marc = new Personne("Marc");
+        Personne sara = new Personne("Sara");
+        ines.setParents(gm, gp);
+        paul.setParents(gm, gp);
+        Personne lea = new Personne("Léa");
+        Personne tom = new Personne("Tom");
+        lea.setParents(ines, marc);
+        tom.setParents(sara, paul);
+        System.out.println(ines.estAdelphe(paul) + " " + lea.estAdelphe(tom) + " " + marc.estAdelphe(sara));
+        System.out.println(gm.estParent(ines) + " " + gm.estParent(lea));
+        System.out.println(gp.estGrandParent(tom) + " " + gp.estGrandParent(paul) + " " + marc.estGrandParent(lea));
+        System.out.println(lea.estCousin(tom) + " " + tom.estCousin(lea) + " " + lea.estCousin(ines));
+        System.out.println(lea + " et " + tom);
+    }
+}`),
+			depart: T(`
+public class Personne
+{
+    private String   nom;
+    private Personne mere;
+    private Personne pere;
+
+}`),
+			solution: T(`
+public class Personne
+{
+    private String   nom;
+    private Personne mere;
+    private Personne pere;
+
+    public Personne(String nom)
+    {
+        this.nom  = nom;
+        this.mere = null;
+        this.pere = null;
+    }
+
+    public void setParents(Personne mere, Personne pere)
+    {
+        this.mere = mere;
+        this.pere = pere;
+    }
+
+    public boolean estParent(Personne p)
+    {
+        return p != null && (p.mere == this || p.pere == this);
+    }
+
+    public boolean estAdelphe(Personne p)
+    {
+        if (p == null || p == this || this.mere == null || this.pere == null)
+        {
+            return false;
+        }
+        return this.mere == p.mere && this.pere == p.pere;
+    }
+
+    public boolean estGrandParent(Personne p)
+    {
+        if (p == null)
+        {
+            return false;
+        }
+        return this.estParent(p.mere) || this.estParent(p.pere);
+    }
+
+    public boolean estCousin(Personne p)
+    {
+        if (p == null || this.mere == null || this.pere == null)
+        {
+            return false;
+        }
+        return this.mere.estAdelphe(p.mere) || this.mere.estAdelphe(p.pere)
+            || this.pere.estAdelphe(p.mere) || this.pere.estAdelphe(p.pere);
+    }
+
+    public String toString()
+    {
+        return this.nom;
+    }
+}`),
+			indices: ["Réutilise tes méthodes : `estGrandParent(p)` revient à « je suis parent de la mère de p, ou de son père » : `this.estParent(p.mere) || this.estParent(p.pere)`. `estParent` doit accepter `null` sans planter.",
+				"Pour `estCousin`, essaie les 4 combinaisons : ma mère ou mon père, adelphe de sa mère ou de son père. Vérifie d'abord que mes parents ne valent pas `null` avant d'écrire `this.mere.estAdelphe(...)`."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 7 (TP8) */
+OBJETS_UNITES.push({
+	id: "o07", num: 7, titre: "Interfaces : un contrat commun", badge: "Peintre industriel",
+	idee: [
+		"Sans interface, l'atelier de peinture a une méthode `peindre` **par sorte d'emballage** : `peindre(Cube)`, `peindre(Cylindre)`... C'est de la surcharge, et chaque nouvel emballage oblige à modifier l'atelier.",
+		"Une **interface** liste ce qu'on attend, sans le code : `interface IPeinture { double getSurfaceExterne(); }`. Chaque emballage écrit `implements IPeinture`, et l'atelier n'a plus qu'**une** méthode : `peindre(IPeinture emb)`.",
+		"Une classe peut implémenter **plusieurs** interfaces (`implements IPeinture, IFabrication`) et doit alors écrire toutes leurs méthodes, en `public`. On ne fait jamais `new` d'une interface."
+	],
+	exemple: {
+		java: T(`
+interface IPeinture
+{
+    double getSurfaceExterne();          // public et sans corps
+}
+
+class Cube implements IPeinture
+{
+    private double cote;
+
+    public Cube(double cote)
+    {
+        this.cote = cote;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 6 * this.cote * this.cote;
+    }
+}
+
+class Cylindre implements IPeinture
+{
+    private double rayon, hauteur;
+
+    public Cylindre(double rayon, double hauteur)
+    {
+        this.rayon   = rayon;
+        this.hauteur = hauteur;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 2 * Math.PI * this.rayon * (this.rayon + this.hauteur);
+    }
+}
+
+class AtelierPeinture
+{
+    private double surfacePeinte = 0;
+    private int    nbEmballages  = 0;
+
+    public void peindre(IPeinture emb)   // accepte tout ce qui implémente IPeinture
+    {
+        this.surfacePeinte += emb.getSurfaceExterne();
+        this.nbEmballages++;
+    }
+}`),
+		note: "`atelier.peindre(new Cube(10))` et `atelier.peindre(new Cylindre(5, 20))` appellent la même méthode. Ajouter une `Sphere` ne demande plus de toucher à l'atelier : il suffit qu'elle implémente `IPeinture`."
+	},
+	exos: [
+		{ id: "o07.surcharge", k: "qcm", q: "L'atelier a `peindre(Cube)`, `peindre(Cylindre)` et `peindre(PrismeHexa)`. On crée une classe `Sphere`. Que faut-il faire pour peindre une sphère ?",
+			opts: ["Ajouter une 4e méthode peindre(Sphere) dans l'atelier", "Rien : Java choisit la méthode la plus proche", "Renommer les méthodes en peindreCube, peindreSphere...", "Faire hériter Sphere de Cube"], a: 0,
+			expl: "Avec la surcharge, chaque type a sa méthode : il faut modifier l'atelier à chaque nouvel emballage. C'est le problème que l'interface `IPeinture` résout." },
+		{ id: "o07.fill", k: "fill", q: "Complète la classe pour qu'une `Sphere` puisse être peinte par `peindre(IPeinture emb)`.",
+			code: T(`
+public class Sphere ___ IPeinture
+{
+    private double rayon;
+
+    public Sphere(double rayon)
+    {
+        this.rayon = rayon;
+    }
+
+    ___ double getSurfaceExterne()
+    {
+        return 4 * Math.PI * this.rayon * this.rayon;
+    }
+}`),
+			trous: [["implements"], ["public"]],
+			expl: "Une classe **implémente** une interface (`extends` est pour l'héritage). Les méthodes d'une interface sont `public` : en les écrivant, on doit garder `public`." },
+		{ id: "o07.public", k: "bug",
+			code: T(`
+public class Usine
+{
+    public static void main(String[] args)
+    {
+        IPeinture p = new Cube(2);
+        System.out.println(p.getSurfaceExterne());
+    }
+}
+
+interface IPeinture
+{
+    double getSurfaceExterne();
+}
+
+class Cube implements IPeinture
+{
+    private double cote;
+
+    public Cube(double cote)
+    {
+        this.cote = cote;
+    }
+
+    double getSurfaceExterne()
+    {
+        return 6 * this.cote * this.cote;
+    }
+}`),
+			ligne: 24, fix: ["public double getSurfaceExterne()"],
+			expl: "Dans l'interface, la méthode est implicitement `public`. Dans `Cube`, sans mot-clé, elle n'est visible que dans le paquetage : on réduirait l'accès, javac refuse." },
+		{ id: "o07.atelier", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Production
+{
+    public static void main(String[] args)
+    {
+        AtelierPeinture atelier = new AtelierPeinture();
+        atelier.peindre(new Cube(10));
+        atelier.peindre(new Pave(10, 20, 5));
+        atelier.peindre(new Cube(1));
+        System.out.println(atelier);
+    }
+}
+
+interface IPeinture
+{
+    double getSurfaceExterne();
+}
+
+class Cube implements IPeinture
+{
+    private double cote;
+
+    public Cube(double cote)
+    {
+        this.cote = cote;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 6 * this.cote * this.cote;
+    }
+}
+
+class Pave implements IPeinture
+{
+    private double l, h, p;
+
+    public Pave(double l, double h, double p)
+    {
+        this.l = l;
+        this.h = h;
+        this.p = p;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 2 * (this.l * this.h + this.l * this.p + this.h * this.p);
+    }
+}
+
+class AtelierPeinture
+{
+    private double surface = 0;
+    private int    nb      = 0;
+
+    public void peindre(IPeinture emb)
+    {
+        this.surface += emb.getSurfaceExterne();
+        this.nb++;
+    }
+
+    public String toString()
+    {
+        return this.nb + " emballages, " + String.format("%.1f", this.surface) + " cm²";
+    }
+}`),
+			expl: "La même méthode `peindre` reçoit un cube (600), un pavé (2 × (200 + 50 + 100) = 700) et un petit cube (6) : 1306 cm² pour 3 emballages. À chaque appel, c'est la méthode de l'objet réel qui calcule la surface." },
+		{ id: "o07.new", k: "qcm", q: "Laquelle de ces lignes compile ?",
+			opts: ["IPeinture p = new Cube(3);", "IPeinture p = new IPeinture();", "Cube c = new IPeinture();", "IPeinture p = IPeinture(3);"], a: 0,
+			expl: "Une interface ne crée pas d'objet. Mais une variable de type `IPeinture` peut désigner n'importe quel objet dont la classe implémente `IPeinture`." },
+		{ id: "o07.vue", k: "qcm", q: "`Cube` implémente `IPeinture` (avec `getSurfaceExterne`) et a aussi `getVolumeExterne()`. Avec `IPeinture p = new Cube(3);`, que donne `p.getVolumeExterne()` ?",
+			opts: ["Erreur de compilation : IPeinture ne connaît pas getVolumeExterne", "27.0", "0.0", "Une exception à l'exécution"], a: 0,
+			expl: "Le compilateur regarde le **type de la variable** : à travers `IPeinture`, on ne voit que `getSurfaceExterne()`. Pour le volume, il faudrait une variable de type `Cube` (ou une interface qui le déclare, comme `IFabrication`)." },
+		{ id: "o07.sphere", k: "code", mode: "class", fichier: "Sphere.java",
+			enonce: "Écris la classe `Sphere(double rayonInterne, double rayonExterne)` qui implémente **les deux** interfaces du programme de test : `IPeinture` (surface externe : 4πR²) et `IFabrication` (volumes externe et interne : 4/3 πR³).",
+			regles: ["allman"],
+			harness: T(`
+public class TestSphere
+{
+    public static void main(String[] args)
+    {
+        Sphere s = new Sphere(9, 10);
+        AtelierPeinture peinture = new AtelierPeinture();
+        AtelierFabrication fabrique = new AtelierFabrication(2.5);
+        peinture.peindre(s);
+        fabrique.fabriquer(s);
+        fabrique.fabriquer(new Sphere(4, 5));
+        System.out.println(String.format("%.2f", peinture.getSurface()) + " cm²");
+        System.out.println(String.format("%.2f", fabrique.getMasse()) + " g");
+    }
+}
+
+interface IPeinture
+{
+    double getSurfaceExterne();
+}
+
+interface IFabrication
+{
+    double getVolumeExterne();
+    double getVolumeInterne();
+}
+
+class AtelierPeinture
+{
+    private double surface = 0;
+
+    public void peindre(IPeinture emb)
+    {
+        this.surface += emb.getSurfaceExterne();
+    }
+
+    public double getSurface()
+    {
+        return this.surface;
+    }
+}
+
+class AtelierFabrication
+{
+    private double masseVolumique;
+    private double masse = 0;
+
+    public AtelierFabrication(double masseVolumique)
+    {
+        this.masseVolumique = masseVolumique;
+    }
+
+    public void fabriquer(IFabrication emb)
+    {
+        this.masse += (emb.getVolumeExterne() - emb.getVolumeInterne()) * this.masseVolumique;
+    }
+
+    public double getMasse()
+    {
+        return this.masse;
+    }
+}`),
+			depart: T(`
+public class Sphere
+{
+
+}`),
+			solution: T(`
+public class Sphere implements IPeinture, IFabrication
+{
+    private double rayonInterne;
+    private double rayonExterne;
+
+    public Sphere(double rayonInterne, double rayonExterne)
+    {
+        this.rayonInterne = rayonInterne;
+        this.rayonExterne = rayonExterne;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 4 * Math.PI * this.rayonExterne * this.rayonExterne;
+    }
+
+    public double getVolumeExterne()
+    {
+        return 4.0 / 3 * Math.PI * Math.pow(this.rayonExterne, 3);
+    }
+
+    public double getVolumeInterne()
+    {
+        return 4.0 / 3 * Math.PI * Math.pow(this.rayonInterne, 3);
+    }
+}`),
+			indices: ["`public class Sphere implements IPeinture, IFabrication` : il faut alors écrire les **trois** méthodes, toutes `public`.",
+				"Attention à `4 / 3` : entre deux `int`, ça vaut 1 ! Écris `4.0 / 3 * Math.PI * Math.pow(r, 3)`."] },
+		{ id: "o07.peinture", k: "code", mode: "class", fichier: "AtelierPeinture.java",
+			enonce: "Écris `AtelierPeinture` : le constructeur reçoit le pouvoir couvrant de la peinture (en m² par litre). `peindre(IPeinture emb)` ajoute la surface (en cm²) et compte l'emballage. `getNbEmballages()`, `consommation()` (litres : surface / 10000 / pouvoir couvrant) et `reInitCompteur()` remettent ou lisent les compteurs.",
+			regles: ["allman"],
+			harness: T(`
+public class TestAtelier
+{
+    public static void main(String[] args)
+    {
+        AtelierPeinture a = new AtelierPeinture(12.5);
+        a.peindre(new Cube(50));
+        a.peindre(new Cube(30));
+        a.peindre(new Cylindre(10, 40));
+        System.out.println(a.getNbEmballages() + " emballages");
+        System.out.println(String.format("%.4f", a.consommation()) + " l");
+        a.reInitCompteur();
+        a.peindre(new Cylindre(10, 40));
+        System.out.println(a.getNbEmballages() + " emballage, " + String.format("%.4f", a.consommation()) + " l");
+    }
+}
+
+interface IPeinture
+{
+    double getSurfaceExterne();
+}
+
+class Cube implements IPeinture
+{
+    private double cote;
+
+    public Cube(double cote)
+    {
+        this.cote = cote;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 6 * this.cote * this.cote;
+    }
+}
+
+class Cylindre implements IPeinture
+{
+    private double rayon, hauteur;
+
+    public Cylindre(double rayon, double hauteur)
+    {
+        this.rayon   = rayon;
+        this.hauteur = hauteur;
+    }
+
+    public double getSurfaceExterne()
+    {
+        return 2 * Math.PI * this.rayon * (this.rayon + this.hauteur);
+    }
+}`),
+			depart: T(`
+public class AtelierPeinture
+{
+    private double pouvoirCouvrant;   // m² par litre
+    private double surfacePeinte;     // cm²
+    private int    nbEmballages;
+
+}`),
+			solution: T(`
+public class AtelierPeinture
+{
+    private double pouvoirCouvrant;   // m² par litre
+    private double surfacePeinte;     // cm²
+    private int    nbEmballages;
+
+    public AtelierPeinture(double pouvoirCouvrant)
+    {
+        this.pouvoirCouvrant = pouvoirCouvrant;
+        this.reInitCompteur();
+    }
+
+    public void reInitCompteur()
+    {
+        this.surfacePeinte = 0.0;
+        this.nbEmballages  = 0;
+    }
+
+    public void peindre(IPeinture emb)
+    {
+        this.surfacePeinte += emb.getSurfaceExterne();
+        this.nbEmballages++;
+    }
+
+    public int getNbEmballages()
+    {
+        return this.nbEmballages;
+    }
+
+    public double consommation()
+    {
+        return this.surfacePeinte / 10000 / this.pouvoirCouvrant;
+    }
+}`),
+			indices: ["Une seule méthode `public void peindre(IPeinture emb)` suffit pour les cubes et les cylindres : elle appelle `emb.getSurfaceExterne()`.",
+				"10 000 cm² font 1 m² : `surfacePeinte / 10000` donne des m², qu'on divise par le pouvoir couvrant pour avoir des litres."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 8 (TP9) */
+OBJETS_UNITES.push({
+	id: "o08", num: 8, titre: "ArrayList ou LinkedList ?", badge: "Gardien de file",
+	idee: [
+		"`ArrayList` et `LinkedList` implémentent toutes les deux l'interface `List` : mêmes méthodes (`add`, `get`, `remove`, `size`...). On déclare `List<Etudiant> lst = new ArrayList<>();` : changer d'implémentation ne touche qu'**une** ligne.",
+		"`ArrayList` range les éléments dans un tableau : `get(i)` est immédiat, mais insérer ou retirer au début décale tout le reste. `LinkedList` chaîne des cellules : ajouter ou retirer en tête est immédiat, mais `get(i)` parcourt la chaîne.",
+		"Une **file d'attente** (premier arrivé, premier servi) ajoute à la fin avec `add(e)` et sert le premier avec `remove(0)`. Avec une `LinkedList`, on dispose aussi de `addLast`, `getFirst` et `removeFirst`."
+	],
+	exemple: {
+		java: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class Promo
+{
+    public static void main(String[] args)
+    {
+        List<Etudiant> lst = new ArrayList<Etudiant>();   // ou new LinkedList<Etudiant>()
+        lst.add(new Etudiant("Martin", 12.5));
+        lst.add(new Etudiant("Leroy", 15.0));
+        lst.add(0, new Etudiant("Petit", 9.5));           // insérée en tête
+
+        double somme = 0;
+        for (Etudiant e : lst)
+        {
+            somme += e.getMoyenne();
+        }
+        System.out.println(lst);
+        System.out.println(String.format("Moyenne : %.2f", somme / lst.size()));
+    }
+}
+
+class Etudiant
+{
+    private String nom;
+    private double moyenne;
+
+    public Etudiant(String nom, double moyenne)
+    {
+        this.nom     = nom;
+        this.moyenne = moyenne;
+    }
+
+    public String getNom()     { return this.nom; }
+    public double getMoyenne() { return this.moyenne; }
+
+    public String toString()
+    {
+        return this.nom + " (" + this.moyenne + ")";
+    }
+}`),
+		note: "Seule la ligne du `new` dit quelle implémentation est utilisée. Tout le reste du programme ne connaît que `List` : c'est l'intérêt des interfaces vu au TP précédent."
+	},
+	exos: [
+		{ id: "o08.type", k: "qcm", q: "Pourquoi écrire `List<Etudiant> lst = new LinkedList<>();` plutôt que `LinkedList<Etudiant> lst = new LinkedList<>();` ?",
+			opts: ["Pour pouvoir passer à ArrayList en changeant une seule ligne", "Parce que LinkedList ne peut pas être le type d'une variable", "Pour que la liste soit triée", "Pour aller plus vite à l'exécution"], a: 0,
+			expl: "Le reste du code n'utilise que les méthodes de `List` : on peut remplacer `new LinkedList<>()` par `new ArrayList<>()` sans rien toucher d'autre." },
+		{ id: "o08.file", k: "predict",
+			q: "Une file d'attente au secrétariat. Qu'affiche ce programme ?",
+			code: T(`
+import java.util.LinkedList;
+import java.util.List;
+
+public class Secretariat
+{
+    public static void main(String[] args)
+    {
+        List<String> file = new LinkedList<String>();
+        file.add("Ana");
+        file.add("Bob");
+        System.out.println(file);
+        String servi = file.remove(0);
+        file.add("Cyril");
+        System.out.println(servi + " servi, reste " + file);
+        file.remove(0);
+        file.remove(0);
+        System.out.println(file + " " + file.isEmpty());
+    }
+}`),
+			expl: "`add` ajoute à la fin, `remove(0)` retire (et renvoie) le premier : premier arrivé, premier servi. Après trois départs, la file est vide : `[]` et `true`." },
+		{ id: "o08.cout", k: "qcm", q: "Une liste de 100 000 éléments. On doit retirer 1 000 fois le **premier** élément. Quelle implémentation est la plus rapide ?",
+			opts: ["LinkedList", "ArrayList", "Les deux pareil", "Aucune : remove(0) est interdit"], a: 0,
+			expl: "Dans une `ArrayList`, retirer la case 0 décale les 99 999 autres à chaque fois. Dans une `LinkedList`, on décroche juste la première cellule." },
+		{ id: "o08.get", k: "qcm", q: "Un programme lit très souvent `lst.get(i)` avec des indices au hasard, et ajoute rarement. Quelle implémentation choisir ?",
+			opts: ["ArrayList", "LinkedList", "Les deux pareil", "Un tableau de LinkedList"], a: 0,
+			expl: "`ArrayList.get(i)` va directement à la case `i` du tableau. `LinkedList.get(i)` doit suivre `i` cellules une par une." },
+		{ id: "o08.remove", k: "predict",
+			q: "Attention aux deux `remove` d'une `List<Integer>`. Qu'affiche ce programme ?",
+			code: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class Remove
+{
+    public static void main(String[] args)
+    {
+        List<Integer> l = new ArrayList<Integer>();
+        l.add(7);
+        l.add(1);
+        l.add(9);
+        l.add(1);
+        l.remove(1);
+        System.out.println(l);
+        l.remove(Integer.valueOf(1));
+        System.out.println(l);
+    }
+}`),
+			expl: "`remove(1)` avec un `int` retire la case d'**indice** 1 (la valeur 1 qui suit 7). `remove(Integer.valueOf(1))` reçoit un objet : il retire la première **valeur** égale à 1." },
+		{ id: "o08.cherche", k: "fill", q: "Complète la méthode qui renvoie l'indice du premier étudiant portant ce nom, ou -1.",
+			code: T(`
+public static int indiceDe(List<Etudiant> lst, String nom)
+{
+    for (int i = 0; i < lst.___(); i++)
+    {
+        if (lst.___(i).getNom().___(nom))
+        {
+            return i;
+        }
+    }
+    return -1;
+}`),
+			trous: [["size"], ["get"], ["equals"]],
+			expl: "Une liste a `size()` (pas `length`). On lit l'élément avec `get(i)`, et on compare des `String` avec `equals`, jamais avec `==`." },
+		{ id: "o08.saut", k: "bug",
+			code: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class Nettoyage
+{
+    public static void main(String[] args)
+    {
+        List<Integer> notes = new ArrayList<Integer>();
+        notes.add(4);
+        notes.add(6);
+        notes.add(14);
+        notes.add(8);
+        notes.add(17);
+        for (int i = 0; i < notes.size(); i++)
+        {
+            if (notes.get(i) < 10)
+            {
+                notes.remove(i);
+            }
+        }
+        System.out.println(notes);
+    }
+}`),
+			ligne: 14, fix: ["for (int i = notes.size() - 1; i >= 0; i--)"],
+			expl: "Quand on retire la case `i`, la suivante prend sa place... puis `i++` la saute : le 6 n'est jamais testé, et le programme affiche `[6, 14, 17]`. En parcourant **à l'envers**, les cases déjà vues ne bougent pas." },
+		{ id: "o08.fileattente", k: "code", mode: "class", fichier: "FileAttente.java",
+			enonce: "Écris la classe `FileAttente`, rangée dans une `LinkedList<String>` : `arriver(String nom)` ajoute à la fin, `servir()` retire et renvoie le premier (ou `null` si la file est vide), `getTaille()` et `toString()` (la liste, par exemple `[Bob, Cyril]`). N'oublie pas les `import`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestFile
+{
+    public static void main(String[] args)
+    {
+        FileAttente f = new FileAttente();
+        System.out.println(f.servir());
+        f.arriver("Ana");
+        f.arriver("Bob");
+        f.arriver("Cyril");
+        System.out.println(f + " " + f.getTaille());
+        System.out.println(f.servir() + " puis " + f.servir());
+        f.arriver("Dina");
+        System.out.println(f + " " + f.getTaille());
+    }
+}`),
+			depart: T(`
+public class FileAttente
+{
+
+}`),
+			solution: T(`
+import java.util.LinkedList;
+
+public class FileAttente
+{
+    private LinkedList<String> file;
+
+    public FileAttente()
+    {
+        this.file = new LinkedList<String>();
+    }
+
+    public void arriver(String nom)
+    {
+        this.file.addLast(nom);
+    }
+
+    public String servir()
+    {
+        if (this.file.isEmpty())
+        {
+            return null;
+        }
+        return this.file.removeFirst();
+    }
+
+    public int getTaille()
+    {
+        return this.file.size();
+    }
+
+    public String toString()
+    {
+        return this.file.toString();
+    }
+}`),
+			indices: ["En haut du fichier : `import java.util.LinkedList;`. L'attribut : `private LinkedList<String> file;`, créé dans le constructeur.",
+				"`removeFirst()` sur une liste vide lève une exception : teste `isEmpty()` d'abord et renvoie `null`."] },
+		{ id: "o08.promo", k: "code", mode: "class", fichier: "Promo.java",
+			enonce: "Écris la classe `Promo`, qui garde ses étudiants dans une `List<Etudiant>` (une `ArrayList`). Méthodes : `ajouter(Etudiant e)`, `moyenneGenerale()` (0 si la promo est vide), `meilleur()` (l'étudiant de plus forte moyenne, `null` si vide) et `retirer(String nom)` qui enlève l'étudiant de ce nom et renvoie `true`, ou `false` s'il n'existe pas.",
+			regles: ["allman"],
+			harness: T(`
+public class TestPromo
+{
+    public static void main(String[] args)
+    {
+        Promo p = new Promo();
+        System.out.println(p.moyenneGenerale() + " " + p.meilleur());
+        p.ajouter(new Etudiant("Martin", 12.5));
+        p.ajouter(new Etudiant("Leroy", 15.0));
+        p.ajouter(new Etudiant("Petit", 9.5));
+        System.out.println(String.format("%.2f", p.moyenneGenerale()) + " " + p.meilleur());
+        System.out.println(p.retirer("Leroy") + " " + p.retirer("Durand"));
+        System.out.println(String.format("%.2f", p.moyenneGenerale()) + " " + p.meilleur());
+    }
+}
+
+class Etudiant
+{
+    private String nom;
+    private double moyenne;
+
+    public Etudiant(String nom, double moyenne)
+    {
+        this.nom     = nom;
+        this.moyenne = moyenne;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public double getMoyenne()
+    {
+        return this.moyenne;
+    }
+
+    public String toString()
+    {
+        return this.nom;
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class Promo
+{
+    private List<Etudiant> lst;
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class Promo
+{
+    private List<Etudiant> lst;
+
+    public Promo()
+    {
+        this.lst = new ArrayList<Etudiant>();
+    }
+
+    public void ajouter(Etudiant e)
+    {
+        this.lst.add(e);
+    }
+
+    public double moyenneGenerale()
+    {
+        if (this.lst.isEmpty())
+        {
+            return 0;
+        }
+        double somme = 0;
+        for (Etudiant e : this.lst)
+        {
+            somme += e.getMoyenne();
+        }
+        return somme / this.lst.size();
+    }
+
+    public Etudiant meilleur()
+    {
+        Etudiant best = null;
+        for (Etudiant e : this.lst)
+        {
+            if (best == null || e.getMoyenne() > best.getMoyenne())
+            {
+                best = e;
+            }
+        }
+        return best;
+    }
+
+    public boolean retirer(String nom)
+    {
+        for (int i = 0; i < this.lst.size(); i++)
+        {
+            if (this.lst.get(i).getNom().equals(nom))
+            {
+                this.lst.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+}`),
+			indices: ["Pour `meilleur()`, garde le meilleur vu jusqu'ici dans une variable qui démarre à `null` : `if (best == null || e.getMoyenne() > best.getMoyenne())`.",
+				"Pour `retirer`, une boucle avec indice : dès que le nom correspond, `this.lst.remove(i); return true;`. On sort tout de suite, donc pas de problème de case sautée."] }
+	]
+});
+
+/* --------------------------------------------------------------- 9 (TP10) */
+OBJETS_UNITES.push({
+	id: "o09", num: 9, titre: "Héritage", badge: "Digne héritier",
+	idee: [
+		"`class ArticlePerissable extends Article` : la fille **hérite** des attributs et méthodes de la mère, et en ajoute. Un article périssable **est un** article : il se range dans une variable ou une liste d'`Article`.",
+		"Le constructeur de la fille appelle d'abord celui de la mère : `super(...)` en **première ligne**. Sans lui, Java met `super()`, qui exige un constructeur sans paramètre chez la mère. Un attribut `private` de la mère est caché à la fille ; `protected` le lui ouvre.",
+		"La fille peut **redéfinir** une méthode (même nom, mêmes paramètres, `@Override`), et `super.methode()` appelle la version de la mère. Toute classe hérite de `Object` : sans `toString()`, on obtient `NomClasse@1b6d3586`."
+	],
+	exemple: {
+		java: T(`
+public class Article
+{
+    protected String nom;
+    protected double prixHT;
+
+    public Article(String nom, double prixHT)
+    {
+        this.nom    = nom;
+        this.prixHT = prixHT;
+    }
+
+    public double prixTTC()
+    {
+        return this.prixHT * 1.2;
+    }
+
+    public String toString()
+    {
+        return this.nom + " : " + String.format("%.2f", this.prixTTC()) + " €";
+    }
+}
+
+class ArticlePerissable extends Article
+{
+    private int joursRestants;
+
+    public ArticlePerissable(String nom, double prixHT, int joursRestants)
+    {
+        super(nom, prixHT);                     // d'abord la partie Article
+        this.joursRestants = joursRestants;
+    }
+
+    @Override
+    public double prixTTC()
+    {
+        if (this.joursRestants <= 2)
+        {
+            return super.prixTTC() / 2;         // la version de la mère, divisée par 2
+        }
+        return super.prixTTC();
+    }
+
+    @Override
+    public String toString()
+    {
+        return super.toString() + " (J-" + this.joursRestants + ")";
+    }
+}`),
+		note: "Dans une `ArrayList<Article>`, on peut mélanger des `Article` et des `ArticlePerissable`. En appelant `a.toString()`, Java prend la version de l'objet réel : c'est le polymorphisme, au cœur de l'unité suivante."
+	},
+	exos: [
+		{ id: "o09.object", k: "qcm", q: "La classe `Boite` n'a pas de méthode `toString()`. Qu'affiche `System.out.println(new Boite());` ?",
+			opts: ["Boite@ suivi d'un code en hexadécimal, comme Boite@1b6d3586", "Une erreur de compilation", "Rien", "Les valeurs des attributs"], a: 0,
+			expl: "Toute classe hérite de `Object`, qui a un `toString()` par défaut : le nom de la classe, `@`, puis un code de hachage. On le redéfinit pour afficher quelque chose d'utile." },
+		{ id: "o09.ordre", k: "predict",
+			q: "Dans quel ordre les constructeurs s'exécutent-ils ? Qu'affiche ce programme ?",
+			code: T(`
+public class Batiment
+{
+    public static void main(String[] args)
+    {
+        SalleTP s = new SalleTP();
+        System.out.println(s);
+    }
+}
+
+class Salle
+{
+    protected int nbTable;
+    protected int nbChaise;
+
+    public Salle()
+    {
+        this(12, 24);
+        System.out.println("A");
+    }
+
+    public Salle(int nbTable, int nbChaise)
+    {
+        this.nbTable  = nbTable;
+        this.nbChaise = nbChaise;
+        System.out.println("B");
+    }
+}
+
+class SalleTP extends Salle
+{
+    private int nbPoste;
+
+    public SalleTP()
+    {
+        this.nbPoste = this.nbTable;
+        System.out.println("C");
+    }
+
+    public String toString()
+    {
+        return this.nbTable + " " + this.nbChaise + " " + this.nbPoste;
+    }
+}`),
+			expl: "`SalleTP()` commence par un `super()` invisible : `Salle()` démarre par `this(12, 24)`, qui affiche B ; puis `Salle()` affiche A ; enfin le corps de `SalleTP()` affiche C. À ce moment, `nbTable` vaut déjà 12." },
+		{ id: "o09.super", k: "bug",
+			code: T(`
+public class Magasin
+{
+    public static void main(String[] args)
+    {
+        Perissable p = new Perissable("Yaourt", 0.8, 3);
+        System.out.println(p.getNom());
+    }
+}
+
+class Article
+{
+    protected String nom;
+    protected double prix;
+
+    public Article(String nom, double prix)
+    {
+        this.nom  = nom;
+        this.prix = prix;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+}
+
+class Perissable extends Article
+{
+    private int jours;
+
+    public Perissable(String nom, double prix, int jours)
+    {
+        super();
+        this.jours = jours;
+    }
+}`),
+			ligne: 33, fix: ["super(nom, prix);"],
+			expl: "`Article` n'a qu'un constructeur, à deux paramètres : `super()` ne trouve rien à appeler. La fille transmet le nom et le prix à la mère avec `super(nom, prix);`." },
+		{ id: "o09.private", k: "bug",
+			code: T(`
+public class Ecole
+{
+    public static void main(String[] args)
+    {
+        SalleTP s = new SalleTP(10, 20);
+        System.out.println(s.description());
+    }
+}
+
+class Salle
+{
+    private int nbTable;
+
+    public Salle(int nbTable)
+    {
+        this.nbTable = nbTable;
+    }
+}
+
+class SalleTP extends Salle
+{
+    private int nbPoste;
+
+    public SalleTP(int nbTable, int nbPoste)
+    {
+        super(nbTable);
+        this.nbPoste = nbPoste;
+    }
+
+    public String description()
+    {
+        return this.nbTable + " tables, " + this.nbPoste + " postes";
+    }
+}`),
+			ligne: 12, fix: ["protected int nbTable;"],
+			expl: "Un attribut `private` n'est accessible que dans **sa** classe, même pas dans les filles. `protected` l'ouvre aux classes filles (on pourrait aussi passer par un accesseur `getNbTable()`)." },
+		{ id: "o09.redef", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.util.ArrayList;
+
+public class Caisse
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Article> panier = new ArrayList<Article>();
+        panier.add(new Article("Stylo", 2.0));
+        panier.add(new ArticlePerissable("Yaourt", 3.0, 1));
+        panier.add(new ArticlePerissable("Fromage", 5.0, 6));
+        double total = 0;
+        for (Article a : panier)
+        {
+            System.out.println(a);
+            total += a.prixTTC();
+        }
+        System.out.println(String.format("Total : %.2f", total));
+    }
+}
+
+class Article
+{
+    protected String nom;
+    protected double prixHT;
+
+    public Article(String nom, double prixHT)
+    {
+        this.nom    = nom;
+        this.prixHT = prixHT;
+    }
+
+    public double prixTTC()
+    {
+        return this.prixHT * 1.2;
+    }
+
+    public String toString()
+    {
+        return this.nom + " " + String.format("%.2f", this.prixTTC());
+    }
+}
+
+class ArticlePerissable extends Article
+{
+    private int jours;
+
+    public ArticlePerissable(String nom, double prixHT, int jours)
+    {
+        super(nom, prixHT);
+        this.jours = jours;
+    }
+
+    @Override
+    public double prixTTC()
+    {
+        if (this.jours <= 2)
+        {
+            return super.prixTTC() / 2;
+        }
+        return super.prixTTC();
+    }
+}`),
+			expl: "Le yaourt (1 jour) est à moitié prix : 3,60 / 2 = 1,80. Remarque : `toString()` est écrit dans `Article`, mais `this.prixTTC()` y appelle la version **redéfinie** pour les périssables. Total : 2,40 + 1,80 + 6,00 = 10,20." },
+		{ id: "o09.estun", k: "qcm", q: "`ArticlePerissable` hérite d'`Article`. Laquelle de ces lignes ne compile **pas** ?",
+			opts: ["ArticlePerissable p = new Article(\"Stylo\", 2.0);", "Article a = new ArticlePerissable(\"Lait\", 1.0, 5);", "Article a = new Article(\"Stylo\", 2.0);", "Object o = new ArticlePerissable(\"Lait\", 1.0, 5);"], a: 0,
+			expl: "Un périssable **est un** article (et un `Object`), donc il va dans une variable de ces types. Mais un article quelconque n'est pas forcément périssable : l'inverse est refusé." },
+		{ id: "o09.override", k: "qcm", q: "À quoi sert `@Override` devant une méthode ?",
+			opts: ["À demander au compilateur de vérifier qu'on redéfinit bien une méthode de la mère", "À rendre la méthode obligatoire dans les filles", "À appeler la méthode de la mère", "À rien : c'est un commentaire"], a: 0,
+			expl: "Si on se trompe de nom (`tostring()`) ou de paramètres, javac signale l'erreur au lieu de créer en silence une nouvelle méthode. C'est une sécurité, pas une obligation." },
+		{ id: "o09.fill", k: "fill", q: "Complète la classe fille : une salle de TP est une salle avec, en plus, des postes informatiques.",
+			code: T(`
+public class SalleTP ___ Salle
+{
+    private int nbPoste;
+
+    public SalleTP(int nbTable, int nbChaise, int nbPoste)
+    {
+        ___(nbTable, nbChaise);
+        this.nbPoste = nbPoste;
+    }
+
+    public String toString()
+    {
+        return ___.toString() + ", " + this.nbPoste + " postes";
+    }
+}`),
+			trous: [["extends"], ["super"], ["super"]],
+			expl: "`extends` pour hériter, `super(...)` pour appeler le constructeur de la mère (en première ligne), et `super.toString()` pour réutiliser son affichage." },
+		{ id: "o09.perissable", k: "code", mode: "class", fichier: "ArticlePerissable.java",
+			enonce: "La classe `Article` est donnée (dans le programme de test). Écris `ArticlePerissable`, qui en hérite : un attribut `joursRestants`, un constructeur à 3 paramètres, `prixTTC()` redéfini (moitié prix quand il reste 2 jours ou moins) et `toString()` redéfini, qui ajoute ` (J-3)` à l'affichage de la mère.",
+			regles: ["allman"],
+			harness: T(`
+public class TestArticles
+{
+    public static void main(String[] args)
+    {
+        Article[] rayon = { new Article("Stylo", 2.0), new ArticlePerissable("Yaourt", 3.0, 1), new ArticlePerissable("Fromage", 5.0, 6) };
+        for (Article a : rayon)
+        {
+            System.out.println(a);
+        }
+        System.out.println(rayon[1] instanceof ArticlePerissable);
+    }
+}
+
+class Article
+{
+    protected String nom;
+    protected double prixHT;
+
+    public Article(String nom, double prixHT)
+    {
+        this.nom    = nom;
+        this.prixHT = prixHT;
+    }
+
+    public double prixTTC()
+    {
+        return this.prixHT * 1.2;
+    }
+
+    public String toString()
+    {
+        return this.nom + " : " + String.format("%.2f", this.prixTTC()) + " €";
+    }
+}`),
+			depart: T(`
+public class ArticlePerissable extends Article
+{
+
+}`),
+			solution: T(`
+public class ArticlePerissable extends Article
+{
+    private int joursRestants;
+
+    public ArticlePerissable(String nom, double prixHT, int joursRestants)
+    {
+        super(nom, prixHT);
+        this.joursRestants = joursRestants;
+    }
+
+    @Override
+    public double prixTTC()
+    {
+        if (this.joursRestants <= 2)
+        {
+            return super.prixTTC() / 2;
+        }
+        return super.prixTTC();
+    }
+
+    @Override
+    public String toString()
+    {
+        return super.toString() + " (J-" + this.joursRestants + ")";
+    }
+}`),
+			indices: ["Le constructeur commence par `super(nom, prixHT);` puis range `joursRestants`.",
+				"Dans `prixTTC()`, réutilise le calcul de la mère : `super.prixTTC() / 2`. Pour `toString()`, `super.toString() + \" (J-\" + joursRestants + \")\"`."] },
+		{ id: "o09.epargne", k: "code", mode: "class", fichier: "CompteEpargne.java",
+			enonce: "La classe `Compte` est donnée. Écris `CompteEpargne`, qui en hérite : un `taux` (en %) en plus, `ajouterInterets()` qui dépose les intérêts (solde × taux / 100) en réutilisant `deposer`, et `retirer(double montant)` redéfini : un compte épargne refuse (renvoie `false`) tout retrait qui ferait passer le solde sous 0.",
+			regles: ["allman"],
+			harness: T(`
+public class TestComptes
+{
+    public static void main(String[] args)
+    {
+        Compte c = new Compte("Ana");
+        CompteEpargne e = new CompteEpargne("Bob", 2.5);
+        c.deposer(100);
+        e.deposer(100);
+        System.out.println(c.retirer(150) + " " + e.retirer(150));
+        e.ajouterInterets();
+        System.out.println(c);
+        System.out.println(e);
+        System.out.println(e.retirer(102.5) + " " + e);
+    }
+}
+
+class Compte
+{
+    protected String titulaire;
+    protected double solde;
+
+    public Compte(String titulaire)
+    {
+        this.titulaire = titulaire;
+        this.solde     = 0;
+    }
+
+    public void deposer(double montant)
+    {
+        this.solde += montant;
+    }
+
+    public boolean retirer(double montant)
+    {
+        this.solde -= montant;
+        return true;
+    }
+
+    public String toString()
+    {
+        return this.titulaire + " : " + String.format("%.2f", this.solde);
+    }
+}`),
+			depart: T(`
+public class CompteEpargne extends Compte
+{
+    private double taux;
+
+}`),
+			solution: T(`
+public class CompteEpargne extends Compte
+{
+    private double taux;
+
+    public CompteEpargne(String titulaire, double taux)
+    {
+        super(titulaire);
+        this.taux = taux;
+    }
+
+    public void ajouterInterets()
+    {
+        this.deposer(this.solde * this.taux / 100);
+    }
+
+    @Override
+    public boolean retirer(double montant)
+    {
+        if (montant > this.solde)
+        {
+            return false;
+        }
+        return super.retirer(montant);
+    }
+}`),
+			indices: ["Le constructeur : `super(titulaire);` puis `this.taux = taux;`. `deposer` est héritée : `this.deposer(...)` marche directement.",
+				"Dans `retirer`, refuse si `montant > this.solde` ; sinon laisse la mère faire le travail avec `return super.retirer(montant);`."] }
+	]
+});
+
+/* -------------------------------------------------------------- 10 (TP10) */
+OBJETS_UNITES.push({
+	id: "o10", num: 10, titre: "Classes abstraites et polymorphisme", badge: "Polymorphe",
+	idee: [
+		"Une classe **abstraite** (`abstract class Polygone`) est un modèle commun : on ne peut pas faire `new Polygone(...)`. Elle peut avoir des attributs, des méthodes complètes **et** des méthodes `abstract`, sans corps.",
+		"Une méthode `abstract` (`public abstract double getAire();`) oblige chaque fille concrète à l'écrire. Une fille qui ne l'écrit pas doit être `abstract` à son tour.",
+		"**Polymorphisme** : dans une liste de `Vehicule`, `v.getChargeMaxi()` exécute la version de l'objet réel (motrice, wagon...). Même une méthode écrite dans la mère, qui appelle `this.getChargeMaxi()`, profite de la bonne version."
+	],
+	exemple: {
+		java: T(`
+public abstract class Polygone
+{
+    protected double[] cotes;
+
+    protected Polygone(int nbCotes)
+    {
+        this.cotes = new double[nbCotes];
+    }
+
+    public double getPerimetre()                 // complète : la même pour tous
+    {
+        double p = 0;
+        for (double c : this.cotes)
+        {
+            p += c;
+        }
+        return p;
+    }
+
+    public abstract double getAire();            // chaque figure a sa formule
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + " : périmètre " + getPerimetre() + ", aire " + getAire();
+    }
+}
+
+class Rectangle extends Polygone
+{
+    public Rectangle(double l, double h)
+    {
+        super(4);
+        this.cotes[0] = l;
+        this.cotes[1] = h;
+        this.cotes[2] = l;
+        this.cotes[3] = h;
+    }
+
+    public double getAire()
+    {
+        return this.cotes[0] * this.cotes[1];
+    }
+}`),
+		note: "`toString()` est écrit une seule fois, dans `Polygone`, mais il affiche la bonne aire pour chaque figure. `getClass().getSimpleName()` donne le nom de la classe réelle de l'objet (`Rectangle`)."
+	},
+	exos: [
+		{ id: "o10.new", k: "qcm", q: "`Polygone` est abstraite, `Triangle` et `Rectangle` en héritent. Laquelle de ces lignes ne compile **pas** ?",
+			opts: ["Polygone p = new Polygone(3);", "Polygone p = new Triangle(3, 4, 5);", "Polygone[] t = new Polygone[10];", "Rectangle r = new Rectangle(2, 5);"], a: 0,
+			expl: "On ne crée pas d'objet d'une classe abstraite. Mais `Polygone` reste un type : variables, tableaux et listes de `Polygone` sont permis (le tableau ne crée aucun objet, seulement 10 cases à `null`)." },
+		{ id: "o10.oubli", k: "bug",
+			code: T(`
+public class Figures
+{
+    public static void main(String[] args)
+    {
+        Polygone p = new Carre(3);
+        System.out.println(p.getAire());
+    }
+}
+
+abstract class Polygone
+{
+    public abstract double getAire();
+}
+
+class Carre extends Polygone
+{
+    private double cote;
+
+    public Carre(double cote)
+    {
+        this.cote = cote;
+    }
+
+    public double getaire()
+    {
+        return this.cote * this.cote;
+    }
+}`),
+			ligne: 24, fix: ["public double getAire()"],
+			expl: "`getaire` (minuscule) est une **nouvelle** méthode : `getAire()` n'est toujours pas écrite, et javac refuse la classe concrète `Carre`. Avec `@Override`, l'erreur aurait été signalée sur la bonne ligne." },
+		{ id: "o10.poly", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Gare
+{
+    public static void main(String[] args)
+    {
+        Vehicule[] train = { new Motrice(8, 80, 6), new Wagon(4, 20, 40), new Wagon(8, 30, 90) };
+        double total = 0;
+        for (Vehicule v : train)
+        {
+            System.out.println(v.getClass().getSimpleName() + " " + v.getChargeMaxi() + " t, " + v.chargeParRoue() + " t/roue");
+            total += v.getChargeMaxi();
+        }
+        System.out.println(total);
+    }
+}
+
+abstract class Vehicule
+{
+    private   int nbRoue;
+    protected int poids;
+
+    public Vehicule(int nbRoue, int poids)
+    {
+        this.nbRoue = nbRoue;
+        this.poids  = poids;
+    }
+
+    public abstract double getChargeMaxi();
+
+    public double chargeParRoue()
+    {
+        return this.getChargeMaxi() / this.nbRoue;
+    }
+}
+
+class Motrice extends Vehicule
+{
+    private int puissance;
+
+    public Motrice(int nbRoue, int poids, int puissance)
+    {
+        super(nbRoue, poids);
+        this.puissance = puissance;
+    }
+
+    public double getChargeMaxi()
+    {
+        return this.poids;
+    }
+}
+
+class Wagon extends Vehicule
+{
+    private int capacite;
+
+    public Wagon(int nbRoue, int poids, int capacite)
+    {
+        super(nbRoue, poids);
+        this.capacite = capacite;
+    }
+
+    public double getChargeMaxi()
+    {
+        return this.poids + this.capacite;
+    }
+}`),
+			expl: "La motrice ne porte que son poids (80), un wagon son poids plus sa capacité (60 et 120). `chargeParRoue()`, écrite une seule fois dans `Vehicule`, appelle la bonne version de `getChargeMaxi()` : 10, 15 et 15 t par roue. Total : 260." },
+		{ id: "o10.concrete", k: "qcm", q: "Une classe non abstraite déclare `public abstract void dessiner();`. Que se passe-t-il ?",
+			opts: ["Erreur de compilation : une méthode abstraite n'existe que dans une classe abstraite (ou une interface)", "La méthode ne fait rien quand on l'appelle", "Erreur seulement si on appelle dessiner()", "Ça compile, la classe devient abstraite toute seule"], a: 0,
+			expl: "Si une classe a une méthode sans corps, on ne pourrait pas exécuter ses objets : Java exige alors que la classe soit déclarée `abstract`." },
+		{ id: "o10.fill", k: "fill", q: "Complète la classe mère des véhicules : on ne doit pas pouvoir créer un « véhicule » tout court, et chaque véhicule calcule sa charge à sa façon.",
+			code: T(`
+public ___ class Vehicule
+{
+    protected int poids;
+
+    public Vehicule(int poids)
+    {
+        this.poids = poids;
+    }
+
+    public ___ double getChargeMaxi()___
+}`),
+			trous: [["abstract"], ["abstract"], [";"]],
+			expl: "La classe et la méthode sont `abstract`. Une méthode abstraite n'a pas d'accolades : sa déclaration se termine par un point-virgule." },
+		{ id: "o10.instanceof", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.util.ArrayList;
+
+public class Inventaire
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Vehicule> lst = new ArrayList<Vehicule>();
+        lst.add(new Wagon());
+        lst.add(new Motrice());
+        lst.add(new Voiture());
+        lst.add(new Wagon());
+        int nbWagons = 0;
+        for (Vehicule v : lst)
+        {
+            if (v instanceof Wagon)
+            {
+                nbWagons++;
+            }
+        }
+        System.out.println(nbWagons + " " + (lst.get(2) instanceof Wagon) + " " + (lst.get(2) instanceof Vehicule));
+    }
+}
+
+abstract class Vehicule { }
+
+class Motrice extends Vehicule { }
+
+class Wagon extends Vehicule { }
+
+class Voiture extends Wagon { }`),
+			expl: "Une `Voiture` hérite de `Wagon` : elle **est un** wagon. `instanceof Wagon` est donc vrai pour les deux wagons et la voiture : 3. Et tout ce qui est dans la liste est un `Vehicule`." },
+		{ id: "o10.figures", k: "code", mode: "class", fichier: "Rectangle.java",
+			enonce: "La classe abstraite `Polygone` est donnée. Écris `Rectangle(double l, double h)` qui en hérite (4 côtés, aire l × h), puis `Carre(double c)`, qui hérite de `Rectangle` et n'a besoin que d'un constructeur.",
+			regles: ["allman"],
+			harness: T(`
+public class TestFigure
+{
+    public static void main(String[] args)
+    {
+        Polygone[] figures = { new Rectangle(2, 5), new Carre(3), new Rectangle(1.5, 4) };
+        double aireTotale = 0;
+        for (Polygone p : figures)
+        {
+            System.out.println(p);
+            aireTotale += p.getAire();
+        }
+        System.out.println(aireTotale);
+    }
+}
+
+abstract class Polygone
+{
+    protected double[] cotes;
+
+    protected Polygone(int nbCotes)
+    {
+        this.cotes = new double[nbCotes];
+    }
+
+    public double getPerimetre()
+    {
+        double p = 0;
+        for (double c : this.cotes)
+        {
+            p += c;
+        }
+        return p;
+    }
+
+    public abstract double getAire();
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + " : périmètre " + getPerimetre() + ", aire " + getAire();
+    }
+}`),
+			depart: T(`
+public class Rectangle extends Polygone
+{
+
+}
+
+class Carre extends Rectangle
+{
+
+}`),
+			solution: T(`
+public class Rectangle extends Polygone
+{
+    public Rectangle(double l, double h)
+    {
+        super(4);
+        this.cotes[0] = l;
+        this.cotes[1] = h;
+        this.cotes[2] = l;
+        this.cotes[3] = h;
+    }
+
+    public double getAire()
+    {
+        return this.cotes[0] * this.cotes[1];
+    }
+}
+
+class Carre extends Rectangle
+{
+    public Carre(double c)
+    {
+        super(c, c);
+    }
+}`),
+			indices: ["`Rectangle` commence par `super(4);` (le constructeur de `Polygone` crée le tableau de 4 côtés), puis remplit `this.cotes[0]` à `this.cotes[3]`.",
+				"Un carré est un rectangle de côtés égaux : son constructeur fait seulement `super(c, c);`. Il hérite de `getAire()`, et `getClass().getSimpleName()` affichera bien `Carre`."] },
+		{ id: "o10.train", k: "code", mode: "class", fichier: "Train.java",
+			enonce: "Les véhicules sont donnés. Écris `Train`, qui range ses véhicules dans une `LinkedList<Vehicule>`. `ajouterVehicule(Vehicule v)` renvoie `false` si `v` est `null`, ou si le train est vide et que `v` n'est pas une `Motrice` (le premier véhicule doit tirer le train). `getChargeTotale()` additionne les charges maximales, et `toString()` affiche une ligne par véhicule.",
+			regles: ["allman"],
+			harness: T(`
+public class TestTrain
+{
+    public static void main(String[] args)
+    {
+        Train t = new Train();
+        System.out.println(t.ajouterVehicule(new Wagon(4, 20, 40)));
+        System.out.println(t.ajouterVehicule(new Motrice(8, 80)));
+        System.out.println(t.ajouterVehicule(new Wagon(4, 20, 40)));
+        System.out.println(t.ajouterVehicule(null));
+        t.ajouterVehicule(new Wagon(8, 30, 90));
+        System.out.print(t);
+        System.out.println("Charge totale : " + t.getChargeTotale());
+    }
+}
+
+abstract class Vehicule
+{
+    protected int nbRoue;
+    protected int poids;
+
+    public Vehicule(int nbRoue, int poids)
+    {
+        this.nbRoue = nbRoue;
+        this.poids  = poids;
+    }
+
+    public abstract double getChargeMaxi();
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + " " + this.nbRoue + " roues, " + this.getChargeMaxi() + " t";
+    }
+}
+
+class Motrice extends Vehicule
+{
+    public Motrice(int nbRoue, int poids)
+    {
+        super(nbRoue, poids);
+    }
+
+    public double getChargeMaxi()
+    {
+        return this.poids;
+    }
+}
+
+class Wagon extends Vehicule
+{
+    private int capacite;
+
+    public Wagon(int nbRoue, int poids, int capacite)
+    {
+        super(nbRoue, poids);
+        this.capacite = capacite;
+    }
+
+    public double getChargeMaxi()
+    {
+        return this.poids + this.capacite;
+    }
+}`),
+			depart: T(`
+import java.util.LinkedList;
+
+public class Train
+{
+    private LinkedList<Vehicule> lstVehicule;
+
+}`),
+			solution: T(`
+import java.util.LinkedList;
+
+public class Train
+{
+    private LinkedList<Vehicule> lstVehicule;
+
+    public Train()
+    {
+        this.lstVehicule = new LinkedList<Vehicule>();
+    }
+
+    public boolean ajouterVehicule(Vehicule v)
+    {
+        if (v == null)
+        {
+            return false;
+        }
+        if (this.lstVehicule.isEmpty() && !(v instanceof Motrice))
+        {
+            return false;
+        }
+        this.lstVehicule.add(v);
+        return true;
+    }
+
+    public double getChargeTotale()
+    {
+        double total = 0;
+        for (Vehicule v : this.lstVehicule)
+        {
+            total += v.getChargeMaxi();
+        }
+        return total;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Vehicule v : this.lstVehicule)
+        {
+            s += v + "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["Le test du premier véhicule : `if (this.lstVehicule.isEmpty() && !(v instanceof Motrice)) return false;` (les parenthèses autour du `instanceof` sont nécessaires avec `!`).",
+				"Pour la charge, une boucle `for (Vehicule v : this.lstVehicule)` et `v.getChargeMaxi()` : chaque véhicule calcule la sienne. Pour `toString()`, concatène `v + \"\\n\"`."] }
+	]
+});
+
+/* -------------------------------------------------------------- 11 (TP11) */
+OBJETS_UNITES.push({
+	id: "o11", num: 11, titre: "Liste doublement chaînée", badge: "Maillon fort",
+	idee: [
+		"Une liste chaînée « maison » est faite de **cellules** : chacune garde un élément et une référence vers la suivante (`svt`). Doublement chaînée, elle connaît aussi la précédente (`prc`). La liste ne garde que la `tete` et la `queue`.",
+		"On parcourt en suivant les flèches : `CelluleDouble cel = this.tete; while (cel != null) { ...; cel = cel.getSvt(); }`. Dans l'autre sens, on part de la `queue` et on suit `getPrc()`.",
+		"Ajouter en fin, c'est relier **dans les deux sens** : `this.queue.setSvt(cel)` **et** `cel.setPrc(this.queue)`, puis `this.queue = cel`. Oublier un lien casse le parcours dans un des deux sens."
+	],
+	exemple: {
+		java: T(`
+public class ListeDouble
+{
+    private CelluleDouble tete;
+    private CelluleDouble queue;
+
+    public ListeDouble()
+    {
+        this.tete  = null;
+        this.queue = null;
+    }
+
+    public boolean estVide()
+    {
+        return this.tete == null;
+    }
+
+    public void ajouter(String val)
+    {
+        CelluleDouble cel = new CelluleDouble(val);
+        if (this.estVide())
+        {
+            this.tete = cel;
+        }
+        else
+        {
+            this.queue.setSvt(cel);     // l'ancienne dernière pointe vers la nouvelle
+            cel.setPrc(this.queue);     // et la nouvelle vers l'ancienne
+        }
+        this.queue = cel;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (CelluleDouble cel = this.tete; cel != null; cel = cel.getSvt())
+        {
+            s += cel.getVal() + " ";
+        }
+        return s;
+    }
+}
+
+class CelluleDouble
+{
+    private String        val;
+    private CelluleDouble prc;
+    private CelluleDouble svt;
+
+    public CelluleDouble(String val)            { this.val = val; }
+    public String        getVal()               { return this.val; }
+    public CelluleDouble getPrc()               { return this.prc; }
+    public CelluleDouble getSvt()               { return this.svt; }
+    public void          setPrc(CelluleDouble c) { this.prc = c; }
+    public void          setSvt(CelluleDouble c) { this.svt = c; }
+}`),
+		note: "Grâce à la `queue`, ajouter en fin ne demande plus de parcourir toute la liste. Au TP, la cellule contient un `Etudiant` au lieu d'une `String`, et la liste a en plus un **curseur** qu'on déplace avec `suivant()` et `precedent()`."
+	},
+	exos: [
+		{ id: "o11.vide", k: "qcm", q: "Que valent `tete` et `queue` dans une liste doublement chaînée vide ?",
+			opts: ["null toutes les deux", "La même cellule vide", "tete vaut null, queue vaut 0", "Elles n'existent pas encore"], a: 0,
+			expl: "Aucune cellule, donc aucune flèche. Dès qu'on ajoute un élément, `tete` et `queue` désignent toutes les deux la même cellule." },
+		{ id: "o11.mem", k: "memory", q: "Complète le schéma mémoire **après** la dernière ligne (la liste est celle de l'exemple).",
+			code: T(`
+ListeDouble l = new ListeDouble();
+l.ajouter("A");
+l.ajouter("B");`),
+			pile: [{ cadre: "main", vars: [{ n: "l", aref: "obj1" }] }],
+			tas: [{ id: "obj1", type: "ListeDouble", champs: [{ n: "tete", aref: "obj2" }, { n: "queue", aref: "obj3" }] },
+				{ id: "obj2", type: "CelluleDouble", champs: [{ n: "val", v: "\"A\"" }, { n: "prc", aref: "null" }, { n: "svt", aref: "obj3" }] },
+				{ id: "obj3", type: "CelluleDouble", champs: [{ n: "val", v: "\"B\"" }, { n: "prc", aref: "obj2" }, { n: "svt", aref: "null" }] }],
+			expl: "La tête est la cellule A, la queue la cellule B. A n'a pas de précédente, B pas de suivante. Entre les deux, deux flèches : `A.svt → B` et `B.prc → A`.",
+			verif: T(`
+public class V
+{
+    public static void main(String[] args)
+    {
+        ListeDouble l = new ListeDouble();
+        l.ajouter("A");
+        l.ajouter("B");
+        CelluleDouble a = l.getTete(), b = l.getQueue();
+        System.out.println("main.l->obj1");
+        System.out.println("obj1.tete->" + (a.getVal().equals("A") ? "obj2" : "?"));
+        System.out.println("obj1.queue->" + (b.getVal().equals("B") ? "obj3" : "?"));
+        System.out.println("obj2.val=" + a.getVal());
+        System.out.println("obj2.prc->" + (a.getPrc() == null ? "null" : "?"));
+        System.out.println("obj2.svt->" + (a.getSvt() == b ? "obj3" : "?"));
+        System.out.println("obj3.val=" + b.getVal());
+        System.out.println("obj3.prc->" + (b.getPrc() == a ? "obj2" : "?"));
+        System.out.println("obj3.svt->" + (b.getSvt() == null ? "null" : "?"));
+    }
+}
+
+class ListeDouble
+{
+    private CelluleDouble tete;
+    private CelluleDouble queue;
+
+    public CelluleDouble getTete()  { return this.tete; }
+    public CelluleDouble getQueue() { return this.queue; }
+
+    public void ajouter(String val)
+    {
+        CelluleDouble cel = new CelluleDouble(val);
+        if (this.tete == null)
+        {
+            this.tete = cel;
+        }
+        else
+        {
+            this.queue.setSvt(cel);
+            cel.setPrc(this.queue);
+        }
+        this.queue = cel;
+    }
+}
+
+class CelluleDouble
+{
+    private String        val;
+    private CelluleDouble prc;
+    private CelluleDouble svt;
+
+    public CelluleDouble(String val)             { this.val = val; }
+    public String        getVal()                { return this.val; }
+    public CelluleDouble getPrc()                { return this.prc; }
+    public CelluleDouble getSvt()                { return this.svt; }
+    public void          setPrc(CelluleDouble c) { this.prc = c; }
+    public void          setSvt(CelluleDouble c) { this.svt = c; }
+}`) },
+		{ id: "o11.sens", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Parcours
+{
+    public static void main(String[] args)
+    {
+        Cellule a = new Cellule("lun");
+        Cellule b = new Cellule("mar");
+        Cellule c = new Cellule("mer");
+        a.svt = b;
+        b.prc = a;
+        b.svt = c;
+        c.prc = b;
+        for (Cellule x = a; x != null; x = x.svt)
+        {
+            System.out.print(x.val + " ");
+        }
+        System.out.println();
+        Cellule x = c;
+        while (x != null)
+        {
+            System.out.print(x.val + " ");
+            x = x.prc;
+        }
+        System.out.println();
+        System.out.println(b.prc.svt.svt.val);
+    }
+}
+
+class Cellule
+{
+    String  val;
+    Cellule prc;
+    Cellule svt;
+
+    Cellule(String val)
+    {
+        this.val = val;
+    }
+}`),
+			expl: "En suivant `svt` depuis `a` : lun mar mer. En suivant `prc` depuis `c` : mer mar lun. Enfin `b.prc` est `a`, `a.svt` est `b`, `b.svt` est `c` : `mer`." },
+		{ id: "o11.if", k: "bug",
+			code: T(`
+public class TestListe
+{
+    public static void main(String[] args)
+    {
+        ListeSimple l = new ListeSimple();
+        l.ajouter("A");
+        l.ajouter("B");
+        l.ajouter("C");
+        l.ajouter("D");
+        System.out.println(l);
+    }
+}
+
+class ListeSimple
+{
+    private Cellule tete;
+
+    public void ajouter(String val)
+    {
+        Cellule cel = new Cellule(val);
+        if (this.tete == null)
+        {
+            this.tete = cel;
+            return;
+        }
+        Cellule tmp = this.tete;
+        if (tmp.svt != null)
+        {
+            tmp = tmp.svt;
+        }
+        tmp.svt = cel;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Cellule c = this.tete; c != null; c = c.svt)
+        {
+            s += c.val;
+        }
+        return s;
+    }
+}
+
+class Cellule
+{
+    String  val;
+    Cellule svt;
+
+    Cellule(String val)
+    {
+        this.val = val;
+    }
+}`),
+			ligne: 27, fix: ["while (tmp.svt != null)"],
+			expl: "Pour trouver la dernière cellule, il faut avancer **tant qu'**il y a une suivante. Avec un `if`, on n'avance qu'une fois : C remplace la suite de B, puis D aussi, et la liste affiche `ABD`." },
+		{ id: "o11.lien", k: "qcm", q: "Dans `ajouter`, on a oublié `cel.setPrc(this.queue);`. Que se passe-t-il ensuite ?",
+			opts: ["Le parcours de la tête vers la queue marche, mais pas celui de la queue vers la tête", "Plus aucun parcours ne marche", "Le programme ne compile plus", "Rien : prc est rempli automatiquement"], a: 0,
+			expl: "Les liens `svt` sont corrects, donc l'affichage normal marche. Mais en partant de la queue, `getPrc()` vaut `null` dès la première cellule : le parcours à l'envers s'arrête tout de suite." },
+		{ id: "o11.fill", k: "fill", q: "Complète l'ajout **en tête** d'une liste doublement chaînée.",
+			code: T(`
+public void ajouterEnTete(String val)
+{
+    CelluleDouble cel = new CelluleDouble(val);
+    if (this.estVide())
+    {
+        this.queue = cel;
+    }
+    else
+    {
+        cel.setSvt(this.___);
+        this.tete.___(cel);
+    }
+    this.tete = ___;
+}`),
+			trous: [["tete"], ["setPrc"], ["cel"]],
+			expl: "La nouvelle cellule pointe vers l'ancienne tête, l'ancienne tête pointe en arrière vers la nouvelle, et la nouvelle devient la tête. Si la liste était vide, elle est aussi la queue." },
+		{ id: "o11.comp", k: "fill", q: "Complète le comparateur qui range les étudiants par nom, puis par prénom quand les noms sont égaux.",
+			code: T(`
+import java.util.Comparator;
+
+public class ComparatorEtd ___ Comparator<Etudiant>
+{
+    public int ___(Etudiant e1, Etudiant e2)
+    {
+        int c = e1.getNom().compareTo(e2.getNom());
+        if (c == 0)
+        {
+            c = e1.getPrenom().___(e2.getPrenom());
+        }
+        return c;
+    }
+}`),
+			trous: [["implements"], ["compare"], ["compareTo"]],
+			expl: "Un `Comparator` est une interface : on l'implémente et on écrit `compare(a, b)`, qui renvoie un nombre négatif si `a` passe avant `b`, 0 s'ils sont à égalité, positif sinon. Pour les `String`, `compareTo` fait ce travail." },
+		{ id: "o11.liste", k: "code", mode: "class", fichier: "ListeDouble.java",
+			enonce: "La classe `CelluleDouble` est donnée. Écris `ListeDouble` avec `tete` et `queue` : `estVide()`, `ajouterEnFin(String val)`, `ajouterEnTete(String val)`, `taille()`, `toString()` (les valeurs de la tête à la queue, séparées par un espace, entre crochets : `[A B C]`) et `inverse()` (même format, de la queue à la tête).",
+			regles: ["allman"],
+			harness: T(`
+public class TestListe
+{
+    public static void main(String[] args)
+    {
+        ListeDouble l = new ListeDouble();
+        System.out.println(l.estVide() + " " + l + " " + l.taille());
+        l.ajouterEnFin("B");
+        l.ajouterEnFin("C");
+        l.ajouterEnTete("A");
+        l.ajouterEnFin("D");
+        System.out.println(l.estVide() + " " + l + " " + l.taille());
+        System.out.println(l.inverse());
+    }
+}
+
+class CelluleDouble
+{
+    private String        val;
+    private CelluleDouble prc;
+    private CelluleDouble svt;
+
+    public CelluleDouble(String val)
+    {
+        this.val = val;
+    }
+
+    public String getVal()
+    {
+        return this.val;
+    }
+
+    public CelluleDouble getPrc()
+    {
+        return this.prc;
+    }
+
+    public CelluleDouble getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setPrc(CelluleDouble c)
+    {
+        this.prc = c;
+    }
+
+    public void setSvt(CelluleDouble c)
+    {
+        this.svt = c;
+    }
+}`),
+			depart: T(`
+public class ListeDouble
+{
+    private CelluleDouble tete;
+    private CelluleDouble queue;
+
+}`),
+			solution: T(`
+public class ListeDouble
+{
+    private CelluleDouble tete;
+    private CelluleDouble queue;
+
+    public ListeDouble()
+    {
+        this.tete  = null;
+        this.queue = null;
+    }
+
+    public boolean estVide()
+    {
+        return this.tete == null;
+    }
+
+    public void ajouterEnFin(String val)
+    {
+        CelluleDouble cel = new CelluleDouble(val);
+        if (this.estVide())
+        {
+            this.tete = cel;
+        }
+        else
+        {
+            this.queue.setSvt(cel);
+            cel.setPrc(this.queue);
+        }
+        this.queue = cel;
+    }
+
+    public void ajouterEnTete(String val)
+    {
+        CelluleDouble cel = new CelluleDouble(val);
+        if (this.estVide())
+        {
+            this.queue = cel;
+        }
+        else
+        {
+            cel.setSvt(this.tete);
+            this.tete.setPrc(cel);
+        }
+        this.tete = cel;
+    }
+
+    public int taille()
+    {
+        int nb = 0;
+        for (CelluleDouble c = this.tete; c != null; c = c.getSvt())
+        {
+            nb++;
+        }
+        return nb;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (CelluleDouble c = this.tete; c != null; c = c.getSvt())
+        {
+            if (c != this.tete)
+            {
+                s += " ";
+            }
+            s += c.getVal();
+        }
+        return "[" + s + "]";
+    }
+
+    public String inverse()
+    {
+        String s = "";
+        for (CelluleDouble c = this.queue; c != null; c = c.getPrc())
+        {
+            if (c != this.queue)
+            {
+                s += " ";
+            }
+            s += c.getVal();
+        }
+        return "[" + s + "]";
+    }
+}`),
+			indices: ["Pour chaque ajout, pense au cas de la liste vide : la nouvelle cellule devient à la fois la tête et la queue.",
+				"`inverse()` est le miroir de `toString()` : on part de `this.queue` et on avance avec `c = c.getPrc()`. Pour les espaces, n'en ajoute pas avant le premier élément."] },
+		{ id: "o11.curseur", k: "code", mode: "class", fichier: "ListeCurseur.java",
+			enonce: "Écris `ListeCurseur` : une liste doublement chaînée (`tete`, `queue`) avec un **curseur** sur la cellule courante. `ajouter(String val)` ajoute en fin et place le curseur dessus. `premier()` place le curseur sur la tête. `suivant()` et `precedent()` déplacent le curseur et renvoient `false` (sans bouger) si c'est impossible. `getCourant()` renvoie la valeur sous le curseur, ou `null` si la liste est vide.",
+			regles: ["allman"],
+			harness: T(`
+public class TestCurseur
+{
+    public static void main(String[] args)
+    {
+        ListeCurseur l = new ListeCurseur();
+        System.out.println(l.getCourant() + " " + l.suivant());
+        l.ajouter("lun");
+        l.ajouter("mar");
+        l.ajouter("mer");
+        System.out.println(l.getCourant() + " " + l.suivant());
+        l.premier();
+        System.out.println(l.getCourant() + " " + l.precedent());
+        l.suivant();
+        l.suivant();
+        System.out.println(l.getCourant());
+        l.precedent();
+        System.out.println(l.getCourant());
+    }
+}
+
+class CelluleDouble
+{
+    private String        val;
+    private CelluleDouble prc;
+    private CelluleDouble svt;
+
+    public CelluleDouble(String val)
+    {
+        this.val = val;
+    }
+
+    public String getVal()
+    {
+        return this.val;
+    }
+
+    public CelluleDouble getPrc()
+    {
+        return this.prc;
+    }
+
+    public CelluleDouble getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setPrc(CelluleDouble c)
+    {
+        this.prc = c;
+    }
+
+    public void setSvt(CelluleDouble c)
+    {
+        this.svt = c;
+    }
+}`),
+			depart: T(`
+public class ListeCurseur
+{
+    private CelluleDouble tete;
+    private CelluleDouble queue;
+    private CelluleDouble curseur;
+
+}`),
+			solution: T(`
+public class ListeCurseur
+{
+    private CelluleDouble tete;
+    private CelluleDouble queue;
+    private CelluleDouble curseur;
+
+    public void ajouter(String val)
+    {
+        CelluleDouble cel = new CelluleDouble(val);
+        if (this.tete == null)
+        {
+            this.tete = cel;
+        }
+        else
+        {
+            this.queue.setSvt(cel);
+            cel.setPrc(this.queue);
+        }
+        this.queue   = cel;
+        this.curseur = cel;
+    }
+
+    public void premier()
+    {
+        this.curseur = this.tete;
+    }
+
+    public boolean suivant()
+    {
+        if (this.curseur == null || this.curseur.getSvt() == null)
+        {
+            return false;
+        }
+        this.curseur = this.curseur.getSvt();
+        return true;
+    }
+
+    public boolean precedent()
+    {
+        if (this.curseur == null || this.curseur.getPrc() == null)
+        {
+            return false;
+        }
+        this.curseur = this.curseur.getPrc();
+        return true;
+    }
+
+    public String getCourant()
+    {
+        if (this.curseur == null)
+        {
+            return null;
+        }
+        return this.curseur.getVal();
+    }
+}`),
+			indices: ["Le curseur est une simple référence de plus vers une cellule existante : `this.curseur = this.curseur.getSvt();` le déplace.",
+				"Avant de bouger, vérifie deux choses : que le curseur existe (`!= null`) et qu'il y a bien une cellule dans cette direction."] },
+		{ id: "o11.triee", k: "code", mode: "class", fichier: "ListeTriee.java",
+			enonce: "Écris `ListeTriee` : une liste doublement chaînée d'étudiants, **toujours rangée** selon le `Comparator<Etudiant>` reçu par le constructeur. `ajouter(Etudiant e)` insère la nouvelle cellule à sa place (après les étudiants à égalité), en reliant `prc` et `svt` des deux côtés. `toString()` renvoie les étudiants de la tête à la queue, séparés par ` | `, et `inverse()` de la queue à la tête.",
+			regles: ["allman"],
+			harness: T(`
+import java.util.Comparator;
+
+public class TestTri
+{
+    public static void main(String[] args)
+    {
+        ListeTriee parNom = new ListeTriee(new ParNom());
+        ListeTriee parMoyenne = new ListeTriee(new ParMoyenne());
+        Etudiant[] promo = { new Etudiant("Martin", 12.5), new Etudiant("Bernard", 15.0), new Etudiant("Petit", 9.5), new Etudiant("Durand", 15.0), new Etudiant("Arnaud", 11.0) };
+        for (Etudiant e : promo)
+        {
+            parNom.ajouter(e);
+            parMoyenne.ajouter(e);
+        }
+        System.out.println(parNom);
+        System.out.println(parMoyenne);
+        System.out.println(parMoyenne.inverse());
+    }
+}
+
+class Etudiant
+{
+    private String nom;
+    private double moyenne;
+
+    public Etudiant(String nom, double moyenne)
+    {
+        this.nom     = nom;
+        this.moyenne = moyenne;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public double getMoyenne()
+    {
+        return this.moyenne;
+    }
+
+    public String toString()
+    {
+        return this.nom + " " + this.moyenne;
+    }
+}
+
+class ParNom implements Comparator<Etudiant>
+{
+    public int compare(Etudiant a, Etudiant b)
+    {
+        return a.getNom().compareTo(b.getNom());
+    }
+}
+
+class ParMoyenne implements Comparator<Etudiant>
+{
+    public int compare(Etudiant a, Etudiant b)
+    {
+        if (a.getMoyenne() < b.getMoyenne())
+        {
+            return -1;
+        }
+        if (a.getMoyenne() > b.getMoyenne())
+        {
+            return 1;
+        }
+        return 0;
+    }
+}
+
+class Cellule
+{
+    private Etudiant etd;
+    private Cellule  prc;
+    private Cellule  svt;
+
+    public Cellule(Etudiant etd)
+    {
+        this.etd = etd;
+    }
+
+    public Etudiant getEtudiant()
+    {
+        return this.etd;
+    }
+
+    public Cellule getPrc()
+    {
+        return this.prc;
+    }
+
+    public Cellule getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setPrc(Cellule c)
+    {
+        this.prc = c;
+    }
+
+    public void setSvt(Cellule c)
+    {
+        this.svt = c;
+    }
+}`),
+			depart: T(`
+import java.util.Comparator;
+
+public class ListeTriee
+{
+    private Cellule tete;
+    private Cellule queue;
+    private Comparator<Etudiant> comp;
+
+    public ListeTriee(Comparator<Etudiant> comp)
+    {
+        this.comp = comp;
+    }
+
+}`),
+			solution: T(`
+import java.util.Comparator;
+
+public class ListeTriee
+{
+    private Cellule tete;
+    private Cellule queue;
+    private Comparator<Etudiant> comp;
+
+    public ListeTriee(Comparator<Etudiant> comp)
+    {
+        this.comp = comp;
+    }
+
+    public void ajouter(Etudiant e)
+    {
+        Cellule cel = new Cellule(e);
+        Cellule apres = this.tete;
+        while (apres != null && this.comp.compare(apres.getEtudiant(), e) <= 0)
+        {
+            apres = apres.getSvt();
+        }
+        if (apres == null)
+        {
+            if (this.queue == null)
+            {
+                this.tete = cel;
+            }
+            else
+            {
+                this.queue.setSvt(cel);
+                cel.setPrc(this.queue);
+            }
+            this.queue = cel;
+        }
+        else
+        {
+            Cellule avant = apres.getPrc();
+            cel.setSvt(apres);
+            apres.setPrc(cel);
+            cel.setPrc(avant);
+            if (avant == null)
+            {
+                this.tete = cel;
+            }
+            else
+            {
+                avant.setSvt(cel);
+            }
+        }
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Cellule c = this.tete; c != null; c = c.getSvt())
+        {
+            if (c != this.tete)
+            {
+                s += " | ";
+            }
+            s += c.getEtudiant();
+        }
+        return s;
+    }
+
+    public String inverse()
+    {
+        String s = "";
+        for (Cellule c = this.queue; c != null; c = c.getPrc())
+        {
+            if (c != this.queue)
+            {
+                s += " | ";
+            }
+            s += c.getEtudiant();
+        }
+        return s;
+    }
+}`),
+			indices: ["Cherche d'abord la cellule `apres` devant laquelle insérer : avance tant que `comp.compare(apres.getEtudiant(), e) <= 0`. Si tu arrives à `null`, c'est un ajout en fin.",
+				"Pour une insertion devant `apres`, il y a 4 liens à poser : `cel.svt`, `apres.prc`, `cel.prc` et, si `avant` existe, `avant.svt` (sinon `cel` devient la tête)."] }
+	]
+});
+
+/* -------------------------------------------------------------- 12 (TP11) */
+OBJETS_UNITES.push({
+	id: "o12", num: 12, titre: "Exceptions", badge: "Démineur",
+	idee: [
+		"Une erreur à l'exécution **lève** une exception (`ArithmeticException`, `NullPointerException`...). Si personne ne l'attrape, le programme s'arrête. `try { ... } catch (ArithmeticException e) { ... }` l'attrape, puis le programme continue **après** le `catch`.",
+		"On lève soi-même une exception avec `throw new IllegalArgumentException(\"message\");`, et `e.getMessage()` relit le message. Le bloc `finally` s'exécute **toujours**, qu'il y ait eu une exception ou non.",
+		"Sa propre exception : `class DeplacementException extends Exception` avec `super(message)`. Héritant de `Exception` (et pas de `RuntimeException`), elle est **contrôlée** : la méthode qui la lève écrit `throws DeplacementException`, et l'appelant doit l'attraper ou l'annoncer à son tour."
+	],
+	exemple: {
+		java: T(`
+public class TestCurseur
+{
+    public static void main(String[] args)
+    {
+        Curseur c = new Curseur(3);
+        try
+        {
+            c.suivant();
+            c.suivant();
+            c.suivant();                         // une case de trop
+            System.out.println("jamais affiché");
+        }
+        catch (DeplacementException e)
+        {
+            System.out.println("Erreur : " + e.getMessage());
+        }
+        System.out.println("position " + c.getPos());
+    }
+}
+
+class DeplacementException extends Exception
+{
+    public DeplacementException(String message)
+    {
+        super(message);
+    }
+}
+
+class Curseur
+{
+    private int pos;
+    private int taille;
+
+    public Curseur(int taille)
+    {
+        this.taille = taille;
+    }
+
+    public void suivant() throws DeplacementException
+    {
+        if (this.pos == this.taille - 1)
+        {
+            throw new DeplacementException("pas de suivant après la case " + this.pos);
+        }
+        this.pos++;
+    }
+
+    public int getPos()
+    {
+        return this.pos;
+    }
+}`),
+		note: "Le troisième `suivant()` lève l'exception : la suite du `try` est sautée, on passe directement au `catch`, puis le programme continue normalement. Le curseur est resté sur la case 2."
+	},
+	exos: [
+		{ id: "o12.saut", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Division
+{
+    public static void main(String[] args)
+    {
+        int[] t = { 12, 4, 0, 3 };
+        for (int i = 0; i < t.length; i++)
+        {
+            try
+            {
+                System.out.println("100 / " + t[i] + " = " + 100 / t[i]);
+            }
+            catch (ArithmeticException e)
+            {
+                System.out.println("division par zéro : " + e.getMessage());
+            }
+        }
+        System.out.println("fin");
+    }
+}`),
+			expl: "Pour 0, la division lève une `ArithmeticException` (message `/ by zero`) avant tout affichage : on passe au `catch`. Le `try` est **dans** la boucle, donc la boucle continue avec 3." },
+		{ id: "o12.finally", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Finally
+{
+    static int lire(String s)
+    {
+        try
+        {
+            return Integer.parseInt(s);
+        }
+        catch (NumberFormatException e)
+        {
+            System.out.println("pas un nombre : " + s);
+            return -1;
+        }
+        finally
+        {
+            System.out.println("lu " + s);
+        }
+    }
+
+    public static void main(String[] args)
+    {
+        System.out.println(lire("42"));
+        System.out.println(lire("4x2"));
+    }
+}`),
+			expl: "Même quand le `try` ou le `catch` fait `return`, le `finally` passe avant que la méthode ne rende la main. D'où « lu 42 » **avant** 42, puis le message du `catch`, « lu 4x2 » et -1." },
+		{ id: "o12.controlee", k: "qcm", q: "Laquelle de ces exceptions oblige la méthode qui la lève à écrire `throws` (si elle ne l'attrape pas) ?",
+			opts: ["class DeplacementException extends Exception", "IllegalArgumentException", "class SaisieException extends RuntimeException", "NullPointerException"], a: 0,
+			expl: "Les filles de `RuntimeException` (dont `IllegalArgumentException` et `NullPointerException`) sont libres. Les autres filles de `Exception` sont **contrôlées** : javac exige `try/catch` ou `throws`." },
+		{ id: "o12.throws", k: "bug",
+			code: T(`
+public class Jeu
+{
+    public static void main(String[] args)
+    {
+        Pion p = new Pion();
+        try
+        {
+            p.avancer(5);
+            p.avancer(5);
+        }
+        catch (DeplacementException e)
+        {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+class DeplacementException extends Exception
+{
+    public DeplacementException(String message)
+    {
+        super(message);
+    }
+}
+
+class Pion
+{
+    private int pos;
+
+    public void avancer(int n)
+    {
+        if (this.pos + n > 8)
+        {
+            throw new DeplacementException("hors du plateau");
+        }
+        this.pos += n;
+    }
+}`),
+			ligne: 30, fix: ["public void avancer(int n) throws DeplacementException"],
+			expl: "`DeplacementException` est contrôlée : une méthode qui peut la lever sans l'attraper doit l'annoncer avec `throws`. C'est ce qui oblige ensuite le `main` à prévoir le `try/catch`." },
+		{ id: "o12.message", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Messages
+{
+    public static void main(String[] args)
+    {
+        try
+        {
+            throw new DeplacementException("fin de liste");
+        }
+        catch (DeplacementException e)
+        {
+            System.out.println(e.getMessage());
+            System.out.println(e);
+        }
+        try
+        {
+            String s = null;
+            s.length();
+        }
+        catch (RuntimeException e)
+        {
+            System.out.println("attrapée : " + (e instanceof NullPointerException));
+        }
+    }
+}
+
+class DeplacementException extends Exception
+{
+    public DeplacementException(String message)
+    {
+        super(message);
+    }
+}`),
+			expl: "`getMessage()` rend le texte passé à `super(message)`. Afficher l'exception elle-même donne `NomDeLaClasse: message`. Un `catch (RuntimeException e)` attrape aussi ses filles, comme `NullPointerException`." },
+		{ id: "o12.fill", k: "fill", q: "Complète la déclaration de l'exception et la méthode qui la lève.",
+			code: T(`
+public class SoldeException ___ Exception
+{
+    public SoldeException(String message)
+    {
+        ___(message);
+    }
+}
+
+public void retirer(double montant) ___ SoldeException
+{
+    if (montant > this.solde)
+    {
+        ___ new SoldeException("solde insuffisant");
+    }
+    this.solde -= montant;
+}`),
+			trous: [["extends"], ["super"], ["throws"], ["throw"]],
+			expl: "Une exception est une classe qui hérite de `Exception`. `throws` (avec un s) **annonce** dans l'en-tête ; `throw` (sans s) **lève** l'exception dans le corps." },
+		{ id: "o12.ordre", k: "qcm", q: "On écrit `catch (Exception e) { ... }` puis, juste après, `catch (ArithmeticException e) { ... }`. Que se passe-t-il ?",
+			opts: ["Erreur de compilation : le second catch ne peut jamais être atteint", "Le second catch sert pour les divisions par zéro", "Les deux catch s'exécutent l'un après l'autre", "Ça compile, Java choisit le plus précis"], a: 0,
+			expl: "Les `catch` sont essayés dans l'ordre. `Exception` attrape déjà toutes les `ArithmeticException` : le second est inutile, et javac le refuse. On met toujours le plus précis en premier." },
+		{ id: "o12.compte", k: "code", mode: "class", fichier: "Compte.java",
+			enonce: "Écris l'exception contrôlée `SoldeException` (constructeur avec message) et la classe `Compte` : `deposer(double montant)` lève une `IllegalArgumentException(\"montant négatif\")` si le montant est négatif, et `retirer(double montant)` lève une `SoldeException(\"solde insuffisant\")` si le retrait dépasse le solde. `getSolde()` renvoie le solde.",
+			regles: ["allman"],
+			harness: T(`
+public class TestCompte
+{
+    public static void main(String[] args)
+    {
+        Compte c = new Compte();
+        c.deposer(50);
+        try
+        {
+            c.retirer(20);
+            System.out.println("retrait ok : " + c.getSolde());
+            c.retirer(100);
+            System.out.println("jamais");
+        }
+        catch (SoldeException e)
+        {
+            System.out.println("refusé : " + e.getMessage());
+        }
+        try
+        {
+            c.deposer(-5);
+        }
+        catch (IllegalArgumentException e)
+        {
+            System.out.println(e.getMessage());
+        }
+        System.out.println(c.getSolde());
+    }
+}`),
+			depart: T(`
+class SoldeException extends Exception
+{
+
+}
+
+public class Compte
+{
+    private double solde;
+
+}`),
+			solution: T(`
+class SoldeException extends Exception
+{
+    public SoldeException(String message)
+    {
+        super(message);
+    }
+}
+
+public class Compte
+{
+    private double solde;
+
+    public void deposer(double montant)
+    {
+        if (montant < 0)
+        {
+            throw new IllegalArgumentException("montant négatif");
+        }
+        this.solde += montant;
+    }
+
+    public void retirer(double montant) throws SoldeException
+    {
+        if (montant > this.solde)
+        {
+            throw new SoldeException("solde insuffisant");
+        }
+        this.solde -= montant;
+    }
+
+    public double getSolde()
+    {
+        return this.solde;
+    }
+}`),
+			indices: ["L'exception : un constructeur `public SoldeException(String message) { super(message); }`.",
+				"`retirer` doit annoncer `throws SoldeException` (exception contrôlée). `deposer` n'en a pas besoin : `IllegalArgumentException` hérite de `RuntimeException`."] },
+		{ id: "o12.lire", k: "code", mode: "method",
+			enonce: "Écris la méthode `static int lireEntier(String s, int defaut)` : elle renvoie l'entier écrit dans `s` (avec `Integer.parseInt`), ou `defaut` si `s` n'est pas un nombre (`NumberFormatException`).",
+			harness: T(`
+		System.out.println(lireEntier("42", 0));
+		System.out.println(lireEntier("-7", 0));
+		System.out.println(lireEntier("douze", 12));
+		System.out.println(lireEntier("", -1));`),
+			depart: T(`
+	static int lireEntier(String s, int defaut)
+	{
+
+	}`),
+			solution: T(`
+	static int lireEntier(String s, int defaut)
+	{
+		try
+		{
+			return Integer.parseInt(s);
+		}
+		catch (NumberFormatException e)
+		{
+			return defaut;
+		}
+	}`),
+			indices: ["Mets l'appel risqué dans un `try` : `return Integer.parseInt(s);`.",
+				"Dans le `catch (NumberFormatException e)`, renvoie simplement `defaut`."] }
+	]
+});
+
+/* -------------------------------------------------------------- 13 (TP12) */
+OBJETS_UNITES.push({
+	id: "o13", num: 13, titre: "Énumérations", badge: "Maître des couleurs",
+	idee: [
+		"Avec des constantes `public static final int ROUGE = 16711680;`, rien n'empêche de passer `42` à une méthode qui attend une couleur. Un **enum** liste les **seules** valeurs possibles : `enum Couleur { ROUGE, VERT, BLEU }`.",
+		"Chaque constante est un objet unique : on compare avec `==`, on s'en sert dans un `switch` (`case ROUGE:`, sans écrire `Couleur.`). `name()` donne son nom, `ordinal()` sa position (dès 0), et `Couleur.values()` le tableau de toutes les constantes.",
+		"Un enum peut avoir des attributs, un constructeur (toujours `private`) et des méthodes : `ROUGE(\"carmin\", 255, 0, 0)` appelle ce constructeur, une fois. `Couleur.valueOf(\"ROUGE\")` retrouve une constante par son nom."
+	],
+	exemple: {
+		java: T(`
+public enum Couleur
+{
+    ROUGE("carmin", 255, 0, 0),
+    VERT ("amande", 0, 255, 0),
+    BLEU ("azur",   0, 0, 255),
+    NOIR ("ébène",  0, 0, 0);
+
+    private String libelle;
+    private int    r, v, b;
+
+    Couleur(String libelle, int r, int v, int b)   // appelé une fois par constante
+    {
+        this.libelle = libelle;
+        this.r = r;
+        this.v = v;
+        this.b = b;
+    }
+
+    public String getLibelle()
+    {
+        return this.libelle;
+    }
+
+    public int getValeur()
+    {
+        return this.r * 65536 + this.v * 256 + this.b;
+    }
+}`),
+		note: "`Couleur.VERT.getValeur()` vaut 65280, `Couleur.VERT.ordinal()` vaut 1, et `System.out.println(Couleur.VERT)` affiche `VERT`. Une méthode `peindre(Couleur c)` ne peut recevoir que ces quatre valeurs (ou `null`)."
+	},
+	exos: [
+		{ id: "o13.k", k: "qcm", q: "Les couleurs sont des constantes `int` dans une classe `CouleurK`. Quel problème l'enum `Couleur` règle-t-il ?",
+			opts: ["Une méthode peindre(int c) accepte n'importe quel entier, même 42", "Les int prennent trop de place en mémoire", "On ne peut pas afficher un int", "Les constantes int ne peuvent pas être static"], a: 0,
+			expl: "Avec `peindre(Couleur c)`, javac refuse tout ce qui n'est pas une constante de l'enum. Et `System.out.println(c)` affiche un nom lisible plutôt qu'un nombre." },
+		{ id: "o13.base", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class TestJour
+{
+    public static void main(String[] args)
+    {
+        Jour j = Jour.MERCREDI;
+        System.out.println(j + " " + j.ordinal() + " " + j.name().length());
+        System.out.println(Jour.values().length);
+        for (Jour k : Jour.values())
+        {
+            if (k.ordinal() % 2 == 0)
+            {
+                System.out.print(k + " ");
+            }
+        }
+        System.out.println();
+        System.out.println(j == Jour.valueOf("MERCREDI"));
+    }
+}
+
+enum Jour
+{
+    LUNDI, MARDI, MERCREDI, JEUDI, VENDREDI
+}`),
+			expl: "`MERCREDI` est la 3e constante : `ordinal()` vaut 2 (on compte depuis 0). Les ordinaux pairs sont 0, 2 et 4. `valueOf` renvoie l'unique objet `MERCREDI` : `==` vaut `true`." },
+		{ id: "o13.switch", k: "fill", q: "Complète le `switch` sur un enum.",
+			code: T(`
+static String temperature(Couleur c)
+{
+    switch (c)
+    {
+        case ___:
+            return "chaude";
+        case BLEU:
+        case VERT:
+            return "froide";
+        ___:
+            return "neutre";
+    }
+}`),
+			trous: [["ROUGE"], ["default"]],
+			expl: "Dans un `switch` sur un enum, on écrit le nom de la constante seul : `case ROUGE:` (et non `case Couleur.ROUGE:`). Le `default` couvre les autres constantes, ici `NOIR`." },
+		{ id: "o13.new", k: "bug",
+			code: T(`
+public class Palette
+{
+    public static void main(String[] args)
+    {
+        Couleur c = new Couleur("rose", 255, 192, 203);
+        System.out.println(c.getLibelle());
+    }
+}
+
+enum Couleur
+{
+    ROUGE("carmin", 255, 0, 0), BLEU("azur", 0, 0, 255);
+
+    private String libelle;
+    private int    r, v, b;
+
+    Couleur(String libelle, int r, int v, int b)
+    {
+        this.libelle = libelle;
+        this.r = r;
+        this.v = v;
+        this.b = b;
+    }
+
+    public String getLibelle()
+    {
+        return this.libelle;
+    }
+}`),
+			ligne: 5, fix: ["Couleur c = Couleur.ROUGE;"],
+			expl: "On ne crée jamais d'objet d'un enum avec `new` : ses objets sont **exactement** ses constantes, créées une fois pour toutes. Pour une nouvelle couleur, on ajoute une constante dans l'enum." },
+		{ id: "o13.valueof", k: "predict",
+			q: "L'enum a sa propre méthode `valueOf(int)`, en plus du `valueOf(String)` fourni par Java. Qu'affiche ce programme ?",
+			code: T(`
+public class ParcoursCouleur
+{
+    public static void main(String[] args)
+    {
+        System.out.println(Couleur.valueOf("BLEU").getLibelle());
+        System.out.println(Couleur.valueOf(1));
+        System.out.println(Couleur.valueOf(7));
+        System.out.println(Couleur.NOIR.compareTo(Couleur.VERT));
+    }
+}
+
+enum Couleur
+{
+    ROUGE("carmin"), VERT("amande"), BLEU("azur"), NOIR("ébène");
+
+    private String libelle;
+
+    Couleur(String libelle)
+    {
+        this.libelle = libelle;
+    }
+
+    public String getLibelle()
+    {
+        return this.libelle;
+    }
+
+    public static Couleur valueOf(int i)
+    {
+        for (Couleur c : Couleur.values())
+        {
+            if (c.ordinal() == i)
+            {
+                return c;
+            }
+        }
+        return null;
+    }
+}`),
+			expl: "`valueOf(\"BLEU\")` (fourni par Java) cherche par nom. Notre `valueOf(1)` cherche par position : `VERT`, et `null` pour 7. `compareTo` compare les positions : 3 - 1 = 2." },
+		{ id: "o13.ctor", k: "qcm", q: "Quand le constructeur de l'enum `Couleur` (8 constantes) est-il exécuté ?",
+			opts: ["8 fois, une par constante, au premier usage de Couleur", "À chaque fois qu'on écrit Couleur.ROUGE", "À chaque new Couleur(...)", "Jamais : un enum n'a pas de constructeur"], a: 0,
+			expl: "Les constantes sont créées une seule fois, quand la classe est chargée. Ensuite, `Couleur.ROUGE` désigne toujours le même objet : c'est pour ça que `==` suffit pour comparer." },
+		{ id: "o13.jour", k: "code", mode: "class", fichier: "Jour.java",
+			enonce: "Écris l'enum `Jour` (de `LUNDI` à `DIMANCHE`) avec `estWeekend()` (samedi ou dimanche), `suivant()` (le jour d'après : après `DIMANCHE` revient `LUNDI`) et `abrege()` qui renvoie les 3 premières lettres en minuscules (`lun`, `mar`...).",
+			regles: ["allman"],
+			harness: T(`
+public class TestJour
+{
+    public static void main(String[] args)
+    {
+        for (Jour j : Jour.values())
+        {
+            System.out.println(j.abrege() + " " + j.estWeekend() + " -> " + j.suivant());
+        }
+        System.out.println(Jour.valueOf("JEUDI").suivant().suivant().ordinal());
+    }
+}`),
+			depart: T(`
+public enum Jour
+{
+    LUNDI, MARDI, MERCREDI, JEUDI, VENDREDI, SAMEDI, DIMANCHE;
+
+}`),
+			solution: T(`
+public enum Jour
+{
+    LUNDI, MARDI, MERCREDI, JEUDI, VENDREDI, SAMEDI, DIMANCHE;
+
+    public boolean estWeekend()
+    {
+        return this == SAMEDI || this == DIMANCHE;
+    }
+
+    public Jour suivant()
+    {
+        Jour[] tous = Jour.values();
+        return tous[(this.ordinal() + 1) % tous.length];
+    }
+
+    public String abrege()
+    {
+        return this.name().substring(0, 3).toLowerCase();
+    }
+}`),
+			indices: ["Dans une méthode de l'enum, `this` est la constante courante : `this == SAMEDI` marche directement.",
+				"Pour `suivant()`, prends `Jour.values()` et la case `(this.ordinal() + 1) % 7` : le modulo fait revenir à 0 après DIMANCHE. `name()` donne le nom en majuscules."] },
+		{ id: "o13.couleur", k: "code", mode: "class", fichier: "Couleur.java",
+			enonce: "Écris l'enum `Couleur` avec 4 constantes : `ROUGE` (« carmin », 255, 0, 0), `JAUNE` (« citron », 255, 255, 0), `CYAN` (« turquoise », 0, 255, 255) et `BLANC` (« immaculé », 255, 255, 255). Ajoute `getLibelle()`, `getValeur()` (r × 65536 + v × 256 + b) et `static Couleur valueOf(int i)` qui renvoie la constante de position `i`, ou `null`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestCouleur
+{
+    public static void main(String[] args)
+    {
+        for (Couleur c : Couleur.values())
+        {
+            System.out.println(String.format("%-10s", c) + String.format("%-10s", c.getLibelle()) + c.getValeur());
+        }
+        System.out.println(Couleur.valueOf(2) + " " + Couleur.valueOf(9) + " " + Couleur.valueOf("JAUNE").ordinal());
+    }
+}`),
+			depart: T(`
+public enum Couleur
+{
+
+}`),
+			solution: T(`
+public enum Couleur
+{
+    ROUGE("carmin", 255, 0, 0),
+    JAUNE("citron", 255, 255, 0),
+    CYAN ("turquoise", 0, 255, 255),
+    BLANC("immaculé", 255, 255, 255);
+
+    private String libelle;
+    private int    r, v, b;
+
+    Couleur(String libelle, int r, int v, int b)
+    {
+        this.libelle = libelle;
+        this.r = r;
+        this.v = v;
+        this.b = b;
+    }
+
+    public String getLibelle()
+    {
+        return this.libelle;
+    }
+
+    public int getValeur()
+    {
+        return this.r * 65536 + this.v * 256 + this.b;
+    }
+
+    public static Couleur valueOf(int i)
+    {
+        for (Couleur c : Couleur.values())
+        {
+            if (c.ordinal() == i)
+            {
+                return c;
+            }
+        }
+        return null;
+    }
+}`),
+			indices: ["Les constantes en premier, séparées par des virgules, la dernière suivie d'un point-virgule. Puis les attributs et le constructeur (sans `public`).",
+				"Pour `valueOf(int i)`, parcours `Couleur.values()` et compare `c.ordinal()` à `i`. Le `valueOf(String)` de Java reste utilisable à côté : ce sont deux surcharges."] }
+	]
+});
+
 /* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
@@ -11531,7 +15927,7 @@ public class Panier
    ========================================================================== */
 var LANGUES = [
 	{ id: "java", nom: "Algo & Java", groupe: "Semestre 1", icone: "☕", mode: "java", runner: "java", desc: "Bases de l'algorithmique en Java (R1.01)", unites: CHAPITRES, controles: CONTROLES, bonus: EVALS },
-	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", niveau: 2, desc: "Classes, collections, interfaces (R2.01) · TP1 à 3 pour l'instant", unites: OBJETS_UNITES },
+	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", niveau: 2, desc: "Classes, collections, interfaces, héritage, exceptions, enum (R2.01)", unites: OBJETS_UNITES },
 	{ id: "ihm", nom: "Dév IHM", groupe: "Semestre 2", icone: "🪟", mode: "java", runner: "swing", desc: "Fenêtres Swing, layouts, événements (R2.02)", bientot: true },
 	{ id: "html", nom: "HTML & CSS", groupe: "Web et autres langages", icone: "🌐", mode: "html", runner: "web", desc: "Construire des pages web", unites: HTML_UNITES, bientot: true }, // prêt, masqué pour l'instant : retirer bientot pour l'ouvrir
 	{ id: "sql", nom: "SQL", groupe: "Web et autres langages", icone: "🗄️", bientot: true },
@@ -12038,7 +16434,7 @@ function updateTabs(hsh)
 	}
 
 	/* --- Prédire la sortie --- */
-	function wrapSnippet(code) { return /\bclass\s+\w+/.test(code) ? code : "public class Exemple\n{\n\tpublic static void main(String[] args)\n\t{\n" + code + "\n\t}\n}"; }
+	function wrapSnippet(code) { return /\b(class|interface|enum)\s+\w+/.test(code) ? code : "public class Exemple\n{\n\tpublic static void main(String[] args)\n\t{\n" + code + "\n\t}\n}"; }
 	function norm(s) { return String(s).replace(/\r/g, "").replace(/\u0001|\u0002/g, "").split("\n").map(function (l) { return l.replace(/[ \t]+$/, ""); }).join("\n").replace(/\n+$/, ""); }
 	function exPredict(e, api)
 	{
