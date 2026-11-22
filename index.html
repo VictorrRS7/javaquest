@@ -372,16 +372,23 @@ code.inline { background: var(--surface-2); padding: 1px 5px; border-radius: 5px
 .lines button.good { background: var(--ok-soft); border-left-color: var(--ok); }
 
 /* Trous à compléter */
-.hole
+input.hole[type="text"]
 {
 	font: inherit;
 	color: var(--ink);
 	background: var(--surface);
 	border: 1px dashed var(--accent);
 	border-radius: 5px;
-	padding: 0 4px;
+	padding: 1px 4px;
 	min-width: 3ch;
+	box-sizing: content-box;
+	vertical-align: baseline;
 }
+.hole::placeholder { color: var(--accent); opacity: .65; text-align: center; }
+.hole:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hole.empty { border: 2px dashed var(--ko); background: var(--ko-soft); }
+pre.code.fill { white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.9; }
+.fillcount { margin: 2px 0 0; }
 .hole.good { border: 1px solid var(--ok); background: var(--ok-soft); }
 .hole.bad { border: 1px solid var(--ko); background: var(--ko-soft); }
 
@@ -768,6 +775,29 @@ input[type="search"] { width: 100%; }
 /* ----- Installation ----- */
 .install-steps { margin: 0; padding-left: 20px; line-height: 1.6; }
 
+/* Éditeur à plusieurs fichiers : les onglets passent à la ligne (jamais cachés hors de l'écran). */
+.filetabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
+.filetab
+{
+	font: inherit;
+	font-family: var(--mono);
+	font-size: .82rem;
+	color: var(--muted);
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-bottom-width: 3px;
+	border-radius: 8px 8px 0 0;
+	padding: 6px 10px;
+	cursor: pointer;
+	min-height: 36px;
+}
+.filetab.on { color: var(--ink); border-color: var(--accent); background: var(--accent-soft, var(--surface)); font-weight: 600; }
+.filetab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fileeditor + textarea.editor, .fileeditor ~ textarea.editor { border-top-left-radius: 0; }
+.filetools { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+.fileform { margin: 6px 0 0; }
+.fileform .row input { flex: 1; min-width: 0; }
+
 </style>
 </head>
 <body>
@@ -994,6 +1024,7 @@ var JavaMini = (function ()
 		{
 			var classes = [];
 			classes.imports = [];
+			classes.importLines = [];
 			classes.toks = this.toks;
 			while (this.peek().type !== "eof")
 			{
@@ -1003,7 +1034,7 @@ var JavaMini = (function ()
 					var path = "";
 					while (!this.is(";") && this.peek().type !== "eof") { path += this.next().v; }
 					this.expect(";");
-					if (isImport) { classes.imports.push(path); }
+					if (isImport) { classes.imports.push(path); classes.importLines.push(this.toks[this.p - 1].line); }
 					continue;
 				}
 				classes.push(this.classDecl());
@@ -1787,6 +1818,7 @@ var JavaMini = (function ()
 	{
 		this.classes = Object.create(null);
 		this.order = classes;
+		this.mainName = opts && opts.mainClass;
 		for (var i = 0; i < classes.length; i++)
 		{
 			if (this.classes[classes[i].name]) { throw cErr("la classe " + classes[i].name + " est déclarée deux fois", classes[i].line); }
@@ -2033,7 +2065,7 @@ var JavaMini = (function ()
 			{
 				var c = this.order[i];
 				var ms = (c.methods.main || []).filter(function (m) { return m.stat && m.ret === "void" && m.params.length === 1 && m.params[0].t === "String[]"; });
-				if (ms.length && (!mainCls || (c.pub && !mainCls.pub))) { mainCls = c; main = ms[0]; }
+				if (ms.length && (!mainCls || (this.mainName ? c.name === this.mainName : (c.pub && !mainCls.pub)))) { mainCls = c; main = ms[0]; }
 			}
 			if (!main)
 			{
@@ -3470,6 +3502,46 @@ var JavaMini = (function ()
 	/* ======================= 5. Points d'entrée ======================= */
 	function parse(src) { return new Parser(src).program(); }
 
+	/* ---- Plusieurs fichiers : un seul texte, chaque fichier commence par la ligne
+	   « //// Fichier : Nom.java » (un commentaire, donc du Java valide). ---- */
+	var MARK = /^\/\/\/\/ Fichier : ([A-Za-z_$][\w$]*\.java)\s*$/;
+	function isMulti(code) { return /^\/\/\/\/ Fichier : /.test(String(code || "").replace(/^\s+/, "")); }
+	function splitFiles(code)
+	{
+		var files = [], cur = null;
+		String(code || "").split("\n").forEach(function (l)
+		{
+			var m = l.match(MARK);
+			if (m) { cur = { name: m[1], lines: [] }; files.push(cur); return; }
+			if (!cur) { cur = { name: null, lines: [] }; files.push(cur); }
+			cur.lines.push(l);
+		});
+		files = files.map(function (f) { return { name: f.name, code: f.lines.join("\n") }; });
+		if (files.length > 1 && files[0].name === null && !files[0].code.trim()) { files.shift(); }
+		return files;
+	}
+	function joinFiles(files) { return files.map(function (f) { return "//// Fichier : " + f.name + "\n" + f.code; }).join("\n"); }
+	function fileRanges(src)
+	{
+		if (!isMulti(src)) { return null; }
+		var segs = [], lines = String(src).split("\n");
+		for (var i = 0; i < lines.length; i++)
+		{
+			var m = lines[i].match(MARK);
+			if (m) { if (segs.length) { segs[segs.length - 1].to = i; } segs.push({ name: m[1], from: i + 2, to: lines.length }); }
+		}
+		return segs;
+	}
+	function segOf(segs, line) { for (var i = segs.length - 1; i >= 0; i--) { if (line >= segs[i].from - 1) { return segs[i]; } } return segs[0]; }
+	/* Ligne du texte complet -> { file, line } dans le fichier (null si un seul fichier). */
+	function whereLine(src, line)
+	{
+		var segs = fileRanges(src);
+		if (!segs || !line) { return null; }
+		var sg = segOf(segs, line);
+		return { file: sg.name, line: Math.max(1, line - sg.from + 1) };
+	}
+
 	function run(src, opts)
 	{
 		opts = opts || {};
@@ -3477,7 +3549,22 @@ var JavaMini = (function ()
 		try
 		{
 			var classes = parse(src);
-			if (opts.fileName)
+			var segs = fileRanges(src);
+			if (segs)
+			{
+				/* Comme javac : une classe publique par fichier, et le fichier porte son nom. */
+				classes.forEach(function (c)
+				{
+					var sg = segOf(segs, c.line);
+					if (c.pub && sg && sg.name !== c.name + ".java")
+					{
+						var bon = segs.some(function (x) { return x.name === c.name + ".java"; });
+						throw cErr("la classe " + c.name + " est publique, elle doit être dans un fichier nommé " + c.name + ".java (elle est écrite dans " + sg.name + ")", c.line,
+							bon ? "Déplace-la dans l'onglet " + c.name + ".java, ou enlève public." : "Un fichier Java ne contient qu'une seule classe publique, et le fichier porte son nom.");
+					}
+				});
+			}
+			else if (opts.fileName)
 			{
 				var pub = classes.filter(function (c) { return c.pub; })[0];
 				if (pub && pub.name !== opts.fileName)
@@ -3486,7 +3573,7 @@ var JavaMini = (function ()
 				}
 			}
 			checkReturns(classes);
-			if ((opts.niveau || DEFAULTS.niveau) >= 2) { checkImports(classes); }
+			if ((opts.niveau || DEFAULTS.niveau) >= 2) { checkImports(classes, segs); }
 			m = new Machine(classes, opts);
 			m.start();
 			return { out: m.out.join(""), error: null, steps: m.steps };
@@ -3516,17 +3603,20 @@ var JavaMini = (function ()
 
 	/* Comme javac : ArrayList, HashMap... ne sont connues qu'après import java.util.XXX; (ou java.util.*). */
 	var UTIL = { ArrayList: 1, LinkedList: 1, HashMap: 1, List: 1, Map: 1, Set: 1, Collections: 1, Iterator: 1, Comparator: 1, Collection: 1 };
-	function checkImports(classes)
+	function checkImports(classes, segs)
 	{
-		var mine = {}, imp = classes.imports || [];
+		var mine = {}, imp = classes.imports || [], il = classes.importLines || [];
 		classes.forEach(function (c) { mine[c.name] = 1; });
 		(classes.toks || []).forEach(function (t, i)
 		{
 			var prev = classes.toks[i - 1];
 			if (t.type !== "id" || !UTIL[t.v] || mine[t.v] || (prev && prev.v === ".")) { return; }
-			if (imp.indexOf("java.util." + t.v) < 0 && imp.indexOf("java.util.*") < 0)
+			/* Plusieurs fichiers : un import ne vaut que pour le fichier où il est écrit. */
+			var seg = segs ? segOf(segs, t.line) : null;
+			var ok = imp.some(function (p, k) { return (p === "java.util." + t.v || p === "java.util.*") && (!seg || segOf(segs, il[k]) === seg); });
+			if (!ok)
 			{
-				throw cErr("symbole introuvable : classe " + t.v, t.line, "Ajoute en haut du fichier : import java.util." + t.v + ";");
+				throw cErr("symbole introuvable : classe " + t.v, t.line, "Ajoute en haut du fichier" + (seg ? " " + seg.name : "") + " : import java.util." + t.v + ";");
 			}
 		});
 	}
@@ -3670,7 +3760,7 @@ var JavaMini = (function ()
 
 	/* Niveau par défaut des exécutions : 1 (S1, sans API) ou 2 (S2 : collections, interfaces...). */
 	function setNiveau(n) { DEFAULTS.niveau = n || 1; }
-	return { run: run, check: check, parse: parse, lex: lex, fmtDouble: fmtDouble, setNiveau: setNiveau };
+	return { run: run, check: check, parse: parse, lex: lex, fmtDouble: fmtDouble, setNiveau: setNiveau, isMulti: isMulti, splitFiles: splitFiles, joinFiles: joinFiles, whereLine: whereLine };
 })();
 
 if (typeof module !== "undefined") { module.exports = JavaMini; }
@@ -20782,6 +20872,100 @@ public class TestEtape3
 	]
 });
 
+
+/* ==========================================================================
+   Plusieurs fichiers, comme sur machine : dans ces projets et ces sujets de DS,
+   chaque classe (ou interface, ou enum) est publique et va dans son propre
+   fichier, avec les import dont elle a besoin. Le code reste écrit d'un bloc
+   ci-dessus ; on le découpe ici en fichiers séparés par « //// Fichier : X.java ».
+   ========================================================================== */
+function enFichiers(code)
+{
+	if (!code) { return code; }
+	var imports = [], chunks = [], pending = [], cur = null;
+	code.split("\n").forEach(function (l)
+	{
+		if (cur) { cur.lines.push(l); if (l === "}") { cur = null; } return; }
+		if (/^import\s/.test(l)) { imports.push(l.trim()); return; }
+		var m = l.match(/^(public\s+)?((?:abstract\s+|final\s+)*)(class|interface|enum)\s+(\w+)/);
+		if (m)
+		{
+			while (pending.length && !pending[0].trim()) { pending.shift(); }
+			cur = { name: m[4], lines: pending.concat([m[1] ? l : "public " + l]) };
+			chunks.push(cur);
+			pending = [];
+			if (/\}\s*$/.test(l)) { cur = null; }
+			return;
+		}
+		pending.push(l);
+	});
+	var used = {};
+	var files = chunks.map(function (c)
+	{
+		var body = c.lines.join("\n").replace(/\s+$/, "");
+		var imp = imports.filter(function (i)
+		{
+			var n = i.replace(/^import\s+|\s*;$/g, "").split(".").pop();
+			var ok = n === "*" ? /\b(ArrayList|LinkedList|HashMap|List|Map|Set|Collections|Iterator|Comparator|Collection)\b/.test(body) : new RegExp("\\b" + n + "\\b").test(body);
+			if (ok) { used[i] = true; }
+			return ok;
+		});
+		return { name: c.name + ".java", imp: imp, body: body };
+	});
+	/* Un import que personne n'utilise encore (code de départ vide) va dans le fichier de la classe publique d'origine, sinon le dernier. */
+	var reste = imports.filter(function (i) { return !used[i]; });
+	if (reste.length && files.length)
+	{
+		var pub = code.match(/^public\s+(?:abstract\s+|final\s+)*(?:class|interface|enum)\s+(\w+)/m);
+		var cible = files.filter(function (f) { return pub && f.name === pub[1] + ".java"; })[0] || files[files.length - 1];
+		cible.imp = cible.imp.concat(reste);
+	}
+	return files.map(function (f) { return "//// Fichier : " + f.name + "\n" + (f.imp.length ? f.imp.join("\n") + "\n\n" : "") + f.body + "\n"; }).join("");
+}
+(function ()
+{
+	function conv(e)
+	{
+		e.solution = enFichiers(e.solution);
+		if (e.depart) { e.depart = enFichiers(e.depart); }
+		delete e.fichier;
+		/* Le programme de test devient lui aussi un fichier : il lui faut ses propres import. */
+		if (e.harness && !/^import\s/m.test(e.harness))
+		{
+			var imp = [];
+			["ArrayList", "LinkedList", "HashMap", "List", "Map", "Collections"].forEach(function (n) { if (new RegExp("\\b" + n + "\\b").test(e.harness)) { imp.push("import java.util." + n + ";"); } });
+			if (imp.length) { e.harness = imp.join("\n") + "\n\n" + e.harness; }
+		}
+		/* Fichier qui apparaît à une étape : on donne juste sa déclaration (sans extends ni implements). */
+		var dep = e.depart || "";
+		e.nouveaux = [];
+		e.solution.replace(/^public\s+((?:abstract\s+|final\s+)*)(class|interface|enum)\s+(\w+)/gm, function (all, mods, kind, nom)
+		{
+			if (dep.indexOf("//// Fichier : " + nom + ".java\n") < 0) { e.nouveaux.push({ name: nom + ".java", code: "public " + mods + kind + " " + nom + "\n{\n\n}\n" }); }
+			return all;
+		});
+	}
+	["o07", "o09", "o10"].forEach(function (id) { OBJETS_PROJETS[id].etapes.forEach(conv); });
+	OBJETS_EVALS.filter(function (v) { return v.id === "oevA" || v.id === "oevB"; }).forEach(function (v)
+	{
+		v.etapes.forEach(conv);
+		v.intro = v.intro.replace(/Tout se passe dans (le fichier )?`\w+\.java`\./, "Chaque classe est publique et a son propre fichier (un onglet chacun), comme sur machine.");
+	});
+	function txt(id, from, to)
+	{
+		var all = [];
+		["o07", "o09", "o10"].forEach(function (k) { all = all.concat(OBJETS_PROJETS[k].etapes); });
+		OBJETS_EVALS.forEach(function (v) { all = all.concat(v.etapes); });
+		var e = all.filter(function (x) { return x.id === id; })[0];
+		e.enonce = e.enonce.replace(from, to);
+		if (e.indices) { e.indices = e.indices.map(function (s) { return s.replace(from, to); }); }
+	}
+	txt("oevA.1", " Aucune de ces classes n'est `public`.", " Chaque classe est `public`, dans son fichier.");
+	txt("oevB.1", "la classe `Tuile` (pas `public`)", "la classe `Tuile` (dans `Tuile.java`)");
+	txt("o09.p2", "en haut du fichier.", "en haut de `Zoo.java` (chaque fichier a ses propres import).");
+	txt("oevA.2", "pour le type de retour.", "en haut de `Royaume.java`, pour le type de retour.");
+})();
+
 /* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
@@ -21416,20 +21600,31 @@ function updateTabs(hsh)
 	{
 		var box = h("div");
 		box.appendChild(h("p", { "class": "q" }, rich(e.q)));
-		var pre = h("pre", { "class": "code" });
-		var parts = e.code.split("___"), inputs = [];
+		/* Le code se replie (pre-wrap) : toutes les cases restent visibles, même sur téléphone. */
+		var pre = h("pre", { "class": "code fill" });
+		var parts = e.code.split("___"), inputs = [], nbTrous = parts.length - 1;
+		var compteur = h("p", { "class": "small muted fillcount", "aria-live": "polite" });
+		function majCompteur()
+		{
+			var rem = inputs.filter(function (x) { return x.value.trim() !== ""; }).length;
+			compteur.textContent = nbTrous > 1 ? rem + " / " + nbTrous + " cases remplies" : (rem ? "Case remplie" : "1 case à remplir");
+		}
 		parts.forEach(function (p, i)
 		{
 			pre.appendChild(highlight(p));
 			if (i < parts.length - 1)
 			{
 				var w = Math.max(3, Math.max.apply(null, e.trous[i].map(function (s) { return s.length; })) + 1);
-				var inp = h("input", { "class": "hole", type: "text", size: String(w), "aria-label": "Trou " + (i + 1), spellcheck: "false", autocapitalize: "off", autocomplete: "off", on: { keydown: function (ev) { if (ev.key === "Enter") { check(); } } } });
+				var inp = h("input", { "class": "hole", type: "text", style: "width:" + w + "ch", placeholder: nbTrous > 1 ? (i < 20 ? String.fromCharCode(0x2460 + i) : "#" + (i + 1)) : "", "aria-label": "Case " + (i + 1) + " sur " + nbTrous, spellcheck: "false", autocapitalize: "off", autocomplete: "off", autocorrect: "off",
+					on: { keydown: function (ev) { if (ev.key === "Enter") { check(); } }, input: function () { this.classList.remove("empty", "good", "bad"); majCompteur(); } } });
 				inputs.push(inp);
 				pre.appendChild(inp);
 			}
 		});
+		if (nbTrous > 1) { box.appendChild(h("p", { "class": "small muted", style: "margin:6px 0 0", text: nbTrous + " cases à remplir (numérotées dans l'ordre), parfois plusieurs sur la même ligne." })); }
 		box.appendChild(pre);
+		majCompteur();
+		box.appendChild(compteur);
 		box.appendChild(h("div", { "class": "toolbar" }, h("button", { "class": "btn", text: "Vérifier", on: { click: check } })));
 		function check()
 		{
@@ -21443,7 +21638,16 @@ function updateTabs(hsh)
 				inp.classList.toggle("bad", !ok);
 				if (!ok) { allOk = false; }
 			});
-			if (empty && !allOk) { api.info("Il reste des trous", "Remplis toutes les cases avant de vérifier."); return; }
+			if (empty && !allOk)
+			{
+				var vides = [];
+				inputs.forEach(function (inp, i) { if (!inp.value.trim()) { inp.classList.remove("bad", "good"); inp.classList.add("empty"); vides.push(i + 1); } });
+				var first = inputs[vides[0] - 1];
+				first.focus();
+				if (first.scrollIntoView) { first.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" }); }
+				api.info(vides.length > 1 ? "Il reste " + vides.length + " cases vides" : "Il reste une case vide", (vides.length > 1 ? "Les cases n° " + vides.join(", ") + " sont vides" : "La case n° " + vides[0] + " est vide") + (vides.length > 1 ? " (entourées en rouge)." : " (entourée en rouge).") + " Remplis toutes les cases avant de vérifier.");
+				return;
+			}
 			if (allOk) { api.win(e.expl); }
 			else { api.lose("Il y a une erreur", e.expl + "\n\nRéponse attendue : " + e.trous.map(function (t) { return t[0]; }).join("  |  ")); }
 		}
@@ -21542,10 +21746,52 @@ function updateTabs(hsh)
 			var pre = "public class Exo\n{\n";
 			return { src: pre + code + "\n\n\tpublic static void main(String[] args)\n\t{\n" + e.harness + "\n\t}\n}\n", offset: 2, lines: code.split("\n").length, ruleSrc: pre + code + "\n}\n" };
 		}
+		if (isMultiEx(e))
+		{
+			/* Plusieurs fichiers : le programme de test devient un fichier de plus. */
+			var hn = mode === "class" ? harnessName(e.harness) : null;
+			var src = code + (hn ? "\n//// Fichier : " + hn + ".java\n" + e.harness : "") + (e.given ? "\n" + e.given : "");
+			return { src: src, offset: 0, lines: code.split("\n").length, ruleSrc: code, multi: true, testFile: hn ? hn + ".java" : null, mainClass: hn || undefined };
+		}
 		if (mode === "class") { return { src: code + "\n" + e.harness, offset: 0, lines: code.split("\n").length, ruleSrc: code }; }
 		return { src: code + (e.given ? "\n" + e.given : ""), offset: 0, lines: code.split("\n").length, ruleSrc: code };
 	}
-	function fixLines(msg, offset) { return offset ? msg.replace(/Ligne (\d+)/g, function (all, n) { return "Ligne " + (n - offset); }) : msg; }
+	function isMultiEx(e) { return !!(e.solution && JavaMini.isMulti(e.solution)); }
+	function harnessName(hs) { var m = String(hs).match(/\bclass\s+(\w+)/); return m ? m[1] : "Test"; }
+	function runOpts(e, b, extra)
+	{
+		var o = { niveau: niveauOf(e), markInput: true, seed: 7, mainClass: b.mainClass };
+		if (!b.multi && e.fichier) { o.fileName = e.fichier.replace(/\.java$/, ""); }
+		Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+		return o;
+	}
+	/* Liste des fichiers attendus (noms tirés de la solution), remplie avec le code donné. */
+	function filesFor(e, code)
+	{
+		var want = JavaMini.splitFiles(e.solution).map(function (f) { return f.name; });
+		var dep = e.depart && JavaMini.isMulti(e.depart) ? JavaMini.splitFiles(e.depart) : [];
+		var have = JavaMini.isMulti(code) ? JavaMini.splitFiles(code) : [];
+		if (!have.length && String(code || "").trim()) { have = [{ name: want[0], code: code }]; }
+		var out = have.slice();
+		want.forEach(function (n)
+		{
+			if (out.some(function (f) { return f.name === n; })) { return; }
+			var d = dep.filter(function (f) { return f.name === n; })[0] || (e.nouveaux || []).filter(function (f) { return f.name === n; })[0];
+			out.push({ name: n, code: d ? d.code : "" });
+		});
+		return out;
+	}
+	/* Code montré par fichier (solution, structure) : un titre et un bloc par fichier. */
+	function filesBlock(code, fn)
+	{
+		if (!JavaMini.isMulti(code)) { return codeBlock(fn ? fn(code) : code); }
+		return JavaMini.splitFiles(code).map(function (f) { return [h("p", { "class": "small", style: "margin:8px 0 2px" }, h("code", { "class": "inline", text: f.name })), codeBlock((fn ? fn(f.code) : f.code).replace(/^\n+|\n+$/g, ""))]; });
+	}
+	function fixLines(msg, offset, src)
+	{
+		if (src && JavaMini.isMulti(src)) { return msg.replace(/Ligne (\d+)/g, function (all, n) { var w = JavaMini.whereLine(src, Number(n)); return w ? w.file + ", ligne " + w.line : all; }); }
+		return offset ? msg.replace(/Ligne (\d+)/g, function (all, n) { return "Ligne " + (n - offset); }) : msg;
+	}
 	var expCache = {};
 	function expectedOut(e, t, i)
 	{
@@ -21553,7 +21799,7 @@ function updateTabs(hsh)
 		if (!expCache[key])
 		{
 			var b = buildSource(e, e.solution);
-			var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: t["in"] || [], markInput: true, seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
+			var r = JavaMini.run(b.src, runOpts(e, b, { inputs: t["in"] || [], seed: t.seed || 7 }));
 			expCache[key] = r.error ? "(erreur dans la solution : " + r.error.msg + ")" : r.out;
 		}
 		return expCache[key];
@@ -21562,7 +21808,9 @@ function updateTabs(hsh)
 	{
 		var line = err.line ? err.line - b.offset : 0;
 		var where = "";
-		if (err.line) { where = (line >= 1 && line <= b.lines) ? "Ligne " + line + " : " : "(dans le programme de test) : "; }
+		var w = b.src && err.line ? JavaMini.whereLine(b.src, err.line) : null;
+		if (w) { where = w.file === b.testFile ? "(dans le programme de test " + w.file + ", ligne " + w.line + ") : " : w.file + ", ligne " + w.line + " : "; }
+		else if (err.line) { where = (line >= 1 && line <= b.lines) ? "Ligne " + line + " : " : "(dans le programme de test) : "; }
 		var title = { compile: "Erreur de compilation", runtime: "Erreur à l'exécution", input: "Saisie manquante", limit: "Programme arrêté" }[err.kind] || "Erreur";
 		return h("div", { "class": "stack" },
 			h("p", { "class": "err", style: "margin:0", text: title }),
@@ -21600,9 +21848,15 @@ function updateTabs(hsh)
 		var box = h("div");
 		add(box, para(e.enonce));
 		if (e.regles && e.regles.length) { box.appendChild(h("div", { "class": "rules", "aria-label": "Règles imposées" }, e.regles.map(function (r) { return h("span", { "class": "rule", text: ruleLabel(r) }); }))); }
-		if (e.fichier) { box.appendChild(h("p", { "class": "small muted" }, "Fichier : ", h("code", { "class": "inline", text: e.fichier }))); }
+		var multi = isMultiEx(e);
+		if (multi)
+		{
+			var noms = JavaMini.splitFiles(e.solution).map(function (f) { return f.name; });
+			box.appendChild(h("p", { "class": "small muted" }, noms.length + " fichiers, un onglet chacun : ", noms.map(function (n, i) { return [i ? ", " : "", h("code", { "class": "inline", text: n })]; }), ". Comme en vrai, chaque classe publique va dans le fichier qui porte son nom, avec ses propres import."));
+		}
+		else if (e.fichier) { box.appendChild(h("p", { "class": "small muted" }, "Fichier : ", h("code", { "class": "inline", text: e.fichier }))); }
 		if (e.given) { box.appendChild(h("details", { "class": "given" }, h("summary", { text: "Classes fournies (déjà écrites, ajoutées à ton code)" }), codeBlock(e.given))); }
-		if ((e.mode === "method" || e.mode === "class") && e.montrerTest !== false) { box.appendChild(h("details", { "class": "given" }, h("summary", { text: "Programme de test (appelle ton code)" }), codeBlock(e.mode === "method" ? "public static void main(String[] args)\n{\n" + e.harness.replace(/^\t\t/gm, "\t") + "\n}" : e.harness))); }
+		if ((e.mode === "method" || e.mode === "class") && e.montrerTest !== false) { box.appendChild(h("details", { "class": "given" }, h("summary", { text: "Programme de test" + (multi ? " (" + harnessName(e.harness) + ".java, déjà écrit)" : " (appelle ton code)") }), codeBlock(e.mode === "method" ? "public static void main(String[] args)\n{\n" + e.harness.replace(/^\t\t/gm, "\t") + "\n}" : e.harness))); }
 
 		var tests = e.tests || [{ "in": [] }];
 		var t0 = tests[0];
@@ -21612,12 +21866,19 @@ function updateTabs(hsh)
 		var edId = "ed-" + e.id;
 		var depart = e.depart || opts.fallback || "";
 		var start = state.code[e.id] !== undefined ? state.code[e.id] : (opts.carry && state.code[opts.carry] !== undefined ? state.code[opts.carry] : depart);
-		box.appendChild(h("label", { "class": "fld", "for": edId, text: "Ton code" }));
+		box.appendChild(h("label", { "class": "fld", "for": edId, text: multi ? "Ton code (un onglet par fichier)" : "Ton code" }));
 		var ed = h("textarea", { "class": "editor", id: edId, spellcheck: "false", autocapitalize: "off", autocomplete: "off", autocorrect: "off", wrap: "off", "aria-describedby": edId + "-aide" });
-		ed.value = start;
-		ed.rows = Math.min(28, Math.max(12, start.split("\n").length + 3));
+		var fe = null;
+		if (multi)
+		{
+			fe = fileEditor(ed, filesFor(e, start), {});
+			box.appendChild(fe.el);
+		}
+		else { ed.value = start; }
+		ed.rows = Math.min(28, Math.max(12, ed.value.split("\n").length + 3));
+		function curCode() { return fe ? JavaMini.joinFiles(fe.files()) : ed.value; }
 		var escaped = false;
-		ed.addEventListener("input", function () { state.code[e.id] = ed.value; save(); });
+		ed.addEventListener("input", function () { state.code[e.id] = curCode(); save(); });
 		ed.addEventListener("keydown", function (ev) { editorKeys(ev, ed, function () { return escaped; }, function (v) { escaped = v; aide.textContent = v ? "Échap : la touche Tab sort maintenant de l'éditeur." : AIDE; }); });
 		var AIDE = "Tab insère une tabulation (Maj+Tab la retire). Échap puis Tab pour sortir de l'éditeur au clavier.";
 		var aide = h("p", { "class": "small muted", id: edId + "-aide", style: "margin:4px 0 0", text: AIDE });
@@ -21635,7 +21896,7 @@ function updateTabs(hsh)
 			h("button", { "class": "btn", text: "Vérifier", on: { click: checkAll } }),
 			h("button", { "class": "btn ghost small", text: "Repartir du code de départ", on: { click: function ()
 			{
-				modal("↺", "Repartir de zéro ?", "Ton code actuel sera remplacé par le code de départ de l'exercice.", [{ label: "Remplacer", action: function () { ed.value = depart; state.code[e.id] = depart; save(); } }, { label: "Annuler" }]);
+				modal("↺", "Repartir de zéro ?", "Ton code actuel sera remplacé par le code de départ de l'exercice" + (multi ? " (dans tous les fichiers)." : "."), [{ label: "Remplacer", action: function () { if (fe) { fe.set(filesFor(e, depart)); } else { ed.value = depart; } state.code[e.id] = curCode(); save(); } }, { label: "Annuler" }]);
 			} } }));
 		box.appendChild(toolbar);
 		if (t0["in"] && t0["in"].length || (tests.some(function (t) { return t["in"] && t["in"].length; })))
@@ -21648,9 +21909,9 @@ function updateTabs(hsh)
 
 		function runOnce()
 		{
-			var b = buildSource(e, ed.value);
+			var b = buildSource(e, curCode());
 			var ins = inBox.value === "" ? [] : inBox.value.split("\n");
-			var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: ins, markInput: true, seed: 7 });
+			var r = JavaMini.run(b.src, runOpts(e, b, { inputs: ins, fileName: undefined }));
 			clear(out);
 			out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Sortie de ton programme" })));
 			out.appendChild(outputBlock(r.out));
@@ -21658,13 +21919,13 @@ function updateTabs(hsh)
 		}
 		function checkAll()
 		{
-			var b = buildSource(e, ed.value);
+			var b = buildSource(e, curCode());
 			clear(out);
-			var ruleMsgs = JavaMini.check(b.ruleSrc, e.regles || []).map(function (m) { return fixLines(m, b.offset); });
+			var ruleMsgs = JavaMini.check(b.ruleSrc, e.regles || []).map(function (m) { return fixLines(m, b.offset, b.multi ? b.ruleSrc : null); });
 			for (var i = 0; i < tests.length; i++)
 			{
 				var t = tests[i];
-				var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: t["in"] || [], markInput: true, seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
+				var r = JavaMini.run(b.src, runOpts(e, b, { inputs: t["in"] || [], seed: t.seed || 7 }));
 				var exp = expectedOut(e, t, i);
 				var label = (t["in"] && t["in"].length) ? "avec les saisies " + t["in"].join(", ") : (tests.length > 1 ? "test " + (i + 1) : "");
 				if (r.error)
@@ -21699,13 +21960,13 @@ function updateTabs(hsh)
 				var hi = hints[i];
 				list.appendChild(h("div", { "class": "hint" },
 					h("strong", { text: hi.squelette ? "💡 Structure de la solution" : "💡 Indice " + (i + 1) }),
-					hi.squelette ? [h("p", { "class": "small muted", style: "margin:4px 0" }, "Les grandes lignes, sans les calculs : à toi de remplir les « … »."), codeBlock(skeleton(e.solution))] : para(hi)));
+					hi.squelette ? [h("p", { "class": "small muted", style: "margin:4px 0" }, "Les grandes lignes, sans les calculs : à toi de remplir les « … »."), filesBlock(e.solution, skeleton)] : para(hi)));
 			}
 			if (shown > hints.length)
 			{
 				list.appendChild(h("details", { "class": "given" }, h("summary", { text: "Voir une solution possible" }),
 					h("p", { "class": "small muted", text: "Compare-la à ta version, puis réécris la tienne sans regarder." }),
-					codeBlock(e.solution)));
+					filesBlock(e.solution)));
 			}
 			var unlocked = Math.min(fails, hints.length + 1);
 			if (shown < unlocked)
@@ -21729,6 +21990,83 @@ function updateTabs(hsh)
 			return false;
 		}
 		return box;
+	}
+
+	/* Éditeur à onglets : un onglet par fichier, une seule zone de texte dont on
+	   échange le contenu. opts.editable : ajouter, renommer, supprimer des fichiers
+	   (bac à sable). opts.onChange : appelé après chaque changement de fichiers. */
+	function fileEditor(ed, files, opts)
+	{
+		opts = opts || {};
+		var cur = 0;
+		var bar = h("div", { "class": "filetabs", role: "tablist", "aria-label": "Fichiers" });
+		var tools = h("div", { "class": "filetools" });
+		var form = h("div", { "class": "fileform", hidden: true });
+		var el = h("div", { "class": "fileeditor" }, bar, opts.editable ? tools : null, opts.editable ? form : null);
+		function flush() { if (files[cur]) { files[cur].code = ed.value; } }
+		function show()
+		{
+			ed.value = files[cur] ? files[cur].code : "";
+			ed.setAttribute("aria-label", "Code du fichier " + (files[cur] ? files[cur].name : ""));
+			draw();
+		}
+		function draw()
+		{
+			clear(bar);
+			files.forEach(function (f, i)
+			{
+				bar.appendChild(h("button", { type: "button", role: "tab", "class": "filetab" + (i === cur ? " on" : ""), "aria-selected": i === cur ? "true" : "false", "aria-controls": ed.id, text: f.name,
+					on: { click: function () { if (i === cur) { return; } flush(); cur = i; show(); } } }));
+			});
+			if (opts.editable)
+			{
+				clear(tools);
+				tools.appendChild(h("button", { "class": "btn ghost small", type: "button", text: "＋ Fichier", on: { click: addFile } }));
+				tools.appendChild(h("button", { "class": "btn ghost small", type: "button", text: "✎ Renommer", on: { click: function () { var old = files[cur].name; ask("Nouveau nom de " + old, old, function (n) { flush(); files[cur].name = n; var b = old.replace(/\.java$/, ""), a = n.replace(/\.java$/, ""); files[cur].code = files[cur].code.replace(new RegExp("\\b(class|interface|enum)(\\s+)" + b + "\\b"), "$1$2" + a); show(); changed(); }); } } }));
+				tools.appendChild(h("button", { "class": "btn ghost small", type: "button", text: "🗑 Supprimer", disabled: files.length < 2, on: { click: function ()
+				{
+					var nom = files[cur].name;
+					modal("🗑", "Supprimer " + nom + " ?", "Le code de ce fichier sera perdu.", [{ label: "Supprimer", action: function () { files.splice(cur, 1); cur = Math.max(0, cur - 1); show(); changed(); } }, { label: "Annuler" }]);
+				} } }));
+			}
+		}
+		/* Petit formulaire en ligne pour le nom (pas de prompt(), mal géré par certaines applis installées). */
+		function ask(label, value, done)
+		{
+			clear(form);
+			form.hidden = false;
+			var id = ed.id + "-nom";
+			var inp = h("input", { type: "text", id: id, value: value, spellcheck: "false", autocapitalize: "off", autocomplete: "off", autocorrect: "off", placeholder: "Voiture.java" });
+			var msg = h("p", { "class": "small err", role: "alert", style: "margin:4px 0 0" });
+			function ok()
+			{
+				var n = inp.value.trim();
+				if (n && !/\.java$/.test(n)) { n += ".java"; }
+				var base = n.replace(/\.java$/, "");
+				if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(base)) { msg.textContent = /[^\x00-\x7f]/.test(base) ? "Pas d'accent dans un nom de fichier Java (écris Vehicule.java, pas Véhicule.java)." : "Un nom de fichier Java : lettres et chiffres, sans espace, en commençant par une lettre (ex. Voiture.java)."; inp.focus(); return; }
+				if (files.some(function (f, i) { return f.name === n && !(value && i === cur); })) { msg.textContent = n + " existe déjà."; inp.focus(); return; }
+				form.hidden = true;
+				clear(form);
+				done(n);
+				ed.focus();
+			}
+			inp.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); ok(); } if (ev.key === "Escape") { form.hidden = true; } });
+			form.appendChild(h("label", { "class": "fld", "for": id, text: label }));
+			form.appendChild(h("div", { "class": "row" }, inp, h("button", { "class": "btn small", type: "button", text: "OK", on: { click: ok } }), h("button", { "class": "btn ghost small", type: "button", text: "Annuler", on: { click: function () { form.hidden = true; } } })));
+			form.appendChild(msg);
+			inp.focus();
+		}
+		function changed() { if (opts.onChange) { opts.onChange(); } }
+		function addFile() { ask("Nom du nouveau fichier", "", function (n) { flush(); files.push({ name: n, code: "public class " + n.replace(/\.java$/, "") + "\n{\n\t\n}\n" }); cur = files.length - 1; show(); changed(); }); }
+		ed.addEventListener("input", flush);
+		show();
+		return {
+			el: el,
+			files: function () { flush(); return files; },
+			set: function (fs) { files = fs; cur = 0; show(); },
+			current: function () { return files[cur] ? files[cur].name : null; },
+			add: addFile
+		};
 	}
 
 	/* Éditeur : Tab, Maj+Tab, Entrée avec indentation automatique, } qui se recale. */
@@ -22264,7 +22602,7 @@ function adminVerif()
 				if (regles.length) { pb.push(id + " : la solution viole ses règles (" + regles.join(" ; ") + ")"); }
 				(e.tests || [{ "in": [] }]).forEach(function (t)
 				{
-					var r = JavaMini.run(b.src, { niveau: niveauOf(e), inputs: t["in"] || [], seed: t.seed || 7, fileName: e.fichier ? e.fichier.replace(/\.java$/, "") : undefined });
+					var r = JavaMini.run(b.src, runOpts(e, b, { inputs: t["in"] || [], seed: t.seed || 7, markInput: false }));
 					if (r.error) { pb.push(id + " (" + (t["in"] || []).join(", ") + ") : " + r.error.msg); }
 				});
 			}
@@ -22801,6 +23139,7 @@ var SANDBOX = {
 		{ nom: "Saisie", code: "import iut.algo.Clavier;\n\npublic class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tSystem.out.print(\"Ton prénom : \");\n\t\tString prenom = Clavier.lireString();\n\t\tSystem.out.print(\"Ton âge : \");\n\t\tint age = Clavier.lire_int();\n\t\tSystem.out.println(\"Salut \" + prenom + \", dans 5 ans tu auras \" + (age + 5) + \" ans.\");\n\t}\n}", saisies: "Léa\n19" },
 		{ nom: "Boucle", code: "public class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tint i = 1;\n\t\twhile (i <= 5)\n\t\t{\n\t\t\tSystem.out.println(i + \" x 7 = \" + i * 7);\n\t\t\ti++;\n\t\t}\n\t}\n}" },
 		{ nom: "Tableau", code: "public class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tint[] notes = {12, 8, 15, 17};\n\t\tint somme = 0;\n\t\tfor (int i = 0; i < notes.length; i++)\n\t\t{\n\t\t\tsomme = somme + notes[i];\n\t\t}\n\t\tSystem.out.println(\"Moyenne : \" + (double) somme / notes.length);\n\t}\n}" },
+		{ nom: "Véhicules (4 fichiers)", niveau: 2, code: "//// Fichier : Vehicule.java\npublic abstract class Vehicule\n{\n\tprotected String immat;\n\n\tpublic Vehicule(String immat)\n\t{\n\t\tthis.immat = immat;\n\t}\n\n\tpublic abstract int getNbRoues();\n\n\tpublic String toString()\n\t{\n\t\treturn this.getClass().getSimpleName() + \" \" + this.immat + \" (\" + this.getNbRoues() + \" roues)\";\n\t}\n}\n//// Fichier : Voiture.java\npublic class Voiture extends Vehicule\n{\n\tpublic Voiture(String immat)\n\t{\n\t\tsuper(immat);\n\t}\n\n\tpublic int getNbRoues()\n\t{\n\t\treturn 4;\n\t}\n}\n//// Fichier : Moto.java\npublic class Moto extends Vehicule\n{\n\tpublic Moto(String immat)\n\t{\n\t\tsuper(immat);\n\t}\n\n\tpublic int getNbRoues()\n\t{\n\t\treturn 2;\n\t}\n}\n//// Fichier : Garage.java\nimport java.util.ArrayList;\n\npublic class Garage\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tArrayList<Vehicule> parc = new ArrayList<Vehicule>();\n\t\tparc.add(new Voiture(\"AB-123-CD\"));\n\t\tparc.add(new Moto(\"EF-456-GH\"));\n\t\tfor (Vehicule v : parc)\n\t\t{\n\t\t\tSystem.out.println(v);\n\t\t}\n\t}\n}" },
 		{ nom: "Classe", code: "public class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tChat c = new Chat(\"Moka\", 3);\n\t\tSystem.out.println(c);\n\t}\n}\n\nclass Chat\n{\n\tprivate String nom;\n\tprivate int age;\n\n\tpublic Chat(String nom, int age)\n\t{\n\t\tthis.nom = nom;\n\t\tthis.age = age;\n\t}\n\n\tpublic String toString()\n\t{\n\t\treturn this.nom + \" a \" + this.age + \" ans\";\n\t}\n}" }
 	],
 	web: [
@@ -22812,13 +23151,37 @@ function renderSandbox()
 {
 	var L = lang(), web = L.runner === "web";
 	var key = "sandbox-" + L.id;
-	var ex = SANDBOX[web ? "web" : "java"];
+	var multiOK = !web && (L.niveau || 1) >= 2;
+	var ex = SANDBOX[web ? "web" : "java"].filter(function (x) { return !x.niveau || x.niveau <= (L.niveau || 1); });
 	app.appendChild(h("div", { "class": "crumb" }, h("button", { "class": "btn ghost small", text: "← Pratique", on: { click: function () { go("#/pratique"); } } })));
 	app.appendChild(h("h1", { text: "Bac à sable " + L.nom }));
-	app.appendChild(h("p", { "class": "muted", text: web ? "Écris du HTML et du CSS : l'aperçu se met à jour pendant que tu tapes." : "Écris un programme Java complet et exécute-le. Clavier fonctionne : mets les saisies dans la case prévue, une par ligne." }));
+	app.appendChild(h("p", { "class": "muted", text: web ? "Écris du HTML et du CSS : l'aperçu se met à jour pendant que tu tapes." : "Écris un programme Java complet et exécute-le. Clavier fonctionne : mets les saisies dans la case prévue, une par ligne." + (multiOK ? " Tu peux répartir tes classes dans plusieurs fichiers (bouton ＋ Fichier) : une classe publique par fichier, au nom du fichier." : "") }));
 	var sel = h("select", { id: "sbEx", "aria-label": "Charger un exemple" }, h("option", { value: "", text: "Charger un exemple…" }), ex.map(function (x, i) { return h("option", { value: String(i), text: x.nom }); }));
 	var ed = h("textarea", { "class": "editor", id: "sbEd", spellcheck: "false", autocapitalize: "off", autocomplete: "off", autocorrect: "off", wrap: "off", rows: "16" });
-	ed.value = state.code[key] !== undefined ? state.code[key] : ex[0].code;
+	var feSlot = h("div"), fe = null, multiMode = false;
+	var addBtn = multiOK ? h("button", { "class": "btn ghost small", type: "button", text: "＋ Fichier", on: { click: function ()
+	{
+		/* On passe à plusieurs fichiers : le code actuel devient le premier, nommé d'après sa classe publique. */
+		var m = ed.value.match(/public\s+(?:abstract\s+|final\s+)?(?:class|interface|enum)\s+(\w+)/);
+		setCode(JavaMini.joinFiles([{ name: (m ? m[1] : "Main") + ".java", code: ed.value }]));
+		saveCode();
+		fe.add();
+	} } }) : null;
+	function curCode() { return multiMode ? JavaMini.joinFiles(fe.files()) : ed.value; }
+	function saveCode() { state.code[key] = curCode(); save(); }
+	function setCode(code)
+	{
+		multiMode = multiOK && JavaMini.isMulti(code);
+		if (multiMode)
+		{
+			if (!fe) { fe = fileEditor(ed, JavaMini.splitFiles(code), { editable: true, onChange: saveCode }); feSlot.appendChild(fe.el); }
+			else { fe.set(JavaMini.splitFiles(code)); }
+		}
+		else { ed.value = code; }
+		feSlot.hidden = !multiMode;
+		if (addBtn) { addBtn.hidden = multiMode; }
+	}
+	setCode(state.code[key] !== undefined ? state.code[key] : ex[0].code);
 	var inBox = h("textarea", { "class": "answer", id: "sbIn", rows: "2", spellcheck: "false", style: "min-height:0" });
 	var out = h("div");
 	var escaped = false;
@@ -22827,18 +23190,18 @@ function renderSandbox()
 	{
 		if (sel.value === "") { return; }
 		var x = ex[Number(sel.value)];
-		ed.value = x.code;
+		setCode(x.code);
 		inBox.value = x.saisies || "";
-		state.code[key] = ed.value;
-		save();
+		saveCode();
 		if (web) { refresh(); }
 		sel.value = "";
 	});
 	app.appendChild(h("div", { "class": "card" },
 		h("label", { "class": "fld", "for": "sbEx", text: "Exemples" }), sel,
-		h("label", { "class": "fld", "for": "sbEd", text: "Ton code" }), ed,
+		h("label", { "class": "fld", "for": "sbEd", text: "Ton code" }), feSlot, ed,
 		h("div", { "class": "toolbar" },
 			h("button", { "class": "btn ghost small", type: "button", text: "⇥ Tab", "aria-label": "Insérer une tabulation", on: { click: function () { insertText(ed, "\t"); ed.focus(); } } }),
+			addBtn,
 			web ? null : h("button", { "class": "btn", text: "▶ Exécuter", on: { click: run } })),
 		web ? null : h("label", { "class": "fld", "for": "sbIn", text: "Saisies au clavier (une par ligne)" }), web ? null : inBox,
 		out));
@@ -22851,14 +23214,15 @@ function renderSandbox()
 		out.appendChild(prev);
 		refresh();
 	}
-	ed.addEventListener("input", function () { state.code[key] = ed.value; save(); if (web) { clearTimeout(t0); t0 = setTimeout(refresh, 300); } });
+	ed.addEventListener("input", function () { saveCode(); if (web) { clearTimeout(t0); t0 = setTimeout(refresh, 300); } });
 	function run()
 	{
-		var r = JavaMini.run(ed.value, { niveau: lang().niveau || 1, inputs: inBox.value === "" ? [] : inBox.value.split("\n"), markInput: true, seed: Date.now() % 100000 });
+		var src = curCode();
+		var r = JavaMini.run(src, { niveau: lang().niveau || 1, inputs: inBox.value === "" ? [] : inBox.value.split("\n"), markInput: true, seed: Date.now() % 100000 });
 		clear(out);
 		out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Sortie" })));
 		out.appendChild(outputBlock(r.out));
-		if (r.error) { out.appendChild(errorView(r.error, { offset: 0, lines: ed.value.split("\n").length })); }
+		if (r.error) { out.appendChild(errorView(r.error, { offset: 0, lines: src.split("\n").length, src: src })); }
 	}
 }
 
