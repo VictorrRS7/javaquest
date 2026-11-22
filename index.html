@@ -2929,6 +2929,13 @@ var JavaMini = (function ()
 				case "toCharArray":
 					need(0);
 					return mk("char[]", { data: s.split("").map(function (c) { return mk("char", c.charCodeAt(0)); }), id: self.nextId++ });
+				case "split":
+					need(1);
+					if (this.niveau < 2) { throw cErr("split n'est pas au programme du semestre 1 : parcours la chaîne avec charAt", line); }
+					var parts, rx = needStr(a0);
+					try { parts = s.length === 0 ? [""] : s.split(new RegExp(rx)); } catch (x) { throw cErr("expression de découpage invalide : " + rx, line); }
+					while (parts.length > 1 && parts[parts.length - 1] === "") { parts.pop(); }
+					return mk("String[]", { data: parts.map(mkStr), id: self.nextId++ });
 				case "toString": need(0); return sv;
 				case "hashCode": need(0); var h = 0; for (var q = 0; q < s.length; q++) { h = (Math.imul(31, h) + s.charCodeAt(q)) | 0; } return mk("int", h);
 			}
@@ -15917,6 +15924,4865 @@ public enum Couleur
 });
 
 /* ==========================================================================
+   JavaQuest : Dév Objets (R2.01), projets, contrôles et sujets type DS
+   --------------------------------------------------------------------------
+   - OBJETS_PROJETS : un mini-projet par unité (rangé dans unite.projet).
+     Chaque étape repart du code de l'étape précédente.
+   - OBJETS_CONTROLES : contrôles chronométrés, puis l'examen final.
+   - OBJETS_EVALS : entraînement aux DS machine. Les thèmes s'inspirent des
+     DS 2023 à 2025 (tuiles, royaume...), mais les énoncés sont nouveaux et
+     les fichiers de données sont remplacés par des lignes de texte.
+   ========================================================================== */
+var OBJETS_PROJETS = {};
+var OBJETS_CONTROLES = [];
+var OBJETS_EVALS = [];
+
+/* ------------------------------------------------------------- Projet 1 */
+OBJETS_PROJETS.o01 = { id: "o01.p", titre: "La médiathèque",
+	intro: "La médiathèque du quartier veut numéroter ses adhérents et suivre les emprunts. Tout repose sur la différence entre ce qui appartient à **un** adhérent et ce qui est **partagé** par tous. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o01.p1", k: "code", mode: "class", titre: "Des numéros uniques", fichier: "Adherent.java", xp: 20,
+			enonce: "Écris la classe `Adherent`. Chaque adhérent reçoit à sa création un numéro unique (1, 2, 3...) grâce à un attribut de classe `nbAdherents`. `toString()` renvoie le numéro sur 3 chiffres précédé de `A`, une espace et le nom : `A001 Ana`. `getNbAdherents()` est `static`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestMediatheque
+{
+    public static void main(String[] args)
+    {
+        System.out.println(Adherent.getNbAdherents());
+        Adherent a = new Adherent("Ana");
+        Adherent b = new Adherent("Bilal");
+        Adherent c = new Adherent("Chloé");
+        System.out.println(a);
+        System.out.println(c);
+        System.out.println(Adherent.getNbAdherents() + " adhérents");
+    }
+}`),
+			depart: T(`
+public class Adherent
+{
+
+}`),
+			solution: T(`
+public class Adherent
+{
+    private static int nbAdherents = 0;
+
+    private int    numero;
+    private String nom;
+
+    public Adherent(String nom)
+    {
+        Adherent.nbAdherents++;
+        this.numero = Adherent.nbAdherents;
+        this.nom    = nom;
+    }
+
+    public static int getNbAdherents()
+    {
+        return Adherent.nbAdherents;
+    }
+
+    public String toString()
+    {
+        return "A" + String.format("%03d", this.numero) + " " + this.nom;
+    }
+}`),
+			indices: ["Le compteur est partagé : `private static int nbAdherents = 0;`. Le numéro est propre à chaque adhérent : pas de `static`.",
+				"Dans le constructeur : `Adherent.nbAdherents++;` puis `this.numero = Adherent.nbAdherents;`. Pour l'affichage, `String.format(\"%03d\", numero)` donne `001`."] },
+		{ id: "o01.p2", k: "code", mode: "class", titre: "Les emprunts", fichier: "Adherent.java", xp: 30,
+			enonce: "Ajoute une constante de classe `MAX_EMPRUNTS` (3), un compteur d'emprunts **par adhérent** et un total d'emprunts **pour toute la médiathèque**. `emprunter()` renvoie `false` si l'adhérent a déjà 3 livres, sinon il compte l'emprunt. `rendre()` fait l'inverse (rien si l'adhérent n'a aucun livre). Ajoute `getNbEmprunts()` et la méthode de classe `getTotalEmprunts()`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestMediatheque
+{
+    public static void main(String[] args)
+    {
+        Adherent a = new Adherent("Ana");
+        Adherent b = new Adherent("Bilal");
+        System.out.println(a.emprunter() + " " + a.emprunter() + " " + a.emprunter() + " " + a.emprunter());
+        b.emprunter();
+        b.rendre();
+        b.rendre();
+        System.out.println(a + " : " + a.getNbEmprunts() + " / " + Adherent.MAX_EMPRUNTS);
+        System.out.println(b + " : " + b.getNbEmprunts());
+        System.out.println("Total : " + Adherent.getTotalEmprunts());
+    }
+}`),
+			depart: "",
+			solution: T(`
+public class Adherent
+{
+    public static final int MAX_EMPRUNTS = 3;
+
+    private static int nbAdherents   = 0;
+    private static int totalEmprunts = 0;
+
+    private int    numero;
+    private String nom;
+    private int    nbEmprunts;
+
+    public Adherent(String nom)
+    {
+        Adherent.nbAdherents++;
+        this.numero     = Adherent.nbAdherents;
+        this.nom        = nom;
+        this.nbEmprunts = 0;
+    }
+
+    public static int getNbAdherents()
+    {
+        return Adherent.nbAdherents;
+    }
+
+    public static int getTotalEmprunts()
+    {
+        return Adherent.totalEmprunts;
+    }
+
+    public int getNbEmprunts()
+    {
+        return this.nbEmprunts;
+    }
+
+    public boolean emprunter()
+    {
+        if (this.nbEmprunts == Adherent.MAX_EMPRUNTS)
+        {
+            return false;
+        }
+        this.nbEmprunts++;
+        Adherent.totalEmprunts++;
+        return true;
+    }
+
+    public void rendre()
+    {
+        if (this.nbEmprunts > 0)
+        {
+            this.nbEmprunts--;
+            Adherent.totalEmprunts--;
+        }
+    }
+
+    public String toString()
+    {
+        return "A" + String.format("%03d", this.numero) + " " + this.nom;
+    }
+}`),
+			indices: ["`public static final int MAX_EMPRUNTS = 3;` : une constante partagée, lisible de l'extérieur avec `Adherent.MAX_EMPRUNTS`.",
+				"Chaque emprunt réussi change **deux** compteurs : `this.nbEmprunts++` et `Adherent.totalEmprunts++`. Même chose dans l'autre sens pour `rendre()`, seulement si `nbEmprunts > 0`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 2 */
+OBJETS_PROJETS.o02 = { id: "o02.p", titre: "Le parking",
+	intro: "Un petit parking a un nombre fixe de places, rangées dans un tableau de `Voiture`. Une place libre vaut `null`. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o02.p1", k: "code", mode: "class", titre: "Garer une voiture", fichier: "Parking.java", xp: 20,
+			enonce: "La classe `Voiture` est donnée. Écris `Parking(int nbPlaces)` avec un tableau de voitures. `garer(Voiture v)` range la voiture à la **première place libre** et renvoie son numéro (à partir de 0), ou `-1` si le parking est plein ou si `v` vaut `null`. `getNbLibres()` compte les places libres.",
+			regles: ["allman"],
+			harness: T(`
+public class TestParking
+{
+    public static void main(String[] args)
+    {
+        Parking p = new Parking(3);
+        System.out.println(p.getNbLibres());
+        System.out.println(p.garer(new Voiture("AB-123-CD", "Clio")));
+        System.out.println(p.garer(new Voiture("EF-456-GH", "208")));
+        System.out.println(p.garer(null));
+        System.out.println(p.garer(new Voiture("IJ-789-KL", "Zoé")));
+        System.out.println(p.garer(new Voiture("MN-012-OP", "Yaris")));
+        System.out.println(p.getNbLibres());
+    }
+}
+
+class Voiture
+{
+    private String immat;
+    private String modele;
+
+    public Voiture(String immat, String modele)
+    {
+        this.immat  = immat;
+        this.modele = modele;
+    }
+
+    public String getImmat()
+    {
+        return this.immat;
+    }
+
+    public String toString()
+    {
+        return this.immat + " " + this.modele;
+    }
+}`),
+			depart: T(`
+public class Parking
+{
+    private Voiture[] places;
+
+}`),
+			solution: T(`
+public class Parking
+{
+    private Voiture[] places;
+
+    public Parking(int nbPlaces)
+    {
+        this.places = new Voiture[nbPlaces];
+    }
+
+    public int garer(Voiture v)
+    {
+        if (v == null)
+        {
+            return -1;
+        }
+        for (int i = 0; i < this.places.length; i++)
+        {
+            if (this.places[i] == null)
+            {
+                this.places[i] = v;
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int getNbLibres()
+    {
+        int nb = 0;
+        for (int i = 0; i < this.places.length; i++)
+        {
+            if (this.places[i] == null)
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }
+}`),
+			indices: ["Le constructeur crée le tableau : toutes les places valent `null`, donc sont libres.",
+				"Dans `garer`, parcours les places et arrête-toi à la première qui vaut `null` : range la voiture et `return i;`. Après la boucle, le parking est plein : `return -1;`."] },
+		{ id: "o02.p2", k: "code", mode: "class", titre: "Sortir et afficher", fichier: "Parking.java", xp: 30,
+			enonce: "Ajoute `sortir(String immat)` : libère la place de la voiture ayant cette immatriculation et renvoie la voiture, ou `null` si elle n'est pas là. Ajoute `toString()` : une ligne par place, le numéro sur 2 chiffres (`00`, `01`...), ` : ` puis la voiture ou `libre`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestParking
+{
+    public static void main(String[] args)
+    {
+        Parking p = new Parking(3);
+        p.garer(new Voiture("AB-123-CD", "Clio"));
+        p.garer(new Voiture("EF-456-GH", "208"));
+        p.garer(new Voiture("IJ-789-KL", "Zoé"));
+        System.out.println(p.sortir("EF-456-GH"));
+        System.out.println(p.sortir("ZZ-000-ZZ"));
+        System.out.print(p);
+        System.out.println(p.garer(new Voiture("MN-012-OP", "Yaris")));
+    }
+}
+
+class Voiture
+{
+    private String immat;
+    private String modele;
+
+    public Voiture(String immat, String modele)
+    {
+        this.immat  = immat;
+        this.modele = modele;
+    }
+
+    public String getImmat()
+    {
+        return this.immat;
+    }
+
+    public String toString()
+    {
+        return this.immat + " " + this.modele;
+    }
+}`),
+			depart: "",
+			solution: T(`
+public class Parking
+{
+    private Voiture[] places;
+
+    public Parking(int nbPlaces)
+    {
+        this.places = new Voiture[nbPlaces];
+    }
+
+    public int garer(Voiture v)
+    {
+        if (v == null)
+        {
+            return -1;
+        }
+        for (int i = 0; i < this.places.length; i++)
+        {
+            if (this.places[i] == null)
+            {
+                this.places[i] = v;
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int getNbLibres()
+    {
+        int nb = 0;
+        for (int i = 0; i < this.places.length; i++)
+        {
+            if (this.places[i] == null)
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    public Voiture sortir(String immat)
+    {
+        for (int i = 0; i < this.places.length; i++)
+        {
+            if (this.places[i] != null && this.places[i].getImmat().equals(immat))
+            {
+                Voiture v = this.places[i];
+                this.places[i] = null;
+                return v;
+            }
+        }
+        return null;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (int i = 0; i < this.places.length; i++)
+        {
+            s += String.format("%02d", i) + " : " + (this.places[i] == null ? "libre" : this.places[i].toString()) + "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["Dans `sortir`, teste d'abord que la place n'est pas `null` **avant** d'appeler `getImmat()`, sinon `NullPointerException`. Garde la voiture dans une variable avant de vider la place.",
+				"Pour `toString`, `String.format(\"%02d\", i)` donne `00`, `01`... et l'opérateur `? :` choisit entre `\"libre\"` et la voiture."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 3 */
+OBJETS_PROJETS.o03 = { id: "o03.p", titre: "Le classement du tournoi",
+	intro: "Un tournoi d'échecs du club inscrit des joueurs, leur donne des points et affiche le classement. On a besoin de `equals` (pas deux fois le même joueur) et de `compareTo` (pour trier). Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o03.p1", k: "code", mode: "class", titre: "Le joueur", fichier: "Joueur.java", xp: 20,
+			enonce: "Écris `Joueur(String nom)` avec des `points` (0 au départ), `ajouterPoints(int pts)`, `getNom()`, `getPoints()`. Deux joueurs sont **égaux** s'ils ont le même nom : redéfinis `equals(Object o)`. Le joueur est `Comparable<Joueur>` : celui qui a **le plus** de points passe devant ; à égalité, l'ordre alphabétique du nom. `toString()` renvoie `Ana (3)`.",
+			regles: ["allman"],
+			harness: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class TestJoueur
+{
+    public static void main(String[] args)
+    {
+        Joueur a = new Joueur("Ana");
+        Joueur b = new Joueur("Bilal");
+        Joueur c = new Joueur("Chloé");
+        a.ajouterPoints(2);
+        b.ajouterPoints(3);
+        c.ajouterPoints(2);
+        System.out.println(a.equals(new Joueur("Ana")) + " " + a.equals(b) + " " + a.equals("Ana"));
+        System.out.println(a.compareTo(b) > 0);
+        ArrayList<Joueur> l = new ArrayList<Joueur>();
+        l.add(c);
+        l.add(a);
+        l.add(b);
+        Collections.sort(l);
+        System.out.println(l);
+        System.out.println(l.contains(new Joueur("Chloé")));
+    }
+}`),
+			depart: T(`
+public class Joueur implements Comparable<Joueur>
+{
+
+}`),
+			solution: T(`
+public class Joueur implements Comparable<Joueur>
+{
+    private String nom;
+    private int    points;
+
+    public Joueur(String nom)
+    {
+        this.nom    = nom;
+        this.points = 0;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getPoints()
+    {
+        return this.points;
+    }
+
+    public void ajouterPoints(int pts)
+    {
+        this.points += pts;
+    }
+
+    public boolean equals(Object o)
+    {
+        if (!(o instanceof Joueur))
+        {
+            return false;
+        }
+        Joueur autre = (Joueur) o;
+        return this.nom.equals(autre.nom);
+    }
+
+    public int compareTo(Joueur autre)
+    {
+        if (this.points != autre.points)
+        {
+            return autre.points - this.points;
+        }
+        return this.nom.compareTo(autre.nom);
+    }
+
+    public String toString()
+    {
+        return this.nom + " (" + this.points + ")";
+    }
+}`),
+			indices: ["`equals(Object o)` : vérifie d'abord `o instanceof Joueur`, puis caste `(Joueur) o` et compare les noms avec `equals`. C'est cette version que `contains` utilise.",
+				"Pour trier du plus grand au plus petit : `return autre.points - this.points;` (l'inverse de l'ordre croissant). À égalité, `this.nom.compareTo(autre.nom)`."] },
+		{ id: "o03.p2", k: "code", mode: "class", titre: "Le tournoi", fichier: "Joueur.java", xp: 30,
+			enonce: "Garde ta classe `Joueur` et ajoute, dans le même fichier, une classe `Tournoi` qui range les joueurs dans une `ArrayList<Joueur>`. `inscrire(String nom)` refuse (renvoie `false`) un nom déjà inscrit. `resultat(String gagnant, String perdant)` donne 3 points au gagnant (s'il est inscrit). `classement()` trie les joueurs et renvoie une ligne par joueur : `1. Bilal (6)`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestTournoi
+{
+    public static void main(String[] args)
+    {
+        Tournoi t = new Tournoi();
+        System.out.println(t.inscrire("Ana") + " " + t.inscrire("Bilal") + " " + t.inscrire("Ana"));
+        t.inscrire("Chloé");
+        t.resultat("Bilal", "Ana");
+        t.resultat("Chloé", "Ana");
+        t.resultat("Bilal", "Chloé");
+        t.resultat("Zoé", "Bilal");
+        System.out.print(t.classement());
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class Joueur implements Comparable<Joueur>
+{
+    private String nom;
+    private int    points;
+
+    public Joueur(String nom)
+    {
+        this.nom    = nom;
+        this.points = 0;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getPoints()
+    {
+        return this.points;
+    }
+
+    public void ajouterPoints(int pts)
+    {
+        this.points += pts;
+    }
+
+    public boolean equals(Object o)
+    {
+        if (!(o instanceof Joueur))
+        {
+            return false;
+        }
+        Joueur autre = (Joueur) o;
+        return this.nom.equals(autre.nom);
+    }
+
+    public int compareTo(Joueur autre)
+    {
+        if (this.points != autre.points)
+        {
+            return autre.points - this.points;
+        }
+        return this.nom.compareTo(autre.nom);
+    }
+
+    public String toString()
+    {
+        return this.nom + " (" + this.points + ")";
+    }
+}
+
+class Tournoi
+{
+    private ArrayList<Joueur> joueurs;
+
+    public Tournoi()
+    {
+        this.joueurs = new ArrayList<Joueur>();
+    }
+
+    public boolean inscrire(String nom)
+    {
+        Joueur j = new Joueur(nom);
+        if (this.joueurs.contains(j))
+        {
+            return false;
+        }
+        this.joueurs.add(j);
+        return true;
+    }
+
+    public void resultat(String gagnant, String perdant)
+    {
+        int i = this.joueurs.indexOf(new Joueur(gagnant));
+        if (i >= 0)
+        {
+            this.joueurs.get(i).ajouterPoints(3);
+        }
+    }
+
+    public String classement()
+    {
+        Collections.sort(this.joueurs);
+        String s = "";
+        for (int i = 0; i < this.joueurs.size(); i++)
+        {
+            s += (i + 1) + ". " + this.joueurs.get(i) + "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["Grâce à ton `equals`, `this.joueurs.contains(new Joueur(nom))` dit si le nom est déjà inscrit, et `indexOf(new Joueur(gagnant))` retrouve sa position.",
+				"N'oublie pas les `import java.util.ArrayList;` et `import java.util.Collections;` en haut du fichier. `classement()` commence par `Collections.sort(this.joueurs);`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 4 */
+OBJETS_PROJETS.o04 = { id: "o04.p", titre: "Le réseau de bus",
+	intro: "La ville range ses lignes de bus dans un objet `Reseau`. On sépare bien les rôles : le **Métier** calcule, l'**IHM** met en forme, le **Contrôleur** (le programme de test) enchaîne. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o04.p1", k: "code", mode: "class", titre: "Le métier", fichier: "Reseau.java", xp: 20,
+			enonce: "La classe `Ligne` est donnée. Écris `Reseau(int nbMax)` qui range ses lignes dans un tableau avec un compteur. `ajouter(Ligne l)` renvoie `false` si le réseau est plein ou si `l` vaut `null`. `getNbLignes()`, `getLigne(int i)` (`null` si l'indice est hors des lignes remplies), `chercher(String numero)` (`null` si absente) et `getVoyageursTotal()`.",
+			regles: ["allman"],
+			harness: T(`
+public class Controleur
+{
+    public static void main(String[] args)
+    {
+        Reseau r = new Reseau(3);
+        r.ajouter(new Ligne("1", "Gare - Plage", 5400));
+        r.ajouter(new Ligne("4", "Lycée - Hôpital", 3150));
+        System.out.println(r.ajouter(null) + " " + r.ajouter(new Ligne("12", "Port - Zénith", 980)) + " " + r.ajouter(new Ligne("7", "Centre", 10)));
+        System.out.println(r.getNbLignes() + " " + r.getLigne(1) + " " + r.getLigne(3));
+        System.out.println(r.chercher("12") + " / " + r.chercher("99"));
+        System.out.println(r.getVoyageursTotal());
+    }
+}
+
+class Ligne
+{
+    private String numero;
+    private String trajet;
+    private int    voyageurs;
+
+    public Ligne(String numero, String trajet, int voyageurs)
+    {
+        this.numero    = numero;
+        this.trajet    = trajet;
+        this.voyageurs = voyageurs;
+    }
+
+    public String getNumero()
+    {
+        return this.numero;
+    }
+
+    public String getTrajet()
+    {
+        return this.trajet;
+    }
+
+    public int getVoyageurs()
+    {
+        return this.voyageurs;
+    }
+
+    public String toString()
+    {
+        return "Ligne " + this.numero;
+    }
+}`),
+			depart: T(`
+public class Reseau
+{
+    private Ligne[] tabLigne;
+    private int     nbLignes;
+
+}`),
+			solution: T(`
+public class Reseau
+{
+    private Ligne[] tabLigne;
+    private int     nbLignes;
+
+    public Reseau(int nbMax)
+    {
+        this.tabLigne = new Ligne[nbMax];
+        this.nbLignes = 0;
+    }
+
+    public boolean ajouter(Ligne l)
+    {
+        if (l == null || this.nbLignes == this.tabLigne.length)
+        {
+            return false;
+        }
+        this.tabLigne[this.nbLignes++] = l;
+        return true;
+    }
+
+    public int getNbLignes()
+    {
+        return this.nbLignes;
+    }
+
+    public Ligne getLigne(int i)
+    {
+        if (i < 0 || i >= this.nbLignes)
+        {
+            return null;
+        }
+        return this.tabLigne[i];
+    }
+
+    public Ligne chercher(String numero)
+    {
+        for (int i = 0; i < this.nbLignes; i++)
+        {
+            if (this.tabLigne[i].getNumero().equals(numero))
+            {
+                return this.tabLigne[i];
+            }
+        }
+        return null;
+    }
+
+    public int getVoyageursTotal()
+    {
+        int total = 0;
+        for (int i = 0; i < this.nbLignes; i++)
+        {
+            total += this.tabLigne[i].getVoyageurs();
+        }
+        return total;
+    }
+}`),
+			indices: ["Toutes les boucles s'arrêtent à `nbLignes`, jamais à `tabLigne.length` : au-delà, les cases valent `null`.",
+				"`getLigne(i)` refuse `i < 0 || i >= nbLignes`. `chercher` compare les numéros avec `equals`."] },
+		{ id: "o04.p2", k: "code", mode: "class", titre: "L'IHM", fichier: "Reseau.java", xp: 30,
+			enonce: "Garde ton `Reseau` et ajoute, dans le même fichier, une classe `Ihm` qui reçoit le réseau dans son constructeur. Elle **n'affiche rien elle-même** : `tableau()` renvoie le texte à afficher, une ligne par bus avec le numéro sur 3 caractères calé à droite, ` | `, le trajet sur 16 caractères calé à gauche, ` | ` et les voyageurs sur 6 caractères, puis une dernière ligne `Total : 9530`.",
+			regles: ["allman"],
+			harness: T(`
+public class Controleur
+{
+    public static void main(String[] args)
+    {
+        Reseau r = new Reseau(5);
+        r.ajouter(new Ligne("1", "Gare - Plage", 5400));
+        r.ajouter(new Ligne("4", "Lycée - Hôpital", 3150));
+        r.ajouter(new Ligne("12", "Port - Zénith", 980));
+        Ihm ihm = new Ihm(r);
+        System.out.print(ihm.tableau());
+    }
+}
+
+class Ligne
+{
+    private String numero;
+    private String trajet;
+    private int    voyageurs;
+
+    public Ligne(String numero, String trajet, int voyageurs)
+    {
+        this.numero    = numero;
+        this.trajet    = trajet;
+        this.voyageurs = voyageurs;
+    }
+
+    public String getNumero()
+    {
+        return this.numero;
+    }
+
+    public String getTrajet()
+    {
+        return this.trajet;
+    }
+
+    public int getVoyageurs()
+    {
+        return this.voyageurs;
+    }
+
+    public String toString()
+    {
+        return "Ligne " + this.numero;
+    }
+}`),
+			depart: "",
+			solution: T(`
+public class Reseau
+{
+    private Ligne[] tabLigne;
+    private int     nbLignes;
+
+    public Reseau(int nbMax)
+    {
+        this.tabLigne = new Ligne[nbMax];
+        this.nbLignes = 0;
+    }
+
+    public boolean ajouter(Ligne l)
+    {
+        if (l == null || this.nbLignes == this.tabLigne.length)
+        {
+            return false;
+        }
+        this.tabLigne[this.nbLignes++] = l;
+        return true;
+    }
+
+    public int getNbLignes()
+    {
+        return this.nbLignes;
+    }
+
+    public Ligne getLigne(int i)
+    {
+        if (i < 0 || i >= this.nbLignes)
+        {
+            return null;
+        }
+        return this.tabLigne[i];
+    }
+
+    public Ligne chercher(String numero)
+    {
+        for (int i = 0; i < this.nbLignes; i++)
+        {
+            if (this.tabLigne[i].getNumero().equals(numero))
+            {
+                return this.tabLigne[i];
+            }
+        }
+        return null;
+    }
+
+    public int getVoyageursTotal()
+    {
+        int total = 0;
+        for (int i = 0; i < this.nbLignes; i++)
+        {
+            total += this.tabLigne[i].getVoyageurs();
+        }
+        return total;
+    }
+}
+
+class Ihm
+{
+    private Reseau reseau;
+
+    public Ihm(Reseau reseau)
+    {
+        this.reseau = reseau;
+    }
+
+    public String tableau()
+    {
+        String s = "";
+        for (int i = 0; i < this.reseau.getNbLignes(); i++)
+        {
+            Ligne l = this.reseau.getLigne(i);
+            s += String.format("%3s", l.getNumero()) + " | " + String.format("%-16s", l.getTrajet()) + " | " + String.format("%6d", l.getVoyageurs()) + "\\n";
+        }
+        s += "Total : " + this.reseau.getVoyageursTotal() + "\\n";
+        return s;
+    }
+}`),
+			indices: ["L'IHM garde une référence vers le métier (`private Reseau reseau;`) et ne passe que par ses méthodes publiques : `getNbLignes()`, `getLigne(i)`, `getVoyageursTotal()`.",
+				"Les largeurs : `String.format(\"%3s\", ...)`, `String.format(\"%-16s\", ...)` (le `-` cale à gauche) et `String.format(\"%6d\", ...)`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 5 */
+OBJETS_PROJETS.o05 = { id: "o05.p", titre: "Le morpion",
+	intro: "Une grille de morpion 3 × 3 rangée dans un tableau à deux dimensions de `char` ; une case vide contient `'.'`. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o05.p1", k: "code", mode: "class", titre: "La grille", fichier: "Grille.java", xp: 20,
+			enonce: "Écris `Grille` : le constructeur remplit les 9 cases avec `'.'`. `jouer(int lig, int col, char symbole)` renvoie `false` si la case est hors de la grille ou déjà prise, sinon pose le symbole. `estPleine()` et `toString()` (une ligne par rangée, les 3 cases collées : `X.O`).",
+			regles: ["allman"],
+			harness: T(`
+public class TestGrille
+{
+    public static void main(String[] args)
+    {
+        Grille g = new Grille();
+        System.out.println(g.jouer(1, 1, 'X') + " " + g.jouer(1, 1, 'O') + " " + g.jouer(3, 0, 'O'));
+        g.jouer(0, 2, 'O');
+        g.jouer(2, 0, 'X');
+        System.out.print(g);
+        System.out.println(g.estPleine());
+        for (int i = 0; i < 9; i++)
+        {
+            g.jouer(i / 3, i % 3, 'O');
+        }
+        System.out.println(g.estPleine());
+    }
+}`),
+			depart: T(`
+public class Grille
+{
+    private char[][] cases;
+
+}`),
+			solution: T(`
+public class Grille
+{
+    private char[][] cases;
+
+    public Grille()
+    {
+        this.cases = new char[3][3];
+        for (int lig = 0; lig < 3; lig++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                this.cases[lig][col] = '.';
+            }
+        }
+    }
+
+    public boolean jouer(int lig, int col, char symbole)
+    {
+        if (lig < 0 || lig > 2 || col < 0 || col > 2 || this.cases[lig][col] != '.')
+        {
+            return false;
+        }
+        this.cases[lig][col] = symbole;
+        return true;
+    }
+
+    public boolean estPleine()
+    {
+        for (int lig = 0; lig < 3; lig++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                if (this.cases[lig][col] == '.')
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (int lig = 0; lig < 3; lig++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                s += this.cases[lig][col];
+            }
+            s += "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["Un tableau de `char` est rempli de `'\\u0000'` au départ : il faut une double boucle dans le constructeur pour y mettre `'.'`.",
+				"Dans `jouer`, teste les bornes **avant** de lire la case (avec `||`, Java s'arrête au premier test vrai)."] },
+		{ id: "o05.p2", k: "code", mode: "class", titre: "Qui a gagné ?", fichier: "Grille.java", xp: 30,
+			enonce: "Ajoute `aGagne(char s)` : vrai si le symbole `s` occupe une ligne entière, une colonne entière ou une des deux diagonales.",
+			regles: ["allman"],
+			harness: T(`
+public class TestGrille
+{
+    public static void main(String[] args)
+    {
+        Grille g1 = new Grille();
+        g1.jouer(0, 1, 'X');
+        g1.jouer(1, 1, 'X');
+        g1.jouer(2, 1, 'X');
+        Grille g2 = new Grille();
+        g2.jouer(0, 2, 'O');
+        g2.jouer(1, 1, 'O');
+        g2.jouer(2, 0, 'O');
+        Grille g3 = new Grille();
+        g3.jouer(2, 0, 'X');
+        g3.jouer(2, 1, 'X');
+        g3.jouer(2, 2, 'O');
+        System.out.println(g1.aGagne('X') + " " + g1.aGagne('O'));
+        System.out.println(g2.aGagne('O') + " " + g3.aGagne('X'));
+        g3.jouer(0, 0, 'O');
+        g3.jouer(1, 1, 'O');
+        System.out.println(g3.aGagne('O'));
+        System.out.print(g3);
+    }
+}`),
+			depart: "",
+			solution: T(`
+public class Grille
+{
+    private char[][] cases;
+
+    public Grille()
+    {
+        this.cases = new char[3][3];
+        for (int lig = 0; lig < 3; lig++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                this.cases[lig][col] = '.';
+            }
+        }
+    }
+
+    public boolean jouer(int lig, int col, char symbole)
+    {
+        if (lig < 0 || lig > 2 || col < 0 || col > 2 || this.cases[lig][col] != '.')
+        {
+            return false;
+        }
+        this.cases[lig][col] = symbole;
+        return true;
+    }
+
+    public boolean estPleine()
+    {
+        for (int lig = 0; lig < 3; lig++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                if (this.cases[lig][col] == '.')
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public boolean aGagne(char s)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (this.cases[i][0] == s && this.cases[i][1] == s && this.cases[i][2] == s)
+            {
+                return true;
+            }
+            if (this.cases[0][i] == s && this.cases[1][i] == s && this.cases[2][i] == s)
+            {
+                return true;
+            }
+        }
+        if (this.cases[0][0] == s && this.cases[1][1] == s && this.cases[2][2] == s)
+        {
+            return true;
+        }
+        return this.cases[0][2] == s && this.cases[1][1] == s && this.cases[2][0] == s;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (int lig = 0; lig < 3; lig++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                s += this.cases[lig][col];
+            }
+            s += "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["Une seule boucle sur `i` suffit pour les lignes **et** les colonnes : la ligne `i` est `cases[i][0..2]`, la colonne `i` est `cases[0..2][i]`.",
+				"Les diagonales se testent à part : `[0][0] [1][1] [2][2]` et `[0][2] [1][1] [2][0]`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 6 */
+OBJETS_PROJETS.o06 = { id: "o06.p", titre: "Le réseau d'amis",
+	intro: "Un petit réseau social : chaque membre garde la liste des membres qu'il connaît. L'amitié marche **dans les deux sens** : si Ana est amie avec Bilal, Bilal est ami avec Ana. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o06.p1", k: "code", mode: "class", titre: "Devenir amis", fichier: "Membre.java", xp: 20,
+			enonce: "Écris `Membre(String pseudo)` avec une `ArrayList<Membre>` d'amis. `ajouterAmi(Membre m)` renvoie `false` si `m` vaut `null`, est le membre lui-même ou est déjà un ami ; sinon elle ajoute le lien **des deux côtés**. `estAmi(Membre m)`, `getNbAmis()` et `toString()` (le pseudo).",
+			regles: ["allman"],
+			harness: T(`
+public class TestReseau
+{
+    public static void main(String[] args)
+    {
+        Membre ana = new Membre("ana");
+        Membre bilal = new Membre("bilal");
+        Membre chloe = new Membre("chloe");
+        System.out.println(ana.ajouterAmi(bilal) + " " + bilal.ajouterAmi(ana) + " " + ana.ajouterAmi(ana) + " " + ana.ajouterAmi(null));
+        chloe.ajouterAmi(ana);
+        System.out.println(bilal.estAmi(ana) + " " + bilal.estAmi(chloe));
+        System.out.println(ana + " : " + ana.getNbAmis() + " amis, " + chloe + " : " + chloe.getNbAmis());
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+
+public class Membre
+{
+    private String            pseudo;
+    private ArrayList<Membre> amis;
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+
+public class Membre
+{
+    private String            pseudo;
+    private ArrayList<Membre> amis;
+
+    public Membre(String pseudo)
+    {
+        this.pseudo = pseudo;
+        this.amis   = new ArrayList<Membre>();
+    }
+
+    public boolean ajouterAmi(Membre m)
+    {
+        if (m == null || m == this || this.amis.contains(m))
+        {
+            return false;
+        }
+        this.amis.add(m);
+        m.amis.add(this);
+        return true;
+    }
+
+    public boolean estAmi(Membre m)
+    {
+        return this.amis.contains(m);
+    }
+
+    public int getNbAmis()
+    {
+        return this.amis.size();
+    }
+
+    public String toString()
+    {
+        return this.pseudo;
+    }
+}`),
+			indices: ["Sans `equals` redéfini, `contains` compare les références avec `==` : c'est exactement « le même membre ».",
+				"Pour le lien dans les deux sens : `this.amis.add(m);` puis `m.amis.add(this);` (on a le droit de lire l'attribut `private` d'un autre objet de la même classe)."] },
+		{ id: "o06.p2", k: "code", mode: "class", titre: "Amis en commun", fichier: "Membre.java", xp: 30,
+			enonce: "Ajoute `nbAmisCommuns(Membre m)` (les amis que les deux membres partagent) et `suggestions()` : une `ArrayList<Membre>` des amis de mes amis qui ne sont **ni moi, ni déjà mes amis**, sans doublon, dans l'ordre où on les rencontre.",
+			regles: ["allman"],
+			harness: T(`
+public class TestReseau
+{
+    public static void main(String[] args)
+    {
+        Membre ana = new Membre("ana");
+        Membre bilal = new Membre("bilal");
+        Membre chloe = new Membre("chloe");
+        Membre dina = new Membre("dina");
+        Membre eli = new Membre("eli");
+        ana.ajouterAmi(bilal);
+        ana.ajouterAmi(chloe);
+        bilal.ajouterAmi(chloe);
+        bilal.ajouterAmi(dina);
+        chloe.ajouterAmi(dina);
+        chloe.ajouterAmi(eli);
+        System.out.println(ana.nbAmisCommuns(bilal) + " " + bilal.nbAmisCommuns(chloe) + " " + dina.nbAmisCommuns(eli));
+        System.out.println(ana.suggestions());
+        System.out.println(eli.suggestions());
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.ArrayList;
+
+public class Membre
+{
+    private String            pseudo;
+    private ArrayList<Membre> amis;
+
+    public Membre(String pseudo)
+    {
+        this.pseudo = pseudo;
+        this.amis   = new ArrayList<Membre>();
+    }
+
+    public boolean ajouterAmi(Membre m)
+    {
+        if (m == null || m == this || this.amis.contains(m))
+        {
+            return false;
+        }
+        this.amis.add(m);
+        m.amis.add(this);
+        return true;
+    }
+
+    public boolean estAmi(Membre m)
+    {
+        return this.amis.contains(m);
+    }
+
+    public int getNbAmis()
+    {
+        return this.amis.size();
+    }
+
+    public int nbAmisCommuns(Membre m)
+    {
+        int nb = 0;
+        for (Membre a : this.amis)
+        {
+            if (m.amis.contains(a))
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    public ArrayList<Membre> suggestions()
+    {
+        ArrayList<Membre> res = new ArrayList<Membre>();
+        for (Membre a : this.amis)
+        {
+            for (Membre b : a.amis)
+            {
+                if (b != this && !this.amis.contains(b) && !res.contains(b))
+                {
+                    res.add(b);
+                }
+            }
+        }
+        return res;
+    }
+
+    public String toString()
+    {
+        return this.pseudo;
+    }
+}`),
+			indices: ["`nbAmisCommuns` : parcours mes amis et compte ceux qui sont aussi dans `m.amis`.",
+				"`suggestions` : une double boucle (mes amis, puis leurs amis). On garde `b` seulement si `b != this`, s'il n'est pas déjà mon ami et pas déjà dans le résultat."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 7 */
+OBJETS_PROJETS.o07 = { id: "o07.p", titre: "La boutique en ligne",
+	intro: "Une boutique vend des livres et des jeux. Le panier ne doit pas connaître chaque sorte d'article : il ne parle qu'à des **interfaces**. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o07.p1", k: "code", mode: "class", titre: "Tout ce qui se vend", fichier: "Panier.java", xp: 20,
+			enonce: "Écris l'interface `Vendable` (`double getPrix()` et `String getNom()`), les classes `Livre(String titre, double prix)` et `Jeu(String nom, double prix, int ageMin)` qui l'implémentent, et `Panier`, qui range des `Vendable` dans une `ArrayList` : `ajouter(Vendable v)`, `total()` et `toString()` (un article par ligne : `Dune : 9.5`).",
+			regles: ["allman"],
+			harness: T(`
+public class TestBoutique
+{
+    public static void main(String[] args)
+    {
+        Panier p = new Panier();
+        p.ajouter(new Livre("Dune", 9.5));
+        p.ajouter(new Jeu("Catan", 42.0, 10));
+        p.ajouter(new Livre("Le Petit Prince", 6.9));
+        System.out.print(p);
+        System.out.println("Total : " + String.format("%.2f", p.total()));
+        Vendable v = new Jeu("Uno", 12.0, 6);
+        System.out.println(v.getNom() + " " + (v instanceof Jeu));
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+
+interface Vendable
+{
+
+}
+
+class Livre
+{
+
+}
+
+class Jeu
+{
+
+}
+
+public class Panier
+{
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+
+interface Vendable
+{
+    double getPrix();
+    String getNom();
+}
+
+class Livre implements Vendable
+{
+    private String titre;
+    private double prix;
+
+    public Livre(String titre, double prix)
+    {
+        this.titre = titre;
+        this.prix  = prix;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+
+    public String getNom()
+    {
+        return this.titre;
+    }
+}
+
+class Jeu implements Vendable
+{
+    private String nom;
+    private double prix;
+    private int    ageMin;
+
+    public Jeu(String nom, double prix, int ageMin)
+    {
+        this.nom    = nom;
+        this.prix   = prix;
+        this.ageMin = ageMin;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+}
+
+public class Panier
+{
+    private ArrayList<Vendable> articles;
+
+    public Panier()
+    {
+        this.articles = new ArrayList<Vendable>();
+    }
+
+    public void ajouter(Vendable v)
+    {
+        this.articles.add(v);
+    }
+
+    public double total()
+    {
+        double t = 0;
+        for (Vendable v : this.articles)
+        {
+            t += v.getPrix();
+        }
+        return t;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Vendable v : this.articles)
+        {
+            s += v.getNom() + " : " + v.getPrix() + "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["Dans l'interface, les méthodes n'ont pas de corps : `double getPrix();`. Dans les classes, elles sont écrites en `public`.",
+				"Le panier ne connaît que `Vendable` : `ArrayList<Vendable>`, et la boucle `for (Vendable v : this.articles)` appelle `v.getPrix()`."] },
+		{ id: "o07.p2", k: "code", mode: "class", titre: "Les soldes", fichier: "Panier.java", xp: 30,
+			enonce: "Ajoute l'interface `Soldable` avec `void solder(int pourcent)`. Seuls les **jeux** sont soldables : `Jeu` implémente les deux interfaces, et `solder(20)` baisse son prix de 20 %. Ajoute à `Panier` la méthode `solderTout(int pourcent)` qui solde uniquement les articles soldables, et renvoie combien d'articles ont été soldés.",
+			regles: ["allman"],
+			harness: T(`
+public class TestBoutique
+{
+    public static void main(String[] args)
+    {
+        Panier p = new Panier();
+        p.ajouter(new Livre("Dune", 9.5));
+        p.ajouter(new Jeu("Catan", 40.0, 10));
+        p.ajouter(new Jeu("Uno", 12.0, 6));
+        System.out.println(p.solderTout(25) + " articles soldés");
+        System.out.print(p);
+        System.out.println("Total : " + String.format("%.2f", p.total()));
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.ArrayList;
+
+interface Vendable
+{
+    double getPrix();
+    String getNom();
+}
+
+interface Soldable
+{
+    void solder(int pourcent);
+}
+
+class Livre implements Vendable
+{
+    private String titre;
+    private double prix;
+
+    public Livre(String titre, double prix)
+    {
+        this.titre = titre;
+        this.prix  = prix;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+
+    public String getNom()
+    {
+        return this.titre;
+    }
+}
+
+class Jeu implements Vendable, Soldable
+{
+    private String nom;
+    private double prix;
+    private int    ageMin;
+
+    public Jeu(String nom, double prix, int ageMin)
+    {
+        this.nom    = nom;
+        this.prix   = prix;
+        this.ageMin = ageMin;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public void solder(int pourcent)
+    {
+        this.prix = this.prix * (100 - pourcent) / 100;
+    }
+}
+
+public class Panier
+{
+    private ArrayList<Vendable> articles;
+
+    public Panier()
+    {
+        this.articles = new ArrayList<Vendable>();
+    }
+
+    public void ajouter(Vendable v)
+    {
+        this.articles.add(v);
+    }
+
+    public double total()
+    {
+        double t = 0;
+        for (Vendable v : this.articles)
+        {
+            t += v.getPrix();
+        }
+        return t;
+    }
+
+    public int solderTout(int pourcent)
+    {
+        int nb = 0;
+        for (Vendable v : this.articles)
+        {
+            if (v instanceof Soldable)
+            {
+                ((Soldable) v).solder(pourcent);
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Vendable v : this.articles)
+        {
+            s += v.getNom() + " : " + v.getPrix() + "\\n";
+        }
+        return s;
+    }
+}`),
+			indices: ["`class Jeu implements Vendable, Soldable` : il faut alors écrire `solder` en plus.",
+				"Dans le panier, une variable `Vendable` ne connaît pas `solder` : teste `v instanceof Soldable`, puis caste : `((Soldable) v).solder(pourcent);`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 8 */
+OBJETS_PROJETS.o08 = { id: "o08.p", titre: "L'imprimante partagée",
+	intro: "Toute la salle de TP envoie ses documents à la même imprimante. Les documents attendent dans une file : premier arrivé, premier imprimé... sauf les urgences. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o08.p1", k: "code", mode: "class", titre: "La file d'impression", fichier: "FileImpression.java", xp: 20,
+			enonce: "La classe `Document` est donnée. Écris `FileImpression`, qui range les documents dans une `LinkedList<Document>`. `envoyer(Document d)` ajoute à la fin, `imprimer()` retire le premier et renvoie son nom (ou `null` si la file est vide), `getNbDocuments()` et `pagesEnAttente()` (le total des pages qui attendent).",
+			regles: ["allman"],
+			harness: T(`
+public class TestImprimante
+{
+    public static void main(String[] args)
+    {
+        FileImpression f = new FileImpression();
+        System.out.println(f.imprimer());
+        f.envoyer(new Document("rapport.pdf", 12));
+        f.envoyer(new Document("photo.png", 1));
+        f.envoyer(new Document("cours.pdf", 30));
+        System.out.println(f.getNbDocuments() + " documents, " + f.pagesEnAttente() + " pages");
+        System.out.println(f.imprimer() + " puis " + f.imprimer());
+        System.out.println(f.getNbDocuments() + " document, " + f.pagesEnAttente() + " pages");
+    }
+}
+
+class Document
+{
+    private String nom;
+    private int    nbPages;
+
+    public Document(String nom, int nbPages)
+    {
+        this.nom     = nom;
+        this.nbPages = nbPages;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getNbPages()
+    {
+        return this.nbPages;
+    }
+
+    public String toString()
+    {
+        return this.nom + " (" + this.nbPages + " p.)";
+    }
+}`),
+			depart: T(`
+import java.util.LinkedList;
+
+public class FileImpression
+{
+    private LinkedList<Document> file;
+
+}`),
+			solution: T(`
+import java.util.LinkedList;
+
+public class FileImpression
+{
+    private LinkedList<Document> file;
+
+    public FileImpression()
+    {
+        this.file = new LinkedList<Document>();
+    }
+
+    public void envoyer(Document d)
+    {
+        this.file.addLast(d);
+    }
+
+    public String imprimer()
+    {
+        if (this.file.isEmpty())
+        {
+            return null;
+        }
+        return this.file.removeFirst().getNom();
+    }
+
+    public int getNbDocuments()
+    {
+        return this.file.size();
+    }
+
+    public int pagesEnAttente()
+    {
+        int total = 0;
+        for (Document d : this.file)
+        {
+            total += d.getNbPages();
+        }
+        return total;
+    }
+}`),
+			indices: ["`addLast` pour envoyer, `removeFirst` pour imprimer : c'est une file. Teste `isEmpty()` avant de retirer.",
+				"`removeFirst()` renvoie le document retiré : `return this.file.removeFirst().getNom();`."] },
+		{ id: "o08.p2", k: "code", mode: "class", titre: "Urgences et annulations", fichier: "FileImpression.java", xp: 30,
+			enonce: "Ajoute `envoyerUrgent(Document d)`, qui place le document **en tête** de la file, et `annuler(String nom)`, qui retire de la file **tous** les documents de ce nom et renvoie combien ont été retirés. Ajoute `toString()` : la liste des documents, par exemple `[photo.png (1 p.), cours.pdf (30 p.)]`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestImprimante
+{
+    public static void main(String[] args)
+    {
+        FileImpression f = new FileImpression();
+        f.envoyer(new Document("cours.pdf", 30));
+        f.envoyer(new Document("photo.png", 1));
+        f.envoyer(new Document("cours.pdf", 30));
+        f.envoyerUrgent(new Document("billet.pdf", 2));
+        System.out.println(f);
+        System.out.println(f.annuler("cours.pdf") + " " + f.annuler("rien.txt"));
+        System.out.println(f + " " + f.pagesEnAttente());
+        System.out.println(f.imprimer());
+    }
+}
+
+class Document
+{
+    private String nom;
+    private int    nbPages;
+
+    public Document(String nom, int nbPages)
+    {
+        this.nom     = nom;
+        this.nbPages = nbPages;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getNbPages()
+    {
+        return this.nbPages;
+    }
+
+    public String toString()
+    {
+        return this.nom + " (" + this.nbPages + " p.)";
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.LinkedList;
+
+public class FileImpression
+{
+    private LinkedList<Document> file;
+
+    public FileImpression()
+    {
+        this.file = new LinkedList<Document>();
+    }
+
+    public void envoyer(Document d)
+    {
+        this.file.addLast(d);
+    }
+
+    public void envoyerUrgent(Document d)
+    {
+        this.file.addFirst(d);
+    }
+
+    public String imprimer()
+    {
+        if (this.file.isEmpty())
+        {
+            return null;
+        }
+        return this.file.removeFirst().getNom();
+    }
+
+    public int getNbDocuments()
+    {
+        return this.file.size();
+    }
+
+    public int pagesEnAttente()
+    {
+        int total = 0;
+        for (Document d : this.file)
+        {
+            total += d.getNbPages();
+        }
+        return total;
+    }
+
+    public int annuler(String nom)
+    {
+        int nb = 0;
+        for (int i = this.file.size() - 1; i >= 0; i--)
+        {
+            if (this.file.get(i).getNom().equals(nom))
+            {
+                this.file.remove(i);
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    public String toString()
+    {
+        return this.file.toString();
+    }
+}`),
+			indices: ["`addFirst` place un document devant tous les autres.",
+				"Pour retirer plusieurs éléments pendant un parcours, utilise une boucle avec indice **à l'envers** : sinon on saute la case qui suit chaque suppression (et un for-each lèverait une `ConcurrentModificationException`)."] }
+	] };
+
+/* ------------------------------------------------------------- Projet 9 */
+OBJETS_PROJETS.o09 = { id: "o09.p", titre: "Le zoo",
+	intro: "Le zoo décrit ses pensionnaires avec une classe mère `Animal` et des classes filles. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o09.p1", k: "code", mode: "class", titre: "Les pensionnaires", fichier: "Animal.java", xp: 20,
+			enonce: "Écris `Animal(String nom, int age)` avec des attributs `protected`, `cri()` (renvoie `...`) et `toString()` (`Léo, 4 ans : ROAR`, qui utilise `cri()`). Puis `Lion`, qui hérite d'`Animal` et crie `ROAR`, et `Perroquet(String nom, int age, String phrase)`, qui répète sa phrase deux fois : `Coco ! Coco !`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestZoo
+{
+    public static void main(String[] args)
+    {
+        Animal[] zoo = { new Animal("Tortue", 80), new Lion("Léo", 4), new Perroquet("Jacquot", 12, "Bonjour") };
+        for (Animal a : zoo)
+        {
+            System.out.println(a);
+        }
+        System.out.println(zoo[2] instanceof Animal);
+    }
+}`),
+			depart: T(`
+public class Animal
+{
+
+}
+
+class Lion extends Animal
+{
+
+}
+
+class Perroquet extends Animal
+{
+
+}`),
+			solution: T(`
+public class Animal
+{
+    protected String nom;
+    protected int    age;
+
+    public Animal(String nom, int age)
+    {
+        this.nom = nom;
+        this.age = age;
+    }
+
+    public String cri()
+    {
+        return "...";
+    }
+
+    public String toString()
+    {
+        return this.nom + ", " + this.age + " ans : " + this.cri();
+    }
+}
+
+class Lion extends Animal
+{
+    public Lion(String nom, int age)
+    {
+        super(nom, age);
+    }
+
+    @Override
+    public String cri()
+    {
+        return "ROAR";
+    }
+}
+
+class Perroquet extends Animal
+{
+    private String phrase;
+
+    public Perroquet(String nom, int age, String phrase)
+    {
+        super(nom, age);
+        this.phrase = phrase;
+    }
+
+    @Override
+    public String cri()
+    {
+        return this.phrase + " ! " + this.phrase + " !";
+    }
+}`),
+			indices: ["Chaque fille commence son constructeur par `super(nom, age);`. `Lion` n'a besoin que de ça et de `cri()`.",
+				"`toString()` est écrit une seule fois dans `Animal` : en appelant `this.cri()`, il utilise automatiquement la version de la fille."] },
+		{ id: "o09.p2", k: "code", mode: "class", titre: "L'heure du repas", fichier: "Animal.java", xp: 30,
+			enonce: "Ajoute `portion()` (kg de nourriture par jour) : 1.0 pour un animal, et pour un lion 5.0 plus 0.5 par année d'âge, en **réutilisant** `super.portion()` (lion = 4 + `super.portion()` + 0,5 × âge). Écris aussi `Zoo` avec une `ArrayList<Animal>` : `ajouter(Animal a)`, `totalNourriture()` et `concert()` (les cris de tous les animaux, séparés par une espace).",
+			regles: ["allman"],
+			harness: T(`
+public class TestZoo
+{
+    public static void main(String[] args)
+    {
+        Zoo z = new Zoo();
+        z.ajouter(new Animal("Tortue", 80));
+        z.ajouter(new Lion("Léo", 4));
+        z.ajouter(new Perroquet("Jacquot", 12, "Coco"));
+        z.ajouter(new Lion("Nala", 10));
+        System.out.println(z.totalNourriture() + " kg");
+        System.out.println(z.concert());
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.ArrayList;
+
+public class Animal
+{
+    protected String nom;
+    protected int    age;
+
+    public Animal(String nom, int age)
+    {
+        this.nom = nom;
+        this.age = age;
+    }
+
+    public String cri()
+    {
+        return "...";
+    }
+
+    public double portion()
+    {
+        return 1.0;
+    }
+
+    public String toString()
+    {
+        return this.nom + ", " + this.age + " ans : " + this.cri();
+    }
+}
+
+class Lion extends Animal
+{
+    public Lion(String nom, int age)
+    {
+        super(nom, age);
+    }
+
+    @Override
+    public String cri()
+    {
+        return "ROAR";
+    }
+
+    @Override
+    public double portion()
+    {
+        return 4 + super.portion() + 0.5 * this.age;
+    }
+}
+
+class Perroquet extends Animal
+{
+    private String phrase;
+
+    public Perroquet(String nom, int age, String phrase)
+    {
+        super(nom, age);
+        this.phrase = phrase;
+    }
+
+    @Override
+    public String cri()
+    {
+        return this.phrase + " ! " + this.phrase + " !";
+    }
+}
+
+class Zoo
+{
+    private ArrayList<Animal> animaux;
+
+    public Zoo()
+    {
+        this.animaux = new ArrayList<Animal>();
+    }
+
+    public void ajouter(Animal a)
+    {
+        this.animaux.add(a);
+    }
+
+    public double totalNourriture()
+    {
+        double total = 0;
+        for (Animal a : this.animaux)
+        {
+            total += a.portion();
+        }
+        return total;
+    }
+
+    public String concert()
+    {
+        String s = "";
+        for (Animal a : this.animaux)
+        {
+            if (!s.isEmpty())
+            {
+                s += " ";
+            }
+            s += a.cri();
+        }
+        return s;
+    }
+}`),
+			indices: ["Dans `Lion`, `super.portion()` appelle la version d'`Animal` (1.0) : `return 4 + super.portion() + 0.5 * this.age;`. `age` est `protected`, donc lisible dans la fille.",
+				"`Zoo` ne connaît que des `Animal` : `a.portion()` et `a.cri()` exécutent la version de l'objet réel. Ajoute `import java.util.ArrayList;` en haut du fichier."] }
+	] };
+
+/* ------------------------------------------------------------ Projet 10 */
+OBJETS_PROJETS.o10 = { id: "o10.p", titre: "La paie des employés",
+	intro: "Une entreprise calcule les salaires. Chaque sorte d'employé a sa formule, mais toutes passent par la même méthode abstraite. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o10.p1", k: "code", mode: "class", titre: "Des salaires différents", fichier: "Employe.java", xp: 20,
+			enonce: "Écris la classe abstraite `Employe(String nom)` avec la méthode abstraite `double salaire()` et `toString()` (`Ana : 1850.0 €`). Puis `Salarie(String nom, double fixe)` (salaire = fixe) et `Commercial(String nom, double fixe, double chiffre)` (salaire = fixe + 5 % du chiffre d'affaires).",
+			regles: ["allman"],
+			harness: T(`
+public class TestPaie
+{
+    public static void main(String[] args)
+    {
+        Employe[] equipe = { new Salarie("Ana", 1850), new Commercial("Bilal", 1200, 20000), new Commercial("Chloé", 1200, 3000) };
+        for (Employe e : equipe)
+        {
+            System.out.println(e);
+        }
+    }
+}`),
+			depart: T(`
+public abstract class Employe
+{
+
+}
+
+class Salarie extends Employe
+{
+
+}
+
+class Commercial extends Employe
+{
+
+}`),
+			solution: T(`
+public abstract class Employe
+{
+    protected String nom;
+
+    public Employe(String nom)
+    {
+        this.nom = nom;
+    }
+
+    public abstract double salaire();
+
+    public String toString()
+    {
+        return this.nom + " : " + this.salaire() + " €";
+    }
+}
+
+class Salarie extends Employe
+{
+    private double fixe;
+
+    public Salarie(String nom, double fixe)
+    {
+        super(nom);
+        this.fixe = fixe;
+    }
+
+    public double salaire()
+    {
+        return this.fixe;
+    }
+}
+
+class Commercial extends Employe
+{
+    private double fixe;
+    private double chiffre;
+
+    public Commercial(String nom, double fixe, double chiffre)
+    {
+        super(nom);
+        this.fixe    = fixe;
+        this.chiffre = chiffre;
+    }
+
+    public double salaire()
+    {
+        return this.fixe + this.chiffre * 0.05;
+    }
+}`),
+			indices: ["`public abstract double salaire();` : pas de corps, un point-virgule. La classe doit alors être `abstract`.",
+				"`toString()` est écrit dans la mère et appelle `this.salaire()` : chaque fille n'écrit que sa formule."] },
+		{ id: "o10.p2", k: "code", mode: "class", titre: "L'entreprise", fichier: "Employe.java", xp: 30,
+			enonce: "Ajoute `Interimaire(String nom, int heures, double tauxHoraire)` (salaire = heures × taux) et la classe `Entreprise` avec une `ArrayList<Employe>` : `embaucher(Employe e)`, `masseSalariale()`, `mieuxPaye()` (l'employé au plus gros salaire, `null` si personne) et `nbCommerciaux()` (avec `instanceof`).",
+			regles: ["allman"],
+			harness: T(`
+public class TestPaie
+{
+    public static void main(String[] args)
+    {
+        Entreprise ent = new Entreprise();
+        System.out.println(ent.mieuxPaye());
+        ent.embaucher(new Salarie("Ana", 1850));
+        ent.embaucher(new Commercial("Bilal", 1200, 20000));
+        ent.embaucher(new Interimaire("Dina", 120, 15.5));
+        ent.embaucher(new Commercial("Chloé", 1200, 3000));
+        System.out.println(ent.masseSalariale());
+        System.out.println(ent.mieuxPaye());
+        System.out.println(ent.nbCommerciaux() + " commerciaux");
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.ArrayList;
+
+public abstract class Employe
+{
+    protected String nom;
+
+    public Employe(String nom)
+    {
+        this.nom = nom;
+    }
+
+    public abstract double salaire();
+
+    public String toString()
+    {
+        return this.nom + " : " + this.salaire() + " €";
+    }
+}
+
+class Salarie extends Employe
+{
+    private double fixe;
+
+    public Salarie(String nom, double fixe)
+    {
+        super(nom);
+        this.fixe = fixe;
+    }
+
+    public double salaire()
+    {
+        return this.fixe;
+    }
+}
+
+class Commercial extends Employe
+{
+    private double fixe;
+    private double chiffre;
+
+    public Commercial(String nom, double fixe, double chiffre)
+    {
+        super(nom);
+        this.fixe    = fixe;
+        this.chiffre = chiffre;
+    }
+
+    public double salaire()
+    {
+        return this.fixe + this.chiffre * 0.05;
+    }
+}
+
+class Interimaire extends Employe
+{
+    private int    heures;
+    private double tauxHoraire;
+
+    public Interimaire(String nom, int heures, double tauxHoraire)
+    {
+        super(nom);
+        this.heures      = heures;
+        this.tauxHoraire = tauxHoraire;
+    }
+
+    public double salaire()
+    {
+        return this.heures * this.tauxHoraire;
+    }
+}
+
+class Entreprise
+{
+    private ArrayList<Employe> employes;
+
+    public Entreprise()
+    {
+        this.employes = new ArrayList<Employe>();
+    }
+
+    public void embaucher(Employe e)
+    {
+        this.employes.add(e);
+    }
+
+    public double masseSalariale()
+    {
+        double total = 0;
+        for (Employe e : this.employes)
+        {
+            total += e.salaire();
+        }
+        return total;
+    }
+
+    public Employe mieuxPaye()
+    {
+        Employe best = null;
+        for (Employe e : this.employes)
+        {
+            if (best == null || e.salaire() > best.salaire())
+            {
+                best = e;
+            }
+        }
+        return best;
+    }
+
+    public int nbCommerciaux()
+    {
+        int nb = 0;
+        for (Employe e : this.employes)
+        {
+            if (e instanceof Commercial)
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }
+}`),
+			indices: ["`Interimaire` suit le même modèle que les autres filles : `super(nom);` puis sa propre formule dans `salaire()`.",
+				"Dans `Entreprise`, `e.salaire()` marche pour tous les employés (polymorphisme) ; `e instanceof Commercial` les trie par sorte."] }
+	] };
+
+/* ------------------------------------------------------------ Projet 11 */
+OBJETS_PROJETS.o11 = { id: "o11.p", titre: "L'historique du navigateur",
+	intro: "Les boutons Précédent et Suivant d'un navigateur se codent très bien avec une liste doublement chaînée et un curseur sur la page courante. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o11.p1", k: "code", mode: "class", titre: "Précédent, suivant", fichier: "Historique.java", xp: 30,
+			enonce: "La classe `Page` (une cellule avec `url`, `prc` et `svt`) est donnée. Écris `Historique` avec une référence `courante`. `visiter(String url)` crée une page **juste après** la courante, qui devient la courante : toutes les pages qui suivaient l'ancienne courante sont oubliées. `reculer()` et `avancer()` déplacent la courante et renvoient `false` si c'est impossible. `getUrl()` renvoie l'url courante (`null` au départ).",
+			regles: ["allman"],
+			harness: T(`
+public class TestHistorique
+{
+    public static void main(String[] args)
+    {
+        Historique h = new Historique();
+        System.out.println(h.getUrl() + " " + h.reculer());
+        h.visiter("accueil");
+        h.visiter("cours");
+        h.visiter("tp11");
+        System.out.println(h.reculer() + " " + h.reculer() + " " + h.reculer() + " " + h.getUrl());
+        h.avancer();
+        System.out.println(h.getUrl());
+        h.visiter("notes");
+        System.out.println(h.avancer() + " " + h.getUrl());
+        h.reculer();
+        System.out.println(h.getUrl());
+    }
+}
+
+class Page
+{
+    private String url;
+    private Page   prc;
+    private Page   svt;
+
+    public Page(String url)
+    {
+        this.url = url;
+    }
+
+    public String getUrl()
+    {
+        return this.url;
+    }
+
+    public Page getPrc()
+    {
+        return this.prc;
+    }
+
+    public Page getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setPrc(Page p)
+    {
+        this.prc = p;
+    }
+
+    public void setSvt(Page p)
+    {
+        this.svt = p;
+    }
+}`),
+			depart: T(`
+public class Historique
+{
+    private Page courante;
+
+}`),
+			solution: T(`
+public class Historique
+{
+    private Page courante;
+
+    public void visiter(String url)
+    {
+        Page p = new Page(url);
+        if (this.courante != null)
+        {
+            this.courante.setSvt(p);
+            p.setPrc(this.courante);
+        }
+        this.courante = p;
+    }
+
+    public boolean reculer()
+    {
+        if (this.courante == null || this.courante.getPrc() == null)
+        {
+            return false;
+        }
+        this.courante = this.courante.getPrc();
+        return true;
+    }
+
+    public boolean avancer()
+    {
+        if (this.courante == null || this.courante.getSvt() == null)
+        {
+            return false;
+        }
+        this.courante = this.courante.getSvt();
+        return true;
+    }
+
+    public String getUrl()
+    {
+        if (this.courante == null)
+        {
+            return null;
+        }
+        return this.courante.getUrl();
+    }
+}`),
+			indices: ["Dans `visiter`, il suffit de remplacer le lien `svt` de la courante par la nouvelle page : les anciennes pages suivantes ne sont plus atteignables, elles sont oubliées.",
+				"N'oublie pas le lien retour : `p.setPrc(this.courante);`, sinon `reculer()` ne marchera pas depuis la nouvelle page."] },
+		{ id: "o11.p2", k: "code", mode: "class", titre: "Afficher l'historique", fichier: "Historique.java", xp: 30,
+			enonce: "Ajoute `taille()` (le nombre de pages atteignables, avant **et** après la courante) et `toString()` : toutes les pages de la plus ancienne à la plus récente, séparées par ` > `, la courante entre crochets. Par exemple : `accueil > [cours] > tp11`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestHistorique
+{
+    public static void main(String[] args)
+    {
+        Historique h = new Historique();
+        System.out.println("(" + h + ") " + h.taille());
+        h.visiter("accueil");
+        h.visiter("cours");
+        h.visiter("tp11");
+        h.reculer();
+        System.out.println(h + " " + h.taille());
+        h.reculer();
+        h.visiter("notes");
+        System.out.println(h + " " + h.taille());
+    }
+}
+
+class Page
+{
+    private String url;
+    private Page   prc;
+    private Page   svt;
+
+    public Page(String url)
+    {
+        this.url = url;
+    }
+
+    public String getUrl()
+    {
+        return this.url;
+    }
+
+    public Page getPrc()
+    {
+        return this.prc;
+    }
+
+    public Page getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setPrc(Page p)
+    {
+        this.prc = p;
+    }
+
+    public void setSvt(Page p)
+    {
+        this.svt = p;
+    }
+}`),
+			depart: "",
+			solution: T(`
+public class Historique
+{
+    private Page courante;
+
+    public void visiter(String url)
+    {
+        Page p = new Page(url);
+        if (this.courante != null)
+        {
+            this.courante.setSvt(p);
+            p.setPrc(this.courante);
+        }
+        this.courante = p;
+    }
+
+    public boolean reculer()
+    {
+        if (this.courante == null || this.courante.getPrc() == null)
+        {
+            return false;
+        }
+        this.courante = this.courante.getPrc();
+        return true;
+    }
+
+    public boolean avancer()
+    {
+        if (this.courante == null || this.courante.getSvt() == null)
+        {
+            return false;
+        }
+        this.courante = this.courante.getSvt();
+        return true;
+    }
+
+    public String getUrl()
+    {
+        if (this.courante == null)
+        {
+            return null;
+        }
+        return this.courante.getUrl();
+    }
+
+    private Page premiere()
+    {
+        Page p = this.courante;
+        while (p != null && p.getPrc() != null)
+        {
+            p = p.getPrc();
+        }
+        return p;
+    }
+
+    public int taille()
+    {
+        int nb = 0;
+        for (Page p = this.premiere(); p != null; p = p.getSvt())
+        {
+            nb++;
+        }
+        return nb;
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Page p = this.premiere(); p != null; p = p.getSvt())
+        {
+            if (!s.isEmpty())
+            {
+                s += " > ";
+            }
+            s += (p == this.courante) ? "[" + p.getUrl() + "]" : p.getUrl();
+        }
+        return s;
+    }
+}`),
+			indices: ["Il n'y a pas d'attribut `tete` : retrouve la plus ancienne page en reculant depuis la courante tant qu'il y a un `prc`. Une méthode `private` pour ça évite de l'écrire deux fois.",
+				"Ensuite, un parcours classique avec `getSvt()`. Compare `p == this.courante` pour savoir où mettre les crochets."] }
+	] };
+
+/* ------------------------------------------------------------ Projet 12 */
+OBJETS_PROJETS.o12 = { id: "o12.p", titre: "Le distributeur de billets",
+	intro: "Un distributeur refuse les mauvais montants et bloque la carte après trois codes faux. Chaque refus est une **exception** que le programme de test attrape. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o12.p1", k: "code", mode: "class", titre: "Retirer des billets", fichier: "Distributeur.java", xp: 20,
+			enonce: "Écris l'exception contrôlée `MontantException` (avec message) et `Distributeur(int stock)`. `retirer(int montant)` lève une `MontantException(\"montant invalide\")` si le montant n'est pas un multiple de 10 strictement positif, et une `MontantException(\"stock insuffisant\")` s'il dépasse le stock ; sinon il diminue le stock. `getStock()` donne ce qui reste.",
+			regles: ["allman"],
+			harness: T(`
+public class TestDistributeur
+{
+    public static void main(String[] args)
+    {
+        Distributeur d = new Distributeur(100);
+        int[] demandes = { 40, 25, -10, 80, 60 };
+        for (int m : demandes)
+        {
+            try
+            {
+                d.retirer(m);
+                System.out.println(m + " € : ok");
+            }
+            catch (MontantException e)
+            {
+                System.out.println(m + " € : " + e.getMessage());
+            }
+        }
+        System.out.println("reste " + d.getStock());
+    }
+}`),
+			depart: T(`
+class MontantException extends Exception
+{
+
+}
+
+public class Distributeur
+{
+    private int stock;
+
+}`),
+			solution: T(`
+class MontantException extends Exception
+{
+    public MontantException(String message)
+    {
+        super(message);
+    }
+}
+
+public class Distributeur
+{
+    private int stock;
+
+    public Distributeur(int stock)
+    {
+        this.stock = stock;
+    }
+
+    public void retirer(int montant) throws MontantException
+    {
+        if (montant <= 0 || montant % 10 != 0)
+        {
+            throw new MontantException("montant invalide");
+        }
+        if (montant > this.stock)
+        {
+            throw new MontantException("stock insuffisant");
+        }
+        this.stock -= montant;
+    }
+
+    public int getStock()
+    {
+        return this.stock;
+    }
+}`),
+			indices: ["`MontantException extends Exception` : elle est contrôlée, donc `retirer` doit écrire `throws MontantException`.",
+				"Lève l'exception **avant** de toucher au stock : `throw` arrête la méthode tout de suite."] },
+		{ id: "o12.p2", k: "code", mode: "class", titre: "Le code secret", fichier: "Distributeur.java", xp: 30,
+			enonce: "Ajoute l'exception contrôlée `CarteBloqueeException` et la classe `Carte(int code)`. `verifier(int essai)` renvoie `true` si le code est bon (et remet le compteur d'erreurs à 0), `false` sinon. Au **3e** code faux d'affilée, la carte se bloque : `verifier` lève alors `CarteBloqueeException(\"carte bloquée\")`, et ensuite à chaque appel, même avec le bon code.",
+			regles: ["allman"],
+			harness: T(`
+public class TestDistributeur
+{
+    public static void main(String[] args)
+    {
+        Carte c = new Carte(1234);
+        int[] essais = { 1111, 1234, 0, 9999, 5555, 1234 };
+        for (int e : essais)
+        {
+            try
+            {
+                System.out.println(e + " : " + c.verifier(e));
+            }
+            catch (CarteBloqueeException ex)
+            {
+                System.out.println(e + " : " + ex.getMessage());
+            }
+        }
+        Distributeur d = new Distributeur(50);
+        try
+        {
+            d.retirer(70);
+        }
+        catch (MontantException ex)
+        {
+            System.out.println(ex);
+        }
+    }
+}`),
+			depart: "",
+			solution: T(`
+class MontantException extends Exception
+{
+    public MontantException(String message)
+    {
+        super(message);
+    }
+}
+
+class CarteBloqueeException extends Exception
+{
+    public CarteBloqueeException(String message)
+    {
+        super(message);
+    }
+}
+
+class Carte
+{
+    private int     code;
+    private int     nbErreurs;
+    private boolean bloquee;
+
+    public Carte(int code)
+    {
+        this.code = code;
+    }
+
+    public boolean verifier(int essai) throws CarteBloqueeException
+    {
+        if (this.bloquee)
+        {
+            throw new CarteBloqueeException("carte bloquée");
+        }
+        if (essai == this.code)
+        {
+            this.nbErreurs = 0;
+            return true;
+        }
+        this.nbErreurs++;
+        if (this.nbErreurs == 3)
+        {
+            this.bloquee = true;
+            throw new CarteBloqueeException("carte bloquée");
+        }
+        return false;
+    }
+}
+
+public class Distributeur
+{
+    private int stock;
+
+    public Distributeur(int stock)
+    {
+        this.stock = stock;
+    }
+
+    public void retirer(int montant) throws MontantException
+    {
+        if (montant <= 0 || montant % 10 != 0)
+        {
+            throw new MontantException("montant invalide");
+        }
+        if (montant > this.stock)
+        {
+            throw new MontantException("stock insuffisant");
+        }
+        this.stock -= montant;
+    }
+
+    public int getStock()
+    {
+        return this.stock;
+    }
+}`),
+			indices: ["La carte garde deux informations : le nombre d'erreurs d'affilée et un booléen `bloquee`. Le premier test de `verifier` est `if (this.bloquee) throw ...`.",
+				"Un bon code remet `nbErreurs` à 0. Au 3e code faux, passe `bloquee` à `true` **puis** lève l'exception."] }
+	] };
+
+/* ------------------------------------------------------------ Projet 13 */
+OBJETS_PROJETS.o13 = { id: "o13.p", titre: "Le robot de l'entrepôt",
+	intro: "Un robot se déplace sur la grille d'un entrepôt. Sa direction est un **enum** qui sait tourner et dire de combien on avance en x et en y. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o13.p1", k: "code", mode: "class", titre: "Les directions", fichier: "Direction.java", xp: 20,
+			enonce: "Écris l'enum `Direction` avec, dans cet ordre, `NORD(0, -1)`, `EST(1, 0)`, `SUD(0, 1)` et `OUEST(-1, 0)` : chaque constante garde son déplacement `dx` et `dy` (accesseurs `getDx()`, `getDy()`). Ajoute `droite()` (NORD → EST → SUD → OUEST → NORD) et `gauche()` (le sens inverse), avec `values()` et `ordinal()`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestDirection
+{
+    public static void main(String[] args)
+    {
+        for (Direction d : Direction.values())
+        {
+            System.out.println(d + " (" + d.getDx() + ", " + d.getDy() + ") droite " + d.droite() + ", gauche " + d.gauche());
+        }
+        System.out.println(Direction.NORD.droite().droite() == Direction.SUD);
+    }
+}`),
+			depart: T(`
+public enum Direction
+{
+
+}`),
+			solution: T(`
+public enum Direction
+{
+    NORD(0, -1), EST(1, 0), SUD(0, 1), OUEST(-1, 0);
+
+    private int dx;
+    private int dy;
+
+    Direction(int dx, int dy)
+    {
+        this.dx = dx;
+        this.dy = dy;
+    }
+
+    public int getDx()
+    {
+        return this.dx;
+    }
+
+    public int getDy()
+    {
+        return this.dy;
+    }
+
+    public Direction droite()
+    {
+        return Direction.values()[(this.ordinal() + 1) % 4];
+    }
+
+    public Direction gauche()
+    {
+        return Direction.values()[(this.ordinal() + 3) % 4];
+    }
+}`),
+			indices: ["Les constantes sont rangées dans le sens des aiguilles d'une montre : tourner à droite, c'est la constante suivante : `values()[(ordinal() + 1) % 4]`.",
+				"Tourner à gauche, c'est reculer d'une case : ajouter 3 plutôt que retirer 1 évite un indice négatif avec le `%`."] },
+		{ id: "o13.p2", k: "code", mode: "class", titre: "Le robot", fichier: "Direction.java", xp: 30,
+			enonce: "Garde ton enum et ajoute la classe `Robot` : il part de (0, 0) tourné vers le `NORD`. `executer(String ordres)` lit chaque lettre : `A` avance d'une case dans sa direction, `D` tourne à droite, `G` tourne à gauche ; toute autre lettre est ignorée. `toString()` renvoie `(2, -1) EST`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestRobot
+{
+    public static void main(String[] args)
+    {
+        Robot r = new Robot();
+        System.out.println(r);
+        r.executer("AADA");
+        System.out.println(r);
+        r.executer("DDAAAX");
+        System.out.println(r);
+        r.executer("GGGG");
+        System.out.println(r);
+    }
+}`),
+			depart: "",
+			solution: T(`
+public enum Direction
+{
+    NORD(0, -1), EST(1, 0), SUD(0, 1), OUEST(-1, 0);
+
+    private int dx;
+    private int dy;
+
+    Direction(int dx, int dy)
+    {
+        this.dx = dx;
+        this.dy = dy;
+    }
+
+    public int getDx()
+    {
+        return this.dx;
+    }
+
+    public int getDy()
+    {
+        return this.dy;
+    }
+
+    public Direction droite()
+    {
+        return Direction.values()[(this.ordinal() + 1) % 4];
+    }
+
+    public Direction gauche()
+    {
+        return Direction.values()[(this.ordinal() + 3) % 4];
+    }
+}
+
+class Robot
+{
+    private int       x;
+    private int       y;
+    private Direction dir;
+
+    public Robot()
+    {
+        this.x   = 0;
+        this.y   = 0;
+        this.dir = Direction.NORD;
+    }
+
+    public void executer(String ordres)
+    {
+        for (int i = 0; i < ordres.length(); i++)
+        {
+            char c = ordres.charAt(i);
+            if (c == 'A')
+            {
+                this.x += this.dir.getDx();
+                this.y += this.dir.getDy();
+            }
+            else if (c == 'D')
+            {
+                this.dir = this.dir.droite();
+            }
+            else if (c == 'G')
+            {
+                this.dir = this.dir.gauche();
+            }
+        }
+    }
+
+    public String toString()
+    {
+        return "(" + this.x + ", " + this.y + ") " + this.dir;
+    }
+}`),
+			indices: ["Le robot garde sa position et un attribut `Direction dir`. Avancer, c'est ajouter `dir.getDx()` à x et `dir.getDy()` à y.",
+				"Tourner remplace la direction : `this.dir = this.dir.droite();`. Afficher l'enum donne directement son nom (`EST`)."] }
+	] };
+
+/* Rattache chaque projet à son unité */
+OBJETS_UNITES.forEach(function (c) { if (OBJETS_PROJETS[c.id] && !c.projet) { c.projet = OBJETS_PROJETS[c.id]; } });
+
+/* ======================================================================
+   Contrôles chronométrés (après les unités 3, 6, 9 et 12) et examen final
+   ====================================================================== */
+OBJETS_CONTROLES.push({
+	id: "oc1", apres: "o03", chapitres: "1 à 3", duree: 20, titre: "Contrôle 1 : classes et objets",
+	intro: "Attributs de classe, tableaux d'objets, `equals` et `compareTo`. Quatre exercices, du plus court au plus long.",
+	exos: [
+		{ id: "oc1.static", k: "qcm", q: "La classe `Point` a `private static int nb;` et `private int x;`. Dans une méthode `static`, laquelle de ces instructions ne compile **pas** ?",
+			opts: ["this.x = 0;", "Point.nb++;", "Point p = new Point();", "nb = nb + 1;"], a: 0,
+			expl: "Une méthode `static` n'a pas d'objet courant : `this` n'y existe pas. Elle peut utiliser les attributs de classe, et créer des objets." },
+		{ id: "oc1.trace", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Garage
+{
+    public static void main(String[] args)
+    {
+        Voiture[] t = new Voiture[4];
+        t[0] = new Voiture("Clio");
+        t[2] = new Voiture("Zoé");
+        t[3] = t[0];
+        t[3].rouler(50);
+        t[0].rouler(20);
+        int nb = 0;
+        for (Voiture v : t)
+        {
+            if (v != null)
+            {
+                nb++;
+            }
+        }
+        System.out.println(nb + " " + Voiture.getNbCreees() + " " + t[0].getKm() + " " + t[2].getKm());
+    }
+}
+
+class Voiture
+{
+    private static int nbCreees = 0;
+    private String modele;
+    private int    km;
+
+    public Voiture(String modele)
+    {
+        this.modele = modele;
+        Voiture.nbCreees++;
+    }
+
+    public void rouler(int distance)
+    {
+        this.km += distance;
+    }
+
+    public int getKm()
+    {
+        return this.km;
+    }
+
+    public static int getNbCreees()
+    {
+        return Voiture.nbCreees;
+    }
+}`),
+			expl: "Trois cases sont remplies, mais seulement **deux** objets ont été créés : `t[3]` désigne la même Clio que `t[0]`. Elle roule donc 50 + 20 = 70 km, et la Zoé reste à 0." },
+		{ id: "oc1.equals", k: "bug",
+			code: T(`
+import java.util.ArrayList;
+
+public class Inventaire
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Livre> l = new ArrayList<Livre>();
+        l.add(new Livre("Dune"));
+        System.out.println(l.contains(new Livre("Dune")));
+    }
+}
+
+class Livre
+{
+    private String titre;
+
+    public Livre(String titre)
+    {
+        this.titre = titre;
+    }
+
+    public boolean equals(Object o)
+    {
+        if (!(o instanceof Livre))
+        {
+            return false;
+        }
+        Livre autre = (Livre) o;
+        return this.titre == autre.titre;
+    }
+}`),
+			ligne: 29, fix: ["return this.titre.equals(autre.titre);"],
+			expl: "Deux `String` se comparent avec `equals`, pas avec `==` (qui compare les références). Ici le résultat dépend de la façon dont les chaînes ont été créées : il ne faut jamais compter dessus." },
+		{ id: "oc1.colis", k: "code", mode: "class", fichier: "Colis.java",
+			enonce: "Écris `Colis(String destination, double poids)`, comparable par **poids croissant** (à poids égal, par destination). Chaque colis reçoit un numéro unique grâce à un attribut de classe. `toString()` renvoie `#2 Lyon 1.5 kg`.",
+			regles: ["allman"],
+			harness: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class TestColis
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Colis> l = new ArrayList<Colis>();
+        l.add(new Colis("Paris", 3.0));
+        l.add(new Colis("Lyon", 1.5));
+        l.add(new Colis("Brest", 3.0));
+        l.add(new Colis("Nice", 0.8));
+        Collections.sort(l);
+        for (Colis c : l)
+        {
+            System.out.println(c);
+        }
+    }
+}`),
+			depart: T(`
+public class Colis implements Comparable<Colis>
+{
+
+}`),
+			solution: T(`
+public class Colis implements Comparable<Colis>
+{
+    private static int dernierNumero = 0;
+
+    private int    numero;
+    private String destination;
+    private double poids;
+
+    public Colis(String destination, double poids)
+    {
+        Colis.dernierNumero++;
+        this.numero      = Colis.dernierNumero;
+        this.destination = destination;
+        this.poids       = poids;
+    }
+
+    public int compareTo(Colis autre)
+    {
+        if (this.poids < autre.poids)
+        {
+            return -1;
+        }
+        if (this.poids > autre.poids)
+        {
+            return 1;
+        }
+        return this.destination.compareTo(autre.destination);
+    }
+
+    public String toString()
+    {
+        return "#" + this.numero + " " + this.destination + " " + this.poids + " kg";
+    }
+}`) }
+	]
+});
+
+OBJETS_CONTROLES.push({
+	id: "oc2", apres: "o06", chapitres: "4 à 6", duree: 30, titre: "Contrôle 2 : objets reliés",
+	intro: "Objets qui rangent d'autres objets, paquetages, plateaux et associations. Cinq exercices.",
+	exos: [
+		{ id: "oc2.pkg", k: "qcm", q: "La méthode `getPiece()` de `Plateau` (paquetage `jeu.metier`) n'a **aucun** mot de visibilité. Qui peut l'appeler ?",
+			opts: ["Seulement les classes du paquetage jeu.metier", "Toutes les classes qui importent jeu.metier.Plateau", "Seulement la classe Plateau", "Tout le monde"], a: 0,
+			expl: "Sans mot-clé, c'est la visibilité « paquetage » : plus large que `private`, plus étroite que `public`. Un `import` ne change rien." },
+		{ id: "oc2.plateau", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Damier
+{
+    public static void main(String[] args)
+    {
+        String[][] t = new String[3][3];
+        for (int i = 0; i < 3; i++)
+        {
+            t[i][i] = "X";
+            t[i][2 - i] = "O";
+        }
+        for (String[] ligne : t)
+        {
+            String s = "";
+            for (String c : ligne)
+            {
+                s += (c == null) ? "." : c;
+            }
+            System.out.println(s);
+        }
+    }
+}`),
+			expl: "La diagonale reçoit X, puis l'anti-diagonale reçoit O. La case du centre est sur les deux : le O, écrit après, remplace le X." },
+		{ id: "oc2.lien", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Equipe
+{
+    public static void main(String[] args)
+    {
+        Joueur a = new Joueur("Ana");
+        Joueur b = new Joueur("Bilal");
+        Joueur c = new Joueur("Chloé");
+        a.capitaine = b;
+        b.capitaine = b;
+        c.capitaine = a.capitaine;
+        b.capitaine = c;
+        System.out.println(a.capitaine.nom + " " + b.capitaine.nom + " " + c.capitaine.nom);
+        System.out.println(a.capitaine.capitaine.nom);
+    }
+}
+
+class Joueur
+{
+    String nom;
+    Joueur capitaine;
+
+    Joueur(String nom)
+    {
+        this.nom = nom;
+    }
+}`),
+			expl: "`c.capitaine = a.capitaine` recopie la **flèche** du moment, vers Bilal. Changer ensuite `b.capitaine` ne modifie ni celle de `a`, ni celle de `c`. Enfin, le capitaine du capitaine d'Ana est celui de Bilal : Chloé." },
+		{ id: "oc2.compteur", k: "bug",
+			code: T(`
+public class Ecole
+{
+    public static void main(String[] args)
+    {
+        Classe c = new Classe(30);
+        c.inscrire("Ana");
+        c.inscrire("Bilal");
+        System.out.println(c.getEffectif());
+    }
+}
+
+class Classe
+{
+    private String[] eleves;
+    private int      nbEleves;
+
+    public Classe(int max)
+    {
+        this.eleves = new String[max];
+    }
+
+    public void inscrire(String nom)
+    {
+        this.eleves[this.nbEleves] = nom;
+    }
+
+    public int getEffectif()
+    {
+        return this.nbEleves;
+    }
+}`),
+			ligne: 24, fix: ["this.eleves[this.nbEleves++] = nom;"],
+			expl: "Le compteur n'avance jamais : chaque élève écrase le précédent dans la case 0, et l'effectif reste à 0. `nbEleves++` range dans la case puis passe à la suivante." },
+		{ id: "oc2.equipe", k: "code", mode: "class", fichier: "Equipe.java",
+			enonce: "La classe `Joueur` est donnée. Écris `Equipe(String nom, int max)` qui range ses joueurs dans un tableau. `recruter(Joueur j)` renvoie `false` si l'équipe est pleine, si `j` vaut `null` ou si ce joueur (le **même objet**) est déjà dans l'équipe. `getCapitaine()` renvoie le joueur au plus haut niveau (`null` si l'équipe est vide), et `niveauMoyen()` la moyenne des niveaux (0 si vide).",
+			regles: ["allman"],
+			harness: T(`
+public class TestEquipe
+{
+    public static void main(String[] args)
+    {
+        Equipe e = new Equipe("Les Aigles", 3);
+        System.out.println(e.getCapitaine() + " " + e.niveauMoyen());
+        Joueur ana = new Joueur("Ana", 7);
+        System.out.println(e.recruter(ana) + " " + e.recruter(ana) + " " + e.recruter(null));
+        e.recruter(new Joueur("Bilal", 9));
+        e.recruter(new Joueur("Chloé", 5));
+        System.out.println(e.recruter(new Joueur("Dina", 10)));
+        System.out.println(e.getCapitaine() + " " + e.niveauMoyen());
+    }
+}
+
+class Joueur
+{
+    private String nom;
+    private int    niveau;
+
+    public Joueur(String nom, int niveau)
+    {
+        this.nom    = nom;
+        this.niveau = niveau;
+    }
+
+    public int getNiveau()
+    {
+        return this.niveau;
+    }
+
+    public String toString()
+    {
+        return this.nom;
+    }
+}`),
+			depart: T(`
+public class Equipe
+{
+    private String   nom;
+    private Joueur[] joueurs;
+    private int      nbJoueurs;
+
+}`),
+			solution: T(`
+public class Equipe
+{
+    private String   nom;
+    private Joueur[] joueurs;
+    private int      nbJoueurs;
+
+    public Equipe(String nom, int max)
+    {
+        this.nom     = nom;
+        this.joueurs = new Joueur[max];
+    }
+
+    public boolean recruter(Joueur j)
+    {
+        if (j == null || this.nbJoueurs == this.joueurs.length)
+        {
+            return false;
+        }
+        for (int i = 0; i < this.nbJoueurs; i++)
+        {
+            if (this.joueurs[i] == j)
+            {
+                return false;
+            }
+        }
+        this.joueurs[this.nbJoueurs++] = j;
+        return true;
+    }
+
+    public Joueur getCapitaine()
+    {
+        Joueur cap = null;
+        for (int i = 0; i < this.nbJoueurs; i++)
+        {
+            if (cap == null || this.joueurs[i].getNiveau() > cap.getNiveau())
+            {
+                cap = this.joueurs[i];
+            }
+        }
+        return cap;
+    }
+
+    public double niveauMoyen()
+    {
+        if (this.nbJoueurs == 0)
+        {
+            return 0;
+        }
+        int total = 0;
+        for (int i = 0; i < this.nbJoueurs; i++)
+        {
+            total += this.joueurs[i].getNiveau();
+        }
+        return (double) total / this.nbJoueurs;
+    }
+}`) }
+	]
+});
+
+OBJETS_CONTROLES.push({
+	id: "oc3", apres: "o09", chapitres: "7 à 9", duree: 30, titre: "Contrôle 3 : interfaces, listes, héritage",
+	intro: "Interfaces, `ArrayList` et `LinkedList`, héritage. Cinq exercices.",
+	exos: [
+		{ id: "oc3.iface", k: "qcm", q: "`interface Volant { void voler(); }`. La classe `Avion implements Volant` écrit `public void voler(int altitude) { ... }` et rien d'autre. Que se passe-t-il ?",
+			opts: ["Erreur de compilation : voler() sans paramètre n'est pas écrite", "Ça compile : voler(int) remplace voler()", "Ça compile, mais voler() ne fait rien", "Erreur seulement à l'appel de voler()"], a: 0,
+			expl: "`voler(int)` est une autre méthode (surcharge). La méthode de l'interface, sans paramètre, manque toujours : javac refuse la classe." },
+		{ id: "oc3.liste", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.util.LinkedList;
+
+public class Pile
+{
+    public static void main(String[] args)
+    {
+        LinkedList<String> l = new LinkedList<String>();
+        l.addFirst("a");
+        l.addFirst("b");
+        l.addLast("c");
+        l.add(1, "d");
+        System.out.println(l);
+        System.out.println(l.removeFirst() + l.removeLast() + l.size());
+        System.out.println(l.getFirst() + " " + l.indexOf("a"));
+    }
+}`),
+			expl: "`addFirst` met devant : [b, a], puis `addLast` derrière : [b, a, c]. `add(1, \"d\")` insère à l'indice 1 : [b, d, a, c]. On retire b et c, il reste [d, a]." },
+		{ id: "oc3.poly", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Ferme
+{
+    public static void main(String[] args)
+    {
+        Animal[] t = { new Animal(), new Chien(), new Chiot() };
+        for (Animal a : t)
+        {
+            System.out.println(a.presentation());
+        }
+    }
+}
+
+class Animal
+{
+    public String cri()
+    {
+        return "...";
+    }
+
+    public String presentation()
+    {
+        return "Je dis " + this.cri();
+    }
+}
+
+class Chien extends Animal
+{
+    public String cri()
+    {
+        return "Ouaf";
+    }
+}
+
+class Chiot extends Chien
+{
+    public String presentation()
+    {
+        return super.presentation() + " (petit)";
+    }
+}`),
+			expl: "`presentation()` est écrite dans `Animal`, mais `this.cri()` appelle la version de l'objet réel. Le chiot hérite du cri du chien, et ajoute « (petit) » à la présentation de sa mère." },
+		{ id: "oc3.super", k: "bug",
+			code: T(`
+public class Banque
+{
+    public static void main(String[] args)
+    {
+        CompteJeune c = new CompteJeune("Léo", 16);
+        System.out.println(c.description());
+    }
+}
+
+class Compte
+{
+    protected String titulaire;
+
+    public Compte(String titulaire)
+    {
+        this.titulaire = titulaire;
+    }
+}
+
+class CompteJeune extends Compte
+{
+    private int age;
+
+    public CompteJeune(String titulaire, int age)
+    {
+        this.titulaire = titulaire;
+        this.age = age;
+    }
+
+    public String description()
+    {
+        return this.titulaire + ", " + this.age + " ans";
+    }
+}`),
+			ligne: 26, fix: ["super(titulaire);"],
+			expl: "Sans `super(...)` en première ligne, Java appelle `super()`... qui n'existe pas : `Compte` n'a qu'un constructeur à un paramètre. La fille doit transmettre le titulaire à la mère avec `super(titulaire);`, toujours en **première** instruction." },
+		{ id: "oc3.media", k: "code", mode: "class", fichier: "Media.java",
+			enonce: "Écris l'interface `Empruntable` (`int dureeMax()` en jours), la classe `Media(String titre)` (`toString()` : le titre) et deux filles qui l'implémentent : `Livre` (21 jours) et `Dvd(String titre, boolean nouveaute)` (7 jours, ou 3 jours si c'est une nouveauté). `toString()` du DVD ajoute ` [DVD]` au titre.",
+			regles: ["allman"],
+			harness: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class TestMedia
+{
+    public static void main(String[] args)
+    {
+        List<Empruntable> l = new ArrayList<Empruntable>();
+        l.add(new Livre("Dune"));
+        l.add(new Dvd("Alien", false));
+        l.add(new Dvd("Dune 2", true));
+        int total = 0;
+        for (Empruntable e : l)
+        {
+            System.out.println(e + " : " + e.dureeMax() + " jours");
+            total += e.dureeMax();
+        }
+        System.out.println(total + " " + (l.get(1) instanceof Media));
+    }
+}`),
+			depart: T(`
+interface Empruntable
+{
+
+}
+
+public class Media
+{
+
+}`),
+			solution: T(`
+interface Empruntable
+{
+    int dureeMax();
+}
+
+public class Media
+{
+    protected String titre;
+
+    public Media(String titre)
+    {
+        this.titre = titre;
+    }
+
+    public String toString()
+    {
+        return this.titre;
+    }
+}
+
+class Livre extends Media implements Empruntable
+{
+    public Livre(String titre)
+    {
+        super(titre);
+    }
+
+    public int dureeMax()
+    {
+        return 21;
+    }
+}
+
+class Dvd extends Media implements Empruntable
+{
+    private boolean nouveaute;
+
+    public Dvd(String titre, boolean nouveaute)
+    {
+        super(titre);
+        this.nouveaute = nouveaute;
+    }
+
+    public int dureeMax()
+    {
+        if (this.nouveaute)
+        {
+            return 3;
+        }
+        return 7;
+    }
+
+    public String toString()
+    {
+        return super.toString() + " [DVD]";
+    }
+}`) }
+	]
+});
+
+OBJETS_CONTROLES.push({
+	id: "oc4", apres: "o12", chapitres: "10 à 12", duree: 40, titre: "Contrôle 4 : abstraction, chaînage, exceptions",
+	intro: "Classes abstraites, liste doublement chaînée et exceptions. Cinq exercices.",
+	exos: [
+		{ id: "oc4.abstract", k: "qcm", q: "`abstract class Forme` a la méthode abstraite `aire()`. `Cercle extends Forme` ne l'écrit pas, et n'est pas déclarée `abstract`. Que se passe-t-il ?",
+			opts: ["Erreur de compilation sur la classe Cercle", "Cercle hérite d'une aire() qui renvoie 0", "Erreur seulement si on appelle aire()", "Erreur seulement si on fait new Forme()"], a: 0,
+			expl: "Une classe concrète doit écrire toutes les méthodes abstraites dont elle hérite. Sinon, elle doit être `abstract` à son tour." },
+		{ id: "oc4.exc", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Etapes
+{
+    static int etape(int n)
+    {
+        if (n == 2)
+        {
+            throw new IllegalArgumentException("étape " + n);
+        }
+        System.out.println("étape " + n + " ok");
+        return n * 10;
+    }
+
+    public static void main(String[] args)
+    {
+        int total = 0;
+        try
+        {
+            for (int i = 1; i <= 3; i++)
+            {
+                total += etape(i);
+            }
+        }
+        catch (IllegalArgumentException e)
+        {
+            System.out.println("arrêt : " + e.getMessage());
+        }
+        finally
+        {
+            System.out.println("total " + total);
+        }
+    }
+}`),
+			expl: "Ici, le `try` entoure **toute** la boucle : l'exception de l'étape 2 fait sortir de la boucle, l'étape 3 n'a jamais lieu. Le `finally` affiche le total, qui ne compte que l'étape 1." },
+		{ id: "oc4.chaine", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Chaine
+{
+    public static void main(String[] args)
+    {
+        Cel a = new Cel(1);
+        Cel b = new Cel(2);
+        Cel c = new Cel(3);
+        a.svt = b;
+        b.prc = a;
+        b.svt = c;
+        c.prc = b;
+        Cel x = new Cel(9);
+        x.prc = a;
+        x.svt = a.svt;
+        a.svt.prc = x;
+        a.svt = x;
+        for (Cel p = a; p != null; p = p.svt)
+        {
+            System.out.print(p.val + " ");
+        }
+        System.out.println();
+        for (Cel p = c; p != null; p = p.prc)
+        {
+            System.out.print(p.val + " ");
+        }
+        System.out.println();
+    }
+}
+
+class Cel
+{
+    int val;
+    Cel prc;
+    Cel svt;
+
+    Cel(int val)
+    {
+        this.val = val;
+    }
+}`),
+			expl: "On insère 9 entre 1 et 2, en posant les quatre liens : `x.prc`, `x.svt`, `b.prc` (via `a.svt.prc`, avant de changer `a.svt`) et `a.svt`. Les deux parcours voient donc 9." },
+		{ id: "oc4.throws", k: "fill", q: "Complète : la méthode lève une exception contrôlée, et l'appelant l'attrape.",
+			code: T(`
+class StockException extends ___
+{
+    public StockException(String msg)
+    {
+        super(msg);
+    }
+}
+
+public void retirer(int qte) ___ StockException
+{
+    if (qte > this.stock)
+    {
+        throw ___ StockException("stock insuffisant");
+    }
+    this.stock -= qte;
+}
+
+// dans le main
+___
+{
+    entrepot.retirer(50);
+}
+catch (StockException e)
+{
+    System.out.println(e.getMessage());
+}`),
+			trous: [["Exception"], ["throws"], ["new"], ["try"]],
+			expl: "Hériter de `Exception` rend l'exception contrôlée : la méthode l'annonce avec `throws`, la lève avec `throw new`, et l'appelant la place dans un `try` / `catch`." },
+		{ id: "oc4.formes", k: "code", mode: "class", fichier: "Forme.java",
+			enonce: "Écris la classe abstraite `Forme` avec `abstract double aire()` et `toString()` (`Cercle : 12.57`, aire avec 2 décimales et le nom de la classe réelle avec `getClass().getSimpleName()`). Puis `Cercle(double r)` et `Rectangle(double l, double h)`. Leurs constructeurs lèvent une `IllegalArgumentException(\"dimension invalide\")` si une dimension est négative ou nulle.",
+			regles: ["allman"],
+			harness: T(`
+public class TestFormes
+{
+    public static void main(String[] args)
+    {
+        Forme[] t = { new Cercle(2), new Rectangle(3, 4.5) };
+        for (Forme f : t)
+        {
+            System.out.println(f);
+        }
+        try
+        {
+            Forme f = new Rectangle(2, -1);
+            System.out.println("créée : " + f);
+        }
+        catch (IllegalArgumentException e)
+        {
+            System.out.println("refusée : " + e.getMessage());
+        }
+    }
+}`),
+			depart: T(`
+public abstract class Forme
+{
+
+}`),
+			solution: T(`
+public abstract class Forme
+{
+    public abstract double aire();
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + " : " + String.format("%.2f", this.aire());
+    }
+}
+
+class Cercle extends Forme
+{
+    private double r;
+
+    public Cercle(double r)
+    {
+        if (r <= 0)
+        {
+            throw new IllegalArgumentException("dimension invalide");
+        }
+        this.r = r;
+    }
+
+    public double aire()
+    {
+        return Math.PI * this.r * this.r;
+    }
+}
+
+class Rectangle extends Forme
+{
+    private double l, h;
+
+    public Rectangle(double l, double h)
+    {
+        if (l <= 0 || h <= 0)
+        {
+            throw new IllegalArgumentException("dimension invalide");
+        }
+        this.l = l;
+        this.h = h;
+    }
+
+    public double aire()
+    {
+        return this.l * this.h;
+    }
+}`) }
+	]
+});
+
+OBJETS_CONTROLES.push({
+	id: "ofinal", apres: "o13", chapitres: "1 à 13", duree: 120, final: true, titre: "Examen final de Dév Objets",
+	intro: "Tout le module dans les conditions d'un DS machine : 2 heures, du plus simple au plus long. Les deux derniers exercices construisent une petite application en plusieurs classes, comme au DS.",
+	exos: [
+		{ id: "ofin.qcm", k: "qcm", q: "Laquelle de ces affirmations est **fausse** ?",
+			opts: ["Une interface peut avoir un constructeur", "Une classe abstraite peut avoir un constructeur", "Une classe peut implémenter plusieurs interfaces", "Une classe ne peut hériter que d'une seule classe"], a: 0,
+			expl: "Une interface ne crée jamais d'objet : elle n'a pas de constructeur. Une classe abstraite en a un, appelé par `super(...)` depuis ses filles." },
+		{ id: "ofin.enum", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Saisons
+{
+    public static void main(String[] args)
+    {
+        Saison s = Saison.HIVER;
+        for (int i = 0; i < 3; i++)
+        {
+            s = s.suivante();
+            System.out.print(s + "(" + s.getMois() + ") ");
+        }
+        System.out.println();
+        System.out.println(Saison.valueOf("ETE").compareTo(Saison.PRINTEMPS));
+    }
+}
+
+enum Saison
+{
+    PRINTEMPS(3), ETE(6), AUTOMNE(9), HIVER(12);
+
+    private int mois;
+
+    Saison(int mois)
+    {
+        this.mois = mois;
+    }
+
+    public int getMois()
+    {
+        return this.mois;
+    }
+
+    public Saison suivante()
+    {
+        return values()[(ordinal() + 1) % values().length];
+    }
+}`),
+			expl: "Après l'hiver (dernière constante), le modulo ramène au printemps. `compareTo` compare les positions : ETE (1) moins PRINTEMPS (0) vaut 1." },
+		{ id: "ofin.cast", k: "qcm", q: "`Animal a = new Chat();` (`Chat` et `Chien` héritent d'`Animal`). Que donne `Chien c = (Chien) a;` ?",
+			opts: ["Ça compile, mais lève une ClassCastException à l'exécution", "Erreur de compilation", "c désigne un chien tout neuf", "c vaut null"], a: 0,
+			expl: "Le compilateur accepte, car un `Animal` *pourrait* être un chien. À l'exécution, l'objet est un chat : Java lève `ClassCastException`. On teste avant avec `instanceof`." },
+		{ id: "ofin.cme", k: "bug",
+			code: T(`
+import java.util.ArrayList;
+
+public class Nettoyage
+{
+    public static void main(String[] args)
+    {
+        ArrayList<String> l = new ArrayList<String>();
+        l.add("ok");
+        l.add("spam");
+        l.add("ok");
+        l.add("spam");
+        for (int i = 0; i < l.size(); i++)
+        {
+            if (l.get(i).equals("spam"))
+            {
+                l.remove(i);
+                i++;
+            }
+        }
+        System.out.println(l);
+    }
+}`),
+			ligne: 17, fix: ["i--;"],
+			expl: "Après `remove(i)`, l'élément suivant prend la place `i` : il faut le retester, donc **reculer** l'indice (`i--`), que la boucle remettra à `i`. Avec `i++`, on saute une case." },
+		{ id: "ofin.exc", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Conversion
+{
+    static int convertir(String s)
+    {
+        try
+        {
+            int n = Integer.parseInt(s);
+            if (n < 0)
+            {
+                throw new IllegalArgumentException("négatif");
+            }
+            return n;
+        }
+        catch (NumberFormatException e)
+        {
+            return -1;
+        }
+    }
+
+    public static void main(String[] args)
+    {
+        String[] t = { "12", "abc", "-4", "7" };
+        int somme = 0;
+        for (String s : t)
+        {
+            try
+            {
+                somme += convertir(s);
+            }
+            catch (IllegalArgumentException e)
+            {
+                System.out.println("refus : " + e.getMessage());
+            }
+        }
+        System.out.println(somme);
+    }
+}`),
+			expl: "\"abc\" lève une `NumberFormatException`, attrapée **dans** `convertir` : elle renvoie -1. \"-4\" lève une `IllegalArgumentException` que `convertir` n'attrape pas : elle remonte au `main`. Somme : 12 - 1 + 7 = 18. (Attention : `NumberFormatException` hérite d'`IllegalArgumentException`, mais elle a déjà été attrapée plus tôt.)" },
+		{ id: "ofin.stock", k: "code", mode: "class", fichier: "Produit.java",
+			enonce: "Une épicerie suit son stock. Écris l'enum `Rayon` (`FRAIS`, `EPICERIE`, `HYGIENE`) et la classe `Produit(String nom, Rayon rayon, double prix, int quantite)`, comparable par **prix croissant**. `vendre(int n)` lève une `IllegalArgumentException(\"stock insuffisant\")` si `n` dépasse la quantité, sinon la diminue. `getValeur()` = prix × quantité. `toString()` : `Lait (FRAIS) 1.2 € x 30`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestProduit
+{
+    public static void main(String[] args)
+    {
+        Produit p = new Produit("Lait", Rayon.FRAIS, 1.2, 30);
+        Produit q = new Produit("Savon", Rayon.HYGIENE, 2.5, 4);
+        System.out.println(p);
+        p.vendre(10);
+        try
+        {
+            q.vendre(5);
+        }
+        catch (IllegalArgumentException e)
+        {
+            System.out.println(q.getNom() + " : " + e.getMessage());
+        }
+        System.out.println(p + " | " + p.getValeur());
+        System.out.println(p.compareTo(q) < 0);
+    }
+}`),
+			depart: T(`
+enum Rayon
+{
+
+}
+
+public class Produit implements Comparable<Produit>
+{
+
+}`),
+			solution: T(`
+enum Rayon
+{
+    FRAIS, EPICERIE, HYGIENE
+}
+
+public class Produit implements Comparable<Produit>
+{
+    private String nom;
+    private Rayon  rayon;
+    private double prix;
+    private int    quantite;
+
+    public Produit(String nom, Rayon rayon, double prix, int quantite)
+    {
+        this.nom      = nom;
+        this.rayon    = rayon;
+        this.prix     = prix;
+        this.quantite = quantite;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public Rayon getRayon()
+    {
+        return this.rayon;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+
+    public void vendre(int n)
+    {
+        if (n > this.quantite)
+        {
+            throw new IllegalArgumentException("stock insuffisant");
+        }
+        this.quantite -= n;
+    }
+
+    public double getValeur()
+    {
+        return this.prix * this.quantite;
+    }
+
+    public int compareTo(Produit autre)
+    {
+        if (this.prix < autre.prix)
+        {
+            return -1;
+        }
+        if (this.prix > autre.prix)
+        {
+            return 1;
+        }
+        return 0;
+    }
+
+    public String toString()
+    {
+        return this.nom + " (" + this.rayon + ") " + this.prix + " € x " + this.quantite;
+    }
+}`) },
+		{ id: "ofin.epicerie", k: "code", mode: "class", fichier: "Epicerie.java",
+			enonce: "Les classes `Produit` et `Rayon` de l'exercice précédent sont données. Écris `Epicerie`, qui range ses produits dans une `ArrayList<Produit>`. `ajouter(Produit p)`, `valeurRayon(Rayon r)` (la valeur du stock d'un rayon), `plusCher()` (`null` si vide) et `catalogue()` : les produits triés par prix croissant, un par ligne, **sans modifier** l'ordre de la liste de l'épicerie (trie une copie).",
+			regles: ["allman"],
+			harness: T(`
+public class TestEpicerie
+{
+    public static void main(String[] args)
+    {
+        Epicerie e = new Epicerie();
+        System.out.println(e.plusCher());
+        e.ajouter(new Produit("Lait", Rayon.FRAIS, 1.2, 30));
+        e.ajouter(new Produit("Riz", Rayon.EPICERIE, 2.1, 12));
+        e.ajouter(new Produit("Savon", Rayon.HYGIENE, 2.5, 4));
+        e.ajouter(new Produit("Yaourt", Rayon.FRAIS, 0.5, 40));
+        System.out.println(e.valeurRayon(Rayon.FRAIS) + " " + e.valeurRayon(Rayon.HYGIENE));
+        System.out.println(e.plusCher());
+        System.out.print(e.catalogue());
+        System.out.println(e.premier());
+    }
+}
+
+enum Rayon
+{
+    FRAIS, EPICERIE, HYGIENE
+}
+
+class Produit implements Comparable<Produit>
+{
+    private String nom;
+    private Rayon  rayon;
+    private double prix;
+    private int    quantite;
+
+    public Produit(String nom, Rayon rayon, double prix, int quantite)
+    {
+        this.nom      = nom;
+        this.rayon    = rayon;
+        this.prix     = prix;
+        this.quantite = quantite;
+    }
+
+    public Rayon getRayon()
+    {
+        return this.rayon;
+    }
+
+    public double getPrix()
+    {
+        return this.prix;
+    }
+
+    public double getValeur()
+    {
+        return this.prix * this.quantite;
+    }
+
+    public int compareTo(Produit autre)
+    {
+        if (this.prix < autre.prix)
+        {
+            return -1;
+        }
+        if (this.prix > autre.prix)
+        {
+            return 1;
+        }
+        return 0;
+    }
+
+    public String toString()
+    {
+        return this.nom;
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class Epicerie
+{
+    private ArrayList<Produit> produits;
+
+    public Epicerie()
+    {
+        this.produits = new ArrayList<Produit>();
+    }
+
+    public Produit premier()
+    {
+        return this.produits.get(0);
+    }
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class Epicerie
+{
+    private ArrayList<Produit> produits;
+
+    public Epicerie()
+    {
+        this.produits = new ArrayList<Produit>();
+    }
+
+    public Produit premier()
+    {
+        return this.produits.get(0);
+    }
+
+    public void ajouter(Produit p)
+    {
+        this.produits.add(p);
+    }
+
+    public double valeurRayon(Rayon r)
+    {
+        double total = 0;
+        for (Produit p : this.produits)
+        {
+            if (p.getRayon() == r)
+            {
+                total += p.getValeur();
+            }
+        }
+        return total;
+    }
+
+    public Produit plusCher()
+    {
+        Produit best = null;
+        for (Produit p : this.produits)
+        {
+            if (best == null || p.compareTo(best) > 0)
+            {
+                best = p;
+            }
+        }
+        return best;
+    }
+
+    public String catalogue()
+    {
+        ArrayList<Produit> copie = new ArrayList<Produit>(this.produits);
+        Collections.sort(copie);
+        String s = "";
+        for (Produit p : copie)
+        {
+            s += p + " " + p.getPrix() + "\\n";
+        }
+        return s;
+    }
+}`) }
+	]
+});
+
+/* ======================================================================
+   Sujets type DS machine (entraînement, sans chrono)
+   Chaque étape repart du code de l'étape précédente, comme au DS.
+   ====================================================================== */
+function J2() { return [].slice.call(arguments).join("\n\n"); }
+
+/* ------------------------------------------- A : le royaume (DS 2025) */
+var RA_DONNEES = T(`
+        String[] provinces = { "NOR;Nordheim", "SOL;Solaria", "MAR;Marévie" };
+        String[] territoires = { "T01;Fjord Gris;12400;310;NOR", "T02;Toundra Haute;3100;890;NOR",
+                                 "T03;Dunes d'Or;8700;640;SOL", "T04;Oasis Claire;15200;120;SOL",
+                                 "T05;Récif Bleu;6800;95;MAR", "T06;Île aux Phares;2300;40;MAR",
+                                 "T07;Plaine Perdue;5000;200;XXX" };`);
+var RA_TERR = T(`
+class Territoire
+{
+    private String code;
+    private String nom;
+    private int    population;
+    private int    superficie;
+    private String codeProvince;
+
+    public Territoire(String code, String nom, int population, int superficie, String codeProvince)
+    {
+        this.code         = code;
+        this.nom          = nom;
+        this.population   = population;
+        this.superficie   = superficie;
+        this.codeProvince = codeProvince;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int    getPopulation()
+    {
+        return this.population;
+    }
+
+    public int    getSuperficie()
+    {
+        return this.superficie;
+    }
+
+    public String getCodeProvince()
+    {
+        return this.codeProvince;
+    }
+
+    public double densite()
+    {
+        return (double) this.population / this.superficie;
+    }
+
+    public String toString()
+    {
+        return String.format("%-4s", this.code) + String.format("%-16s", this.nom) + String.format("%7d", this.population) + " hab" + String.format("%8.1f", this.densite()) + " hab/km²";
+    }
+}`);
+var RA_TERR_CMP = RA_TERR.replace("class Territoire\n{", "class Territoire implements Comparable<Territoire>\n{").replace(
+	"\tpublic String toString()",
+	"\tpublic int compareTo(Territoire autre)\n\t{\n\t\treturn this.population - autre.population;\n\t}\n\n\tpublic String toString()");
+var RA_PROV = T(`
+class Province
+{
+    private String                code;
+    private String                nom;
+    private ArrayList<Territoire> territoires;
+
+    public Province(String code, String nom)
+    {
+        this.code        = code;
+        this.nom         = nom;
+        this.territoires = new ArrayList<Territoire>();
+    }
+
+    public String getCode()
+    {
+        return this.code;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getNbTerritoires()
+    {
+        return this.territoires.size();
+    }
+
+    public Territoire getTerritoire(int i)
+    {
+        return this.territoires.get(i);
+    }
+
+    public void ajouterTerritoire(Territoire t)
+    {
+        this.territoires.add(t);
+    }
+
+    public int getPopulation()
+    {
+        int total = 0;
+        for (Territoire t : this.territoires)
+        {
+            total += t.getPopulation();
+        }
+        return total;
+    }
+
+    public int getSuperficie()
+    {
+        int total = 0;
+        for (Territoire t : this.territoires)
+        {
+            total += t.getSuperficie();
+        }
+        return total;
+    }
+
+    public String toString()
+    {
+        return this.code + " " + this.nom + " : " + this.getNbTerritoires() + " territoires, " + this.getPopulation() + " hab";
+    }
+}`);
+var RA_ROY = T(`
+public class Royaume
+{
+    private ArrayList<Province>   provinces;
+    private ArrayList<Territoire> territoires;
+
+    public Royaume(String[] lignesProvinces, String[] lignesTerritoires)
+    {
+        this.provinces   = new ArrayList<Province>();
+        this.territoires = new ArrayList<Territoire>();
+        this.initProvinces(lignesProvinces);
+        this.initTerritoires(lignesTerritoires);
+    }
+
+    private void initProvinces(String[] lignes)
+    {
+        for (String ligne : lignes)
+        {
+            String[] champs = ligne.split(";");
+            this.provinces.add(new Province(champs[0], champs[1]));
+        }
+    }
+
+    private void initTerritoires(String[] lignes)
+    {
+        for (String ligne : lignes)
+        {
+            String[] champs = ligne.split(";");
+            Province p = this.chercherProvince(champs[4]);
+            if (p != null)
+            {
+                Territoire t = new Territoire(champs[0], champs[1], Integer.parseInt(champs[2]), Integer.parseInt(champs[3]), champs[4]);
+                this.territoires.add(t);
+                p.ajouterTerritoire(t);
+            }
+        }
+    }
+
+    public Province chercherProvince(String code)
+    {
+        for (Province p : this.provinces)
+        {
+            if (p.getCode().equals(code))
+            {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public List<Province> getCopieProvinces()
+    {
+        return new ArrayList<Province>(this.provinces);
+    }
+
+    public List<Territoire> getCopieTerritoires()
+    {
+        return new ArrayList<Territoire>(this.territoires);
+    }
+}`);
+var RA_HTML = T(`
+    public String genererHtml()
+    {
+        String s = "<html>\\n<body>\\n<h1>Royaume</h1>\\n";
+        for (Province p : this.provinces)
+        {
+            s += "<h2>" + p.getNom() + " (" + p.getPopulation() + " hab)</h2>\\n<ul>\\n";
+            for (int i = 0; i < p.getNbTerritoires(); i++)
+            {
+                Territoire t = p.getTerritoire(i);
+                s += "<li>" + t.getNom() + " : " + t.getPopulation() + "</li>\\n";
+            }
+            s += "</ul>\\n";
+        }
+        return s + "</body>\\n</html>\\n";
+    }`);
+var RA_ROY_HTML = RA_ROY.replace(/\n\}$/, "\n\n" + RA_HTML + "\n}");
+var RA_IHM = T(`
+class Ihm
+{
+    private Royaume royaume;
+
+    public Ihm(Royaume royaume)
+    {
+        this.royaume = royaume;
+    }
+
+    public String listerProvinces()
+    {
+        String s = "";
+        for (Province p : this.royaume.getCopieProvinces())
+        {
+            s += p + "\\n";
+        }
+        return s;
+    }
+
+    public String listerTerritoires(boolean trie)
+    {
+        List<Territoire> l = this.royaume.getCopieTerritoires();
+        if (trie)
+        {
+            Collections.sort(l);
+        }
+        String s = "";
+        for (Territoire t : l)
+        {
+            s += t + "\\n";
+        }
+        return s;
+    }
+}`);
+var RA_IMP = "import java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;";
+
+OBJETS_EVALS.push({
+	id: "oevA", theme: "Statistiques d'un royaume", titre: "Le royaume d'Ostrelia", duree: "2h",
+	prerequis: "classes reliées, `ArrayList`, `split` et `Integer.parseInt`, copie de liste, `Comparable`, séparation Métier / IHM.",
+	intro: "Comme au DS de juin 2025, on fait les statistiques démographiques d'un royaume découpé en **provinces**, elles-mêmes découpées en **territoires**. Au DS, les données sont lues dans des fichiers ; ici, chaque ligne de fichier est une `String` du programme de test, avec les champs séparés par `;`. Tout se passe dans le fichier `Royaume.java`. Indentation Allman exigée.",
+	regles: ["allman"],
+	etapes: [
+		{ id: "oevA.1", k: "code", mode: "class", titre: "Territoires et provinces", fichier: "Royaume.java", xp: 30,
+			enonce: "Écris `Territoire(String code, String nom, int population, int superficie, String codeProvince)` avec ses accesseurs, `densite()` et `toString()` : le code sur 4 caractères et le nom sur 16 (calés à gauche), la population sur 7 suivie de ` hab`, la densité sur 8 avec 1 décimale suivie de ` hab/km²`. Puis `Province(String code, String nom)`, qui garde ses territoires dans une `ArrayList` : `ajouterTerritoire`, `getNbTerritoires`, `getTerritoire(int i)`, `getPopulation`, `getSuperficie` et `toString()` (`NOR Nordheim : 2 territoires, 15500 hab`). Aucune de ces classes n'est `public`.",
+			regles: ["allman"],
+			harness: T(`
+class TestEtape1
+{
+    public static void main(String[] args)
+    {
+        Territoire t1 = new Territoire("T01", "Fjord Gris", 12400, 310, "NOR");
+        Territoire t2 = new Territoire("T02", "Toundra Haute", 3100, 890, "NOR");
+        System.out.println(t1);
+        System.out.println(t2);
+        Province p = new Province("NOR", "Nordheim");
+        System.out.println(p);
+        p.ajouterTerritoire(t1);
+        p.ajouterTerritoire(t2);
+        System.out.println(p);
+        System.out.println(p.getSuperficie() + " km², premier : " + p.getTerritoire(0).getNom());
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+
+class Territoire
+{
+
+}
+
+class Province
+{
+
+}`),
+			solution: J2("import java.util.ArrayList;", RA_TERR, RA_PROV),
+			indices: ["La densité est un `double` : `(double) this.population / this.superficie`.",
+				"La province ne recopie pas les chiffres de ses territoires : elle les **additionne** à la demande, en parcourant sa liste."] },
+		{ id: "oevA.2", k: "code", mode: "class", titre: "Le métier : charger le royaume", fichier: "Royaume.java", xp: 40,
+			enonce: "Ajoute la classe `public class Royaume` (le Métier). Son constructeur reçoit les lignes des provinces (`code;nom`) et des territoires (`code;nom;population;superficie;codeProvince`) et appelle deux méthodes `private` : `initProvinces` et `initTerritoires`. Un territoire n'est chargé **que si sa province existe** ; il est alors rangé dans la liste du royaume **et** dans sa province. Ajoute `chercherProvince(String code)` et `getCopieProvinces()` / `getCopieTerritoires()`, qui renvoient une **copie** sous forme de `List` (modifier la copie ne doit pas toucher le royaume).",
+			regles: ["allman"],
+			harness: J2(T(`
+public class TestEtape2
+{
+    public static void main(String[] args)
+    {`), RA_DONNEES, T(`
+        Royaume r = new Royaume(provinces, territoires);
+        List<Province> lp = r.getCopieProvinces();
+        for (Province p : lp)
+        {
+            System.out.println(p);
+        }
+        System.out.println(r.getCopieTerritoires().size() + " territoires chargés");
+        System.out.println(r.chercherProvince("SOL").getSuperficie() + " " + r.chercherProvince("XXX"));
+        lp.clear();
+        System.out.println(r.getCopieProvinces().size());
+    }
+}`)),
+			depart: "",
+			solution: J2(RA_IMP, RA_TERR, RA_PROV, RA_ROY),
+			indices: ["Découpe chaque ligne avec `String[] champs = ligne.split(\";\");` et convertis les nombres avec `Integer.parseInt(champs[2])`.",
+				"Une copie : `return new ArrayList<Province>(this.provinces);`. N'oublie pas `import java.util.List;` pour le type de retour."] },
+		{ id: "oevA.3", k: "code", mode: "class", titre: "L'IHM et l'ordre naturel", fichier: "Royaume.java", xp: 30,
+			enonce: "Ajoute la classe `Ihm`, qui reçoit le royaume et **renvoie** le texte à afficher (elle passe uniquement par les copies) : `listerProvinces()` (une province par ligne) et `listerTerritoires(boolean trie)` (un territoire par ligne ; si `trie` vaut `true`, dans l'ordre de la population croissante). Pour le tri, donne à `Territoire` un **ordre naturel** (`Comparable`).",
+			regles: ["allman"],
+			harness: J2(T(`
+public class TestEtape3
+{
+    public static void main(String[] args)
+    {`), RA_DONNEES, T(`
+        Royaume r = new Royaume(provinces, territoires);
+        Ihm ihm = new Ihm(r);
+        System.out.print(ihm.listerProvinces());
+        System.out.println("--- option 2");
+        System.out.print(ihm.listerTerritoires(false));
+        System.out.println("--- option 3");
+        System.out.print(ihm.listerTerritoires(true));
+        System.out.println(r.getCopieTerritoires().get(0).getNom());
+    }
+}`)),
+			depart: "",
+			solution: J2(RA_IMP, RA_TERR_CMP, RA_PROV, RA_ROY, RA_IHM),
+			indices: ["`class Territoire implements Comparable<Territoire>` et `compareTo` : `return this.population - autre.population;`.",
+				"L'IHM trie la **copie** (`Collections.sort(l)`) : la liste du royaume garde son ordre de chargement, ce que vérifie la dernière ligne du test."] },
+		{ id: "oevA.4", k: "code", mode: "class", titre: "La page HTML", fichier: "Royaume.java", xp: 30,
+			enonce: "Ajoute à `Royaume` la méthode `genererHtml()`, qui renvoie le texte de la page (au DS, on l'écrit dans `index.html`) : `<html>`, `<body>`, `<h1>Royaume</h1>`, puis pour chaque province un `<h2>` avec son nom et sa population entre parenthèses, suivi d'une liste `<ul>` de ses territoires (`<li>Fjord Gris : 12400</li>`). Une balise par ligne, comme dans la trace.",
+			regles: ["allman"],
+			harness: J2(T(`
+public class TestEtape4
+{
+    public static void main(String[] args)
+    {`), RA_DONNEES, T(`
+        Royaume r = new Royaume(provinces, territoires);
+        System.out.print(r.genererHtml());
+    }
+}`)),
+			depart: "",
+			solution: J2(RA_IMP, RA_TERR_CMP, RA_PROV, RA_ROY_HTML, RA_IHM),
+			indices: ["Construis le texte morceau par morceau dans une `String`, avec `\"\\n\"` à la fin de chaque balise.",
+				"Deux boucles imbriquées : les provinces, puis les territoires de chaque province avec `getNbTerritoires()` et `getTerritoire(i)`."] }
+	]
+});
+
+/* ------------------------------------- B : les tuiles hexagonales (DS 2023) */
+var RB_TUILE1 = T(`
+class Tuile
+{
+    private static char prochainId = 'A';
+
+    private char    identifiant;
+    private Tuile[] voisines;
+
+    public Tuile()
+    {
+        this.identifiant = Tuile.prochainId;
+        Tuile.prochainId++;
+        this.voisines = new Tuile[6];
+    }
+
+    public char getIdentifiant()
+    {
+        return this.identifiant;
+    }
+
+    public Tuile getVoisine(int dir)
+    {
+        if (dir < 0 || dir > 5)
+        {
+            return null;
+        }
+        return this.voisines[dir];
+    }
+
+    public int nbVoisines()
+    {
+        int nb = 0;
+        for (Tuile t : this.voisines)
+        {
+            if (t != null)
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    public boolean ajouterVoisine(Tuile autre, int dir)
+    {
+        if (autre == null || autre == this || dir < 0 || dir > 5)
+        {
+            return false;
+        }
+        int oppose = (dir + 3) % 6;
+        if (this.voisines[dir] != null || autre.voisines[oppose] != null)
+        {
+            return false;
+        }
+        this.voisines[dir]      = autre;
+        autre.voisines[oppose]  = this;
+        return true;
+    }
+
+    public String toString()
+    {
+        String s = this.identifiant + " : ";
+        for (Tuile t : this.voisines)
+        {
+            s += (t == null) ? "." : "" + t.identifiant;
+        }
+        return s;
+    }
+}`);
+var RB_TUILE3 = RB_TUILE1.replace("class Tuile\n{", "abstract class Tuile\n{")
+	.replace("\tpublic String toString()\n\t{\n\t\tString s = this.identifiant + \" : \";", "\tpublic abstract String getLibelle();\n\n\tpublic String toString()\n\t{\n\t\tString s = this.identifiant + \" \" + this.getLibelle() + \" : \";");
+var RB_CARTE2 = T(`
+public class Carte
+{
+    private List<Tuile> tuiles;
+
+    public Carte(int nb)
+    {
+        this.tuiles = new ArrayList<Tuile>();
+        for (int i = 0; i < nb; i++)
+        {
+            this.tuiles.add(new Tuile());
+        }
+    }
+
+    public Tuile getTuile(char id)
+    {
+        int i = id - 'A';
+        if (i < 0 || i >= this.tuiles.size())
+        {
+            return null;
+        }
+        return this.tuiles.get(i);
+    }
+
+    public void creerLiens(String[] liens)
+    {
+        for (int i = 0; i < liens.length; i++)
+        {
+            for (int dir = 0; dir < 6; dir++)
+            {
+                char c = liens[i].charAt(dir);
+                if (c != '.')
+                {
+                    this.tuiles.get(i).ajouterVoisine(this.getTuile(c), dir);
+                }
+            }
+        }
+    }
+
+    public String toString()
+    {
+        String s = "";
+        for (Tuile t : this.tuiles)
+        {
+            s += t + "\\n";
+        }
+        return s;
+    }
+}`);
+var RB_CARTE3 = RB_CARTE2.replace(T(`
+    public Carte(int nb)
+    {
+        this.tuiles = new ArrayList<Tuile>();
+        for (int i = 0; i < nb; i++)
+        {
+            this.tuiles.add(new Tuile());
+        }
+    }`), T(`
+    public Carte()
+    {
+        this.tuiles = new ArrayList<Tuile>();
+    }
+
+    public void ajouter(Tuile t)
+    {
+        this.tuiles.add(t);
+    }`));
+var RB_FILLES3 = T(`
+class TuileRessource extends Tuile
+{
+    private String matiere;
+    private int    extrait;
+
+    public TuileRessource(String matiere)
+    {
+        super();
+        this.matiere = matiere;
+        this.extrait = 0;
+    }
+
+    public String getMatiere()
+    {
+        return this.matiere;
+    }
+
+    public int getExtrait()
+    {
+        return this.extrait;
+    }
+
+    public void extraire(int qte)
+    {
+        this.extrait += qte;
+    }
+
+    public String getLibelle()
+    {
+        return this.matiere;
+    }
+}
+
+class TuileEntrepot extends Tuile
+{
+    private int stock;
+
+    public int getStock()
+    {
+        return this.stock;
+    }
+
+    public void stocker(int qte)
+    {
+        this.stock += qte;
+    }
+
+    public String getLibelle()
+    {
+        return "entrepôt";
+    }
+}
+
+class TuileUsine extends Tuile
+{
+    public String getLibelle()
+    {
+        return "verrerie";
+    }
+}`);
+var RB_USINE4 = T(`
+class TuileUsine extends Tuile
+{
+    public String getLibelle()
+    {
+        return "verrerie";
+    }
+
+    private TuileRessource ressource(String matiere)
+    {
+        for (int dir = 0; dir < 6; dir++)
+        {
+            Tuile t = this.getVoisine(dir);
+            if (t instanceof TuileRessource && ((TuileRessource) t).getMatiere().equals(matiere))
+            {
+                return (TuileRessource) t;
+            }
+        }
+        return null;
+    }
+
+    private TuileEntrepot entrepot()
+    {
+        for (int dir = 0; dir < 6; dir++)
+        {
+            if (this.getVoisine(dir) instanceof TuileEntrepot)
+            {
+                return (TuileEntrepot) this.getVoisine(dir);
+            }
+        }
+        return null;
+    }
+
+    public boolean produire(int n)
+    {
+        TuileRessource sable = this.ressource("sable");
+        TuileRessource bois  = this.ressource("bois");
+        TuileRessource eau   = this.ressource("eau");
+        TuileEntrepot  ent   = this.entrepot();
+        if (sable == null || bois == null || eau == null || ent == null)
+        {
+            return false;
+        }
+        sable.extraire(4 * n);
+        bois.extraire(2 * n);
+        eau.extraire(n);
+        ent.stocker(n);
+        return true;
+    }
+}`);
+var RB_FILLES4 = RB_FILLES3.replace(/class TuileUsine extends Tuile[\s\S]*$/, RB_USINE4);
+var RB_PRODUIRE = T(`
+    public boolean produire(char id, int n)
+    {
+        Tuile t = this.getTuile(id);
+        if (!(t instanceof TuileUsine))
+        {
+            return false;
+        }
+        return ((TuileUsine) t).produire(n);
+    }`);
+var RB_CARTE4 = RB_CARTE3.replace("\tpublic String toString()", RB_PRODUIRE + "\n\n\tpublic String toString()");
+var RB_IMP = "import java.util.ArrayList;\nimport java.util.List;";
+var RB_CARTE_TEST = T(`
+        Carte c = new Carte();
+        c.ajouter(new TuileUsine());
+        c.ajouter(new TuileRessource("sable"));
+        c.ajouter(new TuileRessource("bois"));
+        c.ajouter(new TuileRessource("eau"));
+        c.ajouter(new TuileEntrepot());
+        c.ajouter(new TuileUsine());
+        c.ajouter(new TuileRessource("sable"));
+        c.creerLiens(new String[] { "BCDEF.", "......", "......", "......", "......", "G....." });`);
+
+OBJETS_EVALS.push({
+	id: "oevB", theme: "Tuiles hexagonales", titre: "La route du verre", duree: "2h",
+	prerequis: "attribut de classe, tableau d'objets, liens dans les deux sens, `List`, classe abstraite, `instanceof` et cast.",
+	intro: "Comme au DS de juin 2023, on construit une carte de **tuiles hexagonales**. Chaque tuile a six côtés numérotés de 0 (en haut) à 5, dans le sens des aiguilles d'une montre : la voisine posée sur le côté `d` voit la tuile courante sur son côté opposé, `(d + 3) % 6`. Les tuiles reçoivent automatiquement les identifiants `A`, `B`, `C`... Tout se passe dans `Carte.java`. Indentation Allman exigée.",
+	regles: ["allman"],
+	etapes: [
+		{ id: "oevB.1", k: "code", mode: "class", titre: "La tuile", fichier: "Carte.java", xp: 30,
+			enonce: "Écris la classe `Tuile` (pas `public`) : un identifiant `char` auto-incrémenté grâce à un attribut de classe (la première tuile est `A`), et un tableau de 6 voisines. `getIdentifiant()`, `getVoisine(int dir)` (`null` si `dir` est hors de 0..5), `nbVoisines()` et `ajouterVoisine(Tuile autre, int dir)` : elle renvoie `false` si `autre` vaut `null` ou est la tuile elle-même, si `dir` est invalide, ou si l'un des deux côtés est déjà pris ; sinon elle pose le lien **des deux côtés**. `toString()` : `A : BC.E..` (l'identifiant de chaque voisine, ou `.`).",
+			regles: ["allman"],
+			harness: T(`
+class TestEtape1
+{
+    public static void main(String[] args)
+    {
+        Tuile a = new Tuile();
+        Tuile b = new Tuile();
+        Tuile c = new Tuile();
+        System.out.println(a.ajouterVoisine(b, 0) + " " + a.ajouterVoisine(c, 0) + " " + a.ajouterVoisine(a, 1) + " " + a.ajouterVoisine(c, 6));
+        System.out.println(a.ajouterVoisine(c, 1) + " " + c.ajouterVoisine(b, 5) + " " + b.ajouterVoisine(c, 2));
+        System.out.println(a);
+        System.out.println(b);
+        System.out.println(c);
+        System.out.println(c.getVoisine(4).getIdentifiant() + " " + a.nbVoisines() + " " + a.getVoisine(7));
+    }
+}`),
+			depart: T(`
+class Tuile
+{
+
+}`),
+			solution: RB_TUILE1,
+			indices: ["Un attribut de classe `private static char prochainId = 'A';` : le constructeur le recopie dans l'identifiant, puis fait `Tuile.prochainId++` (un `char` s'incrémente comme un entier).",
+				"Le côté opposé se calcule : `(dir + 3) % 6`. Vérifie que **les deux** cases sont libres avant de poser `this.voisines[dir] = autre` et `autre.voisines[oppose] = this`."] },
+		{ id: "oevB.2", k: "code", mode: "class", titre: "La carte et la table des liens", fichier: "Carte.java", xp: 30,
+			enonce: "Ajoute `public class Carte`, qui range ses tuiles dans une `List<Tuile>`. Le constructeur `Carte(int nb)` crée `nb` tuiles. `getTuile(char id)` retrouve une tuile par son identifiant (`null` si elle n'existe pas). `creerLiens(String[] liens)` lit une table : la ligne `i` décrit la tuile d'indice `i`, et le caractère en position `d` est l'identifiant de sa voisine sur le côté `d` (`.` pour aucune). `toString()` affiche une tuile par ligne.",
+			regles: ["allman"],
+			harness: T(`
+public class TestEtape2
+{
+    public static void main(String[] args)
+    {
+        Carte c = new Carte(5);
+        c.creerLiens(new String[] { "BC.DE.", "..C...", "...D..", "....E.", "......" });
+        System.out.print(c);
+        System.out.println(c.getTuile('C').nbVoisines() + " " + c.getTuile('Z'));
+    }
+}`),
+			depart: "",
+			solution: J2(RB_IMP, RB_TUILE1, RB_CARTE2),
+			indices: ["`getTuile` : l'indice d'une tuile est `id - 'A'` (les identifiants suivent l'ordre de création).",
+				"`creerLiens` : double boucle sur les lignes et les 6 positions ; pour chaque caractère différent de `'.'`, appelle `ajouterVoisine`. Un lien déjà posé dans l'autre sens est simplement refusé, sans erreur."] },
+		{ id: "oevB.3", k: "code", mode: "class", titre: "Des tuiles spécialisées", fichier: "Carte.java", xp: 30,
+			enonce: "Une tuile n'est plus une simple tuile : rends `Tuile` **abstraite** avec `public abstract String getLibelle()`, et affiche le libellé dans `toString()` : `A verrerie : BCDEF.`. Écris `TuileRessource(String matiere)` (libellé : la matière ; `extraire(int qte)` ajoute à un compteur `getExtrait()`), `TuileEntrepot` (libellé `entrepôt` ; `stocker(int qte)`, `getStock()`) et `TuileUsine` (libellé `verrerie`). La carte se construit maintenant avec `Carte()` et `ajouter(Tuile t)`.",
+			regles: ["allman"],
+			harness: J2(T(`
+public class TestEtape3
+{
+    public static void main(String[] args)
+    {`), RB_CARTE_TEST, T(`
+        System.out.print(c);
+        TuileRessource r = (TuileRessource) c.getTuile('B');
+        r.extraire(5);
+        r.extraire(3);
+        System.out.println(r.getMatiere() + " extrait : " + r.getExtrait());
+    }
+}`)),
+			depart: "",
+			solution: J2(RB_IMP, RB_TUILE3, RB_FILLES3, RB_CARTE3),
+			indices: ["`abstract class Tuile` et `public abstract String getLibelle();`. Dans `toString()`, `this.getLibelle()` appellera la version de chaque fille.",
+				"Les filles n'ont pas besoin de s'occuper de l'identifiant ni des voisines : le constructeur de `Tuile` s'en charge (appel implicite à `super()`)."] },
+		{ id: "oevB.4", k: "code", mode: "class", titre: "Produire du verre", fichier: "Carte.java", xp: 40,
+			enonce: "Pour produire `n` unités de verre, une verrerie consomme `4n` unités de sable, `2n` de bois et `n` d'eau, prises dans des tuiles ressources **voisines**, et stocke les `n` unités dans un entrepôt **voisin**. Écris `produire(int n)` dans `TuileUsine` : `false` s'il manque une de ces voisines, sinon elle extrait, stocke et renvoie `true`. Ajoute `produire(char id, int n)` à `Carte` : `false` si la tuile n'est pas une usine.",
+			regles: ["allman"],
+			harness: J2(T(`
+public class TestEtape4
+{
+    public static void main(String[] args)
+    {`), RB_CARTE_TEST, T(`
+        System.out.println(c.produire('A', 3) + " " + c.produire('A', 2) + " " + c.produire('F', 1) + " " + c.produire('B', 1));
+        System.out.println(((TuileRessource) c.getTuile('B')).getExtrait() + " sable, " + ((TuileRessource) c.getTuile('C')).getExtrait() + " bois, " + ((TuileRessource) c.getTuile('D')).getExtrait() + " eau");
+        System.out.println(((TuileEntrepot) c.getTuile('E')).getStock() + " verres en stock");
+    }
+}`)),
+			depart: "",
+			solution: J2(RB_IMP, RB_TUILE3, RB_FILLES4, RB_CARTE4),
+			indices: ["Parcours les 6 voisines de l'usine : `t instanceof TuileRessource`, puis cast `(TuileRessource) t` pour lire sa matière. Deux méthodes `private` (une pour une ressource, une pour l'entrepôt) évitent de répéter la boucle.",
+				"Ne touche à aucun compteur tant que tu n'as pas trouvé **toutes** les voisines nécessaires : sinon on extrairait du sable pour rien."] }
+	]
+});
+
+/* ----------------------------------- C : le marché aux tuiles (DS 2024) */
+var RC_TYPE = T(`
+enum Type
+{
+    GLAISIERE("argile", 3), FORET("bois", 2), BRIQUETERIE("brique", 6);
+
+    private String ressource;
+    private int    cout;
+
+    Type(String ressource, int cout)
+    {
+        this.ressource = ressource;
+        this.cout      = cout;
+    }
+
+    public String getRessource()
+    {
+        return this.ressource;
+    }
+
+    public int getCout()
+    {
+        return this.cout;
+    }
+}`);
+var RC_JOUEUR = T(`
+class Joueur
+{
+    private String                   nom;
+    private int                      monnaie;
+    private HashMap<String, Integer> stock;
+
+    public Joueur(String nom)
+    {
+        this.nom     = nom;
+        this.monnaie = 20;
+        this.stock   = new HashMap<String, Integer>();
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getMonnaie()
+    {
+        return this.monnaie;
+    }
+
+    public int getQuantite(String ressource)
+    {
+        return this.stock.getOrDefault(ressource, 0);
+    }
+
+    public void varierRessource(String ressource, int qte)
+    {
+        this.stock.put(ressource, this.getQuantite(ressource) + qte);
+    }
+
+    public void varierMonnaie(int qte)
+    {
+        this.monnaie += qte;
+    }
+
+    public boolean payer(int somme)
+    {
+        if (somme > this.monnaie)
+        {
+            return false;
+        }
+        this.monnaie -= somme;
+        return true;
+    }
+
+    public String toString()
+    {
+        return this.nom + " : " + this.monnaie + " pièces, " + this.getQuantite("argile") + " argile, " + this.getQuantite("bois") + " bois, " + this.getQuantite("brique") + " brique";
+    }
+}`);
+var RC_TUILE = T(`
+public class Tuile
+{
+    private Type   type;
+    private Joueur proprietaire;
+
+    public Tuile(Type type)
+    {
+        this.type = type;
+    }
+
+    public Type getType()
+    {
+        return this.type;
+    }
+
+    public Joueur getProprietaire()
+    {
+        return this.proprietaire;
+    }
+
+    public boolean acheter(Joueur j)
+    {
+        if (j == null || this.proprietaire != null || !j.payer(this.type.getCout()))
+        {
+            return false;
+        }
+        this.proprietaire = j;
+        return true;
+    }
+
+    public boolean collecter()
+    {
+        if (this.proprietaire == null)
+        {
+            return false;
+        }
+        switch (this.type)
+        {
+            case BRIQUETERIE:
+                if (this.proprietaire.getQuantite("argile") < 2)
+                {
+                    return false;
+                }
+                this.proprietaire.varierRessource("argile", -2);
+                this.proprietaire.varierRessource("brique", 1);
+                return true;
+            default:
+                this.proprietaire.varierRessource(this.type.getRessource(), 1);
+                return true;
+        }
+    }
+
+    public String toString()
+    {
+        return this.type + " (" + (this.proprietaire == null ? "libre" : this.proprietaire.getNom()) + ")";
+    }
+}`);
+var RC_MARCHE = T(`
+class Marche
+{
+    public static int prix(String ressource)
+    {
+        for (Type t : Type.values())
+        {
+            if (t.getRessource().equals(ressource))
+            {
+                return t.getCout();
+            }
+        }
+        throw new IllegalArgumentException("ressource inconnue : " + ressource);
+    }
+
+    public static void vendre(Joueur j, String ressource, int qte)
+    {
+        int p = Marche.prix(ressource);
+        if (qte <= 0 || qte > j.getQuantite(ressource))
+        {
+            throw new IllegalArgumentException("quantité invalide");
+        }
+        j.varierRessource(ressource, -qte);
+        j.varierMonnaie(p * qte);
+    }
+}`);
+
+OBJETS_EVALS.push({
+	id: "oevC", theme: "Jeu de plateau", titre: "Le marché aux tuiles", duree: "1h30",
+	prerequis: "`enum` avec attributs, `HashMap`, `switch` sur un enum, `values()`, exceptions.",
+	intro: "Comme au DS de 2024, des joueurs achètent des tuiles de production (glaisière, forêt, briqueterie) et récoltent des ressources. Le type de tuile est un **enum** qui connaît la ressource produite et le prix d'achat. Tout se passe dans `Tuile.java`. Indentation Allman exigée.",
+	regles: ["allman"],
+	etapes: [
+		{ id: "oevC.1", k: "code", mode: "class", titre: "Les types et le joueur", fichier: "Tuile.java", xp: 30,
+			enonce: "Écris l'enum `Type` : `GLAISIERE` (ressource `argile`, coût 3), `FORET` (`bois`, 2) et `BRIQUETERIE` (`brique`, 6), avec `getRessource()` et `getCout()`. Puis `Joueur(String nom)`, qui démarre avec 20 pièces et range ses ressources dans une `HashMap<String, Integer>` : `getQuantite(String r)` (0 si absente), `varierRessource(String r, int qte)`, `varierMonnaie(int qte)`, `payer(int somme)` (`false` s'il n'a pas assez) et `toString()` (`Ana : 20 pièces, 0 argile, 0 bois, 0 brique`). Aucune de ces classes n'est `public`.",
+			regles: ["allman"],
+			harness: T(`
+class TestEtape1
+{
+    public static void main(String[] args)
+    {
+        for (Type t : Type.values())
+        {
+            System.out.println(t + " -> " + t.getRessource() + ", " + t.getCout() + " pièces");
+        }
+        Joueur a = new Joueur("Ana");
+        System.out.println(a);
+        a.varierRessource("bois", 3);
+        a.varierRessource("bois", -1);
+        System.out.println(a.payer(15) + " " + a.payer(15));
+        System.out.println(a);
+    }
+}`),
+			depart: T(`
+import java.util.HashMap;
+
+enum Type
+{
+
+}
+
+class Joueur
+{
+
+}`),
+			solution: J2("import java.util.HashMap;", RC_TYPE, RC_JOUEUR),
+			indices: ["Les constantes de l'enum appellent son constructeur : `GLAISIERE(\"argile\", 3), ...;` puis les attributs et le constructeur (sans `public`).",
+				"`this.stock.getOrDefault(ressource, 0)` évite le `null` d'une ressource encore jamais reçue."] },
+		{ id: "oevC.2", k: "code", mode: "class", titre: "Acheter et récolter", fichier: "Tuile.java", xp: 40,
+			enonce: "Ajoute `public class Tuile(Type type)` avec un propriétaire (`null` au départ). `acheter(Joueur j)` renvoie `false` si la tuile a déjà un propriétaire ou si le joueur ne peut pas payer son coût. `collecter()` renvoie `false` sans propriétaire ; sinon, avec un `switch` sur le type : une glaisière ou une forêt donne 1 unité de sa ressource, une briqueterie transforme 2 argiles du propriétaire en 1 brique (`false` s'il a moins de 2 argiles). `toString()` : `FORET (Ana)` ou `FORET (libre)`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestEtape2
+{
+    public static void main(String[] args)
+    {
+        Joueur ana = new Joueur("Ana");
+        Joueur bob = new Joueur("Bob");
+        Tuile g = new Tuile(Type.GLAISIERE);
+        Tuile f = new Tuile(Type.FORET);
+        Tuile b = new Tuile(Type.BRIQUETERIE);
+        System.out.println(f.collecter() + " " + g.acheter(ana) + " " + g.acheter(bob) + " " + b.acheter(ana) + " " + f.acheter(bob));
+        System.out.println(g + " " + f + " " + b);
+        System.out.println(b.collecter());
+        g.collecter();
+        g.collecter();
+        g.collecter();
+        f.collecter();
+        System.out.println(b.collecter() + " " + b.collecter());
+        System.out.println(ana);
+        System.out.println(bob);
+    }
+}`),
+			depart: "",
+			solution: J2("import java.util.HashMap;", RC_TYPE, RC_JOUEUR, RC_TUILE),
+			indices: ["Dans `acheter`, l'ordre des tests compte : vérifie que la tuile est libre **avant** d'appeler `payer`, sinon le joueur paierait une tuile qu'il n'obtient pas.",
+				"`switch (this.type) { case BRIQUETERIE: ... default: ... }` : dans un `switch` sur un enum, on écrit la constante seule. Le `default` couvre la glaisière et la forêt grâce à `getRessource()`."] },
+		{ id: "oevC.3", k: "code", mode: "class", titre: "Le marché", fichier: "Tuile.java", xp: 30,
+			enonce: "Ajoute la classe `Marche` avec deux méthodes `static`. `prix(String ressource)` renvoie le prix d'une unité : le coût du type qui produit cette ressource (cherche-le avec `Type.values()`), et lève une `IllegalArgumentException(\"ressource inconnue : or\")` sinon. `vendre(Joueur j, String ressource, int qte)` vend des ressources du joueur contre `prix × qte` pièces, et lève une `IllegalArgumentException(\"quantité invalide\")` si `qte` est négative, nulle ou supérieure à ce qu'il possède.",
+			regles: ["allman"],
+			harness: T(`
+public class TestEtape3
+{
+    public static void main(String[] args)
+    {
+        Joueur ana = new Joueur("Ana");
+        ana.varierRessource("bois", 5);
+        ana.varierRessource("brique", 2);
+        System.out.println(Marche.prix("bois") + " " + Marche.prix("brique"));
+        Marche.vendre(ana, "brique", 2);
+        Marche.vendre(ana, "bois", 3);
+        System.out.println(ana);
+        String[][] ventes = { { "bois", "4" }, { "or", "1" }, { "bois", "2" } };
+        for (String[] v : ventes)
+        {
+            try
+            {
+                Marche.vendre(ana, v[0], Integer.parseInt(v[1]));
+                System.out.println("vendu : " + v[1] + " " + v[0]);
+            }
+            catch (IllegalArgumentException e)
+            {
+                System.out.println("refusé : " + e.getMessage());
+            }
+        }
+        System.out.println(ana);
+    }
+}`),
+			depart: "",
+			solution: J2("import java.util.HashMap;", RC_TYPE, RC_JOUEUR, RC_TUILE, RC_MARCHE),
+			indices: ["`for (Type t : Type.values())` parcourt les trois types ; compare `t.getRessource()` avec `equals`. Si la boucle se termine sans `return`, lève l'exception.",
+				"Dans `vendre`, appelle d'abord `prix` (qui lève l'exception pour une ressource inconnue), puis vérifie la quantité, et seulement ensuite modifie le joueur."] }
+	]
+});
+
+/* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
    format que CHAPITRES), puis l'ajouter ici.
@@ -15927,7 +20793,7 @@ public enum Couleur
    ========================================================================== */
 var LANGUES = [
 	{ id: "java", nom: "Algo & Java", groupe: "Semestre 1", icone: "☕", mode: "java", runner: "java", desc: "Bases de l'algorithmique en Java (R1.01)", unites: CHAPITRES, controles: CONTROLES, bonus: EVALS },
-	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", niveau: 2, desc: "Classes, collections, interfaces, héritage, exceptions, enum (R2.01)", unites: OBJETS_UNITES },
+	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", niveau: 2, desc: "Classes, collections, interfaces, héritage, exceptions, enum (R2.01)", unites: OBJETS_UNITES, controles: OBJETS_CONTROLES, bonus: OBJETS_EVALS },
 	{ id: "ihm", nom: "Dév IHM", groupe: "Semestre 2", icone: "🪟", mode: "java", runner: "swing", desc: "Fenêtres Swing, layouts, événements (R2.02)", bientot: true },
 	{ id: "html", nom: "HTML & CSS", groupe: "Web et autres langages", icone: "🌐", mode: "html", runner: "web", desc: "Construire des pages web", unites: HTML_UNITES, bientot: true }, // prêt, masqué pour l'instant : retirer bientot pour l'ouvrir
 	{ id: "sql", nom: "SQL", groupe: "Web et autres langages", icone: "🗄️", bientot: true },
