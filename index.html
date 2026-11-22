@@ -925,7 +925,8 @@ var JavaMini = (function ()
 				}
 				var txt = src.slice(s2, i).replace(/_/g, "");
 				var suf = src[i];
-				if (suf === "d" || suf === "D" || suf === "f" || suf === "F") { isDouble = true; i++; }
+				if (suf === "f" || suf === "F") { i++; push("float", Math.fround(Number(txt)), line); continue; }
+				if (suf === "d" || suf === "D") { isDouble = true; i++; }
 				else if (suf === "l" || suf === "L") { i++; push("long", Number(txt), line); continue; }
 				if (isDouble) { push("double", Number(txt), line); }
 				else
@@ -984,11 +985,6 @@ var JavaMini = (function ()
 	function normType(t)
 	{
 		if (t === "short" || t === "byte") { return "int"; }
-		if (t === "float") { return "double"; }
-		if (t === "Integer") { return "int"; }
-		if (t === "Double") { return "double"; }
-		if (t === "Character") { return "char"; }
-		if (t === "Boolean") { return "boolean"; }
 		return t;
 	}
 	function arr(t, d) { while (d-- > 0) { t += "[]"; } return t; }
@@ -1518,7 +1514,7 @@ var JavaMini = (function ()
 				{
 					var ct = this.type();
 					var nx = this.peek(1);
-					if (this.is(")") && (nx.type === "id" || nx.type === "str" || nx.type === "int" || nx.type === "double" || nx.type === "char" ||
+					if (this.is(")") && (nx.type === "id" || nx.type === "str" || nx.type === "int" || nx.type === "double" || nx.type === "float" || nx.type === "long" || nx.type === "char" ||
 						(nx.type === "kw" && /^(this|new|null|true|false|super)$/.test(nx.v)) || (nx.type === "op" && (nx.v === "(" || nx.v === "!"))))
 					{
 						this.next();
@@ -1573,6 +1569,7 @@ var JavaMini = (function ()
 				case "int": this.next(); return { k: "lit", val: { t: "int", v: t.v }, line: line };
 				case "long": this.next(); return { k: "lit", val: { t: "long", v: t.v }, line: line };
 				case "double": this.next(); return { k: "lit", val: { t: "double", v: t.v }, line: line };
+				case "float": this.next(); return { k: "lit", val: { t: "float", v: t.v }, line: line };
 				case "char": this.next(); return { k: "lit", val: { t: "char", v: t.v }, line: line };
 				case "str":
 					this.next();
@@ -1645,7 +1642,22 @@ var JavaMini = (function ()
 	// Les chaînes sont des « boîtes » { s: "..." } pour que == compare les références, comme en Java.
 	var NULLV = { t: "null", v: null };
 	var VOID = { t: "void", v: null };
-	function num(t) { return t === "int" || t === "long" || t === "double" || t === "char"; }
+	function num(t) { return t === "int" || t === "long" || t === "double" || t === "char" || t === "float"; }
+	/* Classes enveloppes : la valeur garde son type de base (t) et reçoit une identité (box),
+	   comme un objet Integer de Java ; -128..127 sont partagés (cache de Integer.valueOf). */
+	var WRAP = { Integer: "int", Double: "double", Character: "char", Boolean: "boolean", Long: "long", Float: "float", Short: "int", Byte: "int" };
+	var WRAPNAME = { "int": "Integer", "double": "Double", "char": "Character", "boolean": "Boolean", "long": "Long", "float": "Float" };
+	var boxSeq = 0;
+	/* Paramètres de type des classes génériques (T, E...) : traités comme Object. */
+	var TPARAMS = Object.create(null);
+	function box(v)
+	{
+		if (v.box) { return v; }
+		var cache = (v.t === "int" || v.t === "long" || v.t === "char") ? (v.v >= -128 && v.v <= 127 && (v.t !== "char" || v.v <= 127)) : v.t === "boolean";
+		return { t: v.t, v: v.v, box: cache ? "c" + v.t + v.v : "b" + (++boxSeq) };
+	}
+	function unbox(v) { return v.box ? { t: v.t, v: v.v } : v; }
+	function tName(v) { return v.box ? WRAPNAME[v.t] : v.t; }
 	function isArr(t) { return /\[\]$/.test(t); }
 	function elem(t) { return t.slice(0, -2); }
 	function isRef(t) { return !PRIM[t] && t !== "void"; }
@@ -1654,7 +1666,7 @@ var JavaMini = (function ()
 	function defVal(t)
 	{
 		if (t === "int" || t === "long" || t === "char") { return mk(t, 0); }
-		if (t === "double") { return mk("double", 0); }
+		if (t === "double" || t === "float") { return mk(t, 0); }
 		if (t === "boolean") { return mk("boolean", false); }
 		return NULLV;
 	}
@@ -1668,27 +1680,43 @@ var JavaMini = (function ()
 	function convNum(v, t)
 	{
 		var x = v.v;
+		var reel = v.t === "double" || v.t === "float";
 		if (t === "double") { return mk("double", Number(x)); }
-		if (t === "long") { return mk("long", v.t === "double" ? (isNaN(x) ? 0 : Math.trunc(x)) : x); }
-		if (t === "int") { return mk("int", v.t === "double" ? toIntBits(x) : (x | 0)); }
-		if (t === "char") { return mk("char", (v.t === "double" ? toIntBits(x) : x) & 0xFFFF); }
+		if (t === "float") { return mk("float", Math.fround(Number(x))); }
+		if (t === "long") { return mk("long", reel ? (isNaN(x) ? 0 : Math.trunc(x)) : x); }
+		if (t === "int") { return mk("int", reel ? toIntBits(x) : (x | 0)); }
+		if (t === "char") { return mk("char", (reel ? toIntBits(x) : x) & 0xFFFF); }
 		return v;
 	}
 	function widens(from, to)
 	{
 		if (from === to) { return true; }
-		if (from === "char") { return to === "int" || to === "long" || to === "double"; }
-		if (from === "int") { return to === "long" || to === "double"; }
-		if (from === "long") { return to === "double"; }
+		if (from === "char") { return to === "int" || to === "long" || to === "float" || to === "double"; }
+		if (from === "int") { return to === "long" || to === "float" || to === "double"; }
+		if (from === "long") { return to === "float" || to === "double"; }
+		if (from === "float") { return to === "double"; }
 		return false;
 	}
 	function assignable(from, to)
 	{
 		if (from === to) { return true; }
+		if (TPARAMS[erase(to)]) { return from !== "void"; }
+		if (WRAP[to]) { return from === WRAP[to] || from === "null"; }
 		if (num(from) && num(to)) { return widens(from, to); }
 		if (from === "null") { return isRef(to); }
 		if (to === "Object") { return from !== "void"; }
 		return false;
+	}
+	/* Float.toString : le plus court décimal qui redonne le même float. */
+	function fmtFloat(x)
+	{
+		if (isNaN(x) || !isFinite(x) || x === 0) { return fmtDouble(x); }
+		for (var p = 1; p <= 9; p++)
+		{
+			var y = Number(x.toPrecision(p));
+			if (Math.fround(y) === x) { return fmtDouble(y); }
+		}
+		return fmtDouble(x);
 	}
 	function fmtDouble(x)
 	{
@@ -1787,7 +1815,7 @@ var JavaMini = (function ()
 	var COLL = { ArrayList: "list", LinkedList: "list", HashMap: "map" };
 	var SUPERS = {
 		ArrayList: ["List", "Collection", "Iterable"], LinkedList: ["List", "Deque", "Queue", "Collection", "Iterable"],
-		List: ["Collection", "Iterable"], Set: ["Collection", "Iterable"], Collection: ["Iterable"], HashMap: ["Map"],
+		List: ["Collection", "Iterable"], Set: ["Collection", "Iterable"], Collection: ["Iterable"], HashMap: ["Map"], Queue: ["Collection", "Iterable"], Deque: ["Queue", "Collection", "Iterable"],
 		String: ["Comparable", "CharSequence"]
 	};
 	var KNOWN_TYPES = { List: 1, Map: 1, Set: 1, Collection: 1, Iterable: 1, Iterator: 1, Deque: 1, Queue: 1, Comparable: 1, Comparator: 1, ArrayList: 1, LinkedList: 1, HashMap: 1, CharSequence: 1 };
@@ -2084,12 +2112,40 @@ var JavaMini = (function ()
 		/* Conversion lors d'une affectation ou d'un passage de paramètre. */
 		conv: function (v, t, line, node)
 		{
-			if (v.t === t) { return v; }
 			if (v.t === "void") { throw cErr("cette méthode ne renvoie rien (void) : sa valeur ne peut pas être utilisée", line); }
+			var et = erase(t);
+			/* Vers une classe enveloppe : boxing, mais seulement depuis le type de base exact (Double d = 5; est refusé). */
+			if (WRAP[et])
+			{
+				if (v.t === "null") { return v; }
+				if (v.t === WRAP[et] && (et !== "Short" && et !== "Byte")) { return box(v); }
+				if (et === "Character" && v.t === "int" && !v.box && constExpr(node) && v.v >= 0 && v.v <= 65535) { return box(mk("char", v.v)); }
+				if ((num(v.t) || v.t === "boolean"))
+				{
+					throw cErr("types incompatibles : " + tName(v) + " ne peut pas être converti en " + et, line,
+						v.box ? "Un " + tName(v) + " ne devient pas un " + et + " : passe par le type de base, par exemple " + et + ".valueOf(x." + WRAP[et] + "Value())." :
+						(WRAP[et] === "double" && v.t === "int" ? "Un int ne devient pas automatiquement un Double : écris 5.0 au lieu de 5, ou (double) x." : "Le boxing ne marche que depuis " + WRAP[et] + " exactement."));
+				}
+			}
+			/* Paramètre de type (T d'une classe générique) ou Object : un nombre y est rangé dans son enveloppe. */
+			if (TPARAMS[et] && !this.classes[et]) { return (num(v.t) || v.t === "boolean") ? box(v) : v; }
+			if ((et === "Object" || et === "Number" || et === "Comparable") && (num(v.t) || v.t === "boolean")) { return box(v); }
+			/* Depuis une enveloppe vers un type de base : unboxing (NullPointerException si null). */
+			if (PRIM[t] && v.t === "null" && !(node && node.k === "lit"))
+			{
+				throw rErr("java.lang.NullPointerException: Cannot invoke \"java.lang." + (WRAPNAME[t] || "Integer") + "." + (t === "char" ? "charValue" : t + "Value") + "()\"", line,
+					"La variable enveloppe (Integer, Double...) vaut null : il n'y a pas de nombre à en tirer.");
+			}
+			if (v.box && PRIM[t])
+			{
+				if (v.t !== t && !widens(v.t, t)) { throw cErr("types incompatibles : " + tName(v) + " ne peut pas être converti en " + t, line); }
+				v = unbox(v);
+			}
+			if (v.t === t) { return v; }
 			if (num(v.t) && num(t))
 			{
 				if (widens(v.t, t)) { return convNum(v, t); }
-				if (constExpr(node) && v.t !== "double" && (t === "char" || t === "int") && v.v >= 0 && v.v <= 65535) { return convNum(v, t); }
+				if (constExpr(node) && v.t !== "double" && v.t !== "float" && v.t !== "long" && (t === "char" || t === "int") && v.v >= 0 && v.v <= 65535) { return convNum(v, t); }
 				throw cErr("types incompatibles : conversion avec perte possible de " + v.t + " vers " + t, line,
 					v.t === "double" ? "Un double ne rentre pas dans un " + t + " sans conversion : utilise (" + t + ") ou déclare la variable en double." : "Ajoute une conversion explicite (" + t + ").");
 			}
@@ -2106,6 +2162,15 @@ var JavaMini = (function ()
 		/* Conversion explicite (cast). */
 		cast: function (v, t, line)
 		{
+			if (WRAP[erase(t)])
+			{
+				if (v.t === "null") { return v; }
+				if (v.t === WRAP[erase(t)]) { return box(v); }
+				if (v.box) { throw rErr("java.lang.ClassCastException: class java.lang." + tName(v) + " cannot be cast to class java.lang." + erase(t), line); }
+				if (num(v.t)) { throw cErr("conversion impossible de " + v.t + " en " + erase(t), line); }
+			}
+			if (TPARAMS[erase(t)] && !this.classes[erase(t)]) { return v; }
+			if (v.box && PRIM[t]) { v = unbox(v); }
 			if (v.t === t) { return v; }
 			if (num(v.t) && num(t)) { return convNum(v, t); }
 			if (t === "String" && v.t === "null") { return v; }
@@ -2125,6 +2190,7 @@ var JavaMini = (function ()
 			{
 				case "int": case "long": return String(v.v);
 				case "double": return fmtDouble(v.v);
+				case "float": return fmtFloat(v.v);
 				case "char": return String.fromCharCode(v.v);
 				case "boolean": return v.v ? "true" : "false";
 				case "String": return v.v.s;
@@ -2603,6 +2669,99 @@ var JavaMini = (function ()
 			var self = this;
 			return args.map(function (a) { return self.ev(a, fr); });
 		},
+		/* Méthodes d'un objet Integer, Double, Character, Boolean... */
+		wrapCall: function (t, name, args, line)
+		{
+			var W = WRAPNAME[t.t], a0 = args[0];
+			function need(n) { if (args.length !== n) { throw cErr(W + "." + name + " attend " + n + " paramètre(s)", line); } }
+			switch (name)
+			{
+				case "equals": need(1); return mk("boolean", a0.t !== "null" && a0.t === t.t && a0.v === t.v);
+				case "compareTo":
+					need(1);
+					if (a0.t === "null") { throw rErr("java.lang.NullPointerException", line); }
+					if (a0.t !== t.t) { throw cErr("types incompatibles : " + tName(a0) + " ne peut pas être converti en " + W, line); }
+					if (t.t === "char") { return mk("int", t.v - a0.v); }
+					if (t.t === "boolean") { return mk("int", t.v === a0.v ? 0 : (t.v ? 1 : -1)); }
+					return mk("int", t.v < a0.v ? -1 : (t.v > a0.v ? 1 : 0));
+				case "intValue": need(0); return convNum(unbox(t), "int");
+				case "longValue": need(0); return convNum(unbox(t), "long");
+				case "doubleValue": need(0); return convNum(unbox(t), "double");
+				case "floatValue": need(0); return convNum(unbox(t), "float");
+				case "charValue": need(0); if (t.t !== "char") { break; } return unbox(t);
+				case "booleanValue": need(0); if (t.t !== "boolean") { break; } return unbox(t);
+				case "toString": need(0); return mkStr(this.str(t, line));
+				case "hashCode": need(0); return mk("int", t.t === "boolean" ? (t.v ? 1231 : 1237) : (t.t === "double" || t.t === "float") ? javaHash(t) : t.v | 0);
+				case "getClass": need(0); return { t: "Class", v: { isClass: true, cname: W } };
+			}
+			throw cErr("symbole introuvable : méthode " + name + "() dans " + W, line);
+		},
+		/* Type déclaré (statique) d'une expression, comme le voit javac ; null si on ne sait pas. */
+		staticType: function (e, fr)
+		{
+			var self = this;
+			function fieldType(cn, fname)
+			{
+				for (var c = self.classes[erase(cn || "")]; c; c = c.ext ? self.classes[erase(c.ext)] : null)
+				{
+					var f = c.fields.filter(function (x) { return x.name === fname; })[0];
+					if (f) { return f.t; }
+				}
+				return null;
+			}
+			function targ(t, k) { var m = String(t).match(/<(.*)>$/); if (!m) { return null; } var parts = [], depth = 0, cur = ""; m[1].split("").forEach(function (ch) { if (ch === "<") { depth++; } if (ch === ">") { depth--; } if (ch === "," && !depth) { parts.push(cur.trim()); cur = ""; } else { cur += ch; } }); parts.push(cur.trim()); return parts[k] || null; }
+			var here = fr.meth && fr.meth.cls ? fr.meth.cls : fr.cls;
+			switch (e.k)
+			{
+				case "paren": return this.staticType(e.e, fr);
+				case "this": return here ? here.name : null;
+				case "cast": return e.t;
+				case "new": return e.cls + (e.targs || "");
+				case "name":
+					var v = this.findVar(fr, e.name);
+					if (v) { return v.t; }
+					return here ? fieldType(here.name, e.name) : null;
+				case "field":
+					var ot = this.staticType(e.obj, fr);
+					return ot ? fieldType(ot, e.name) : null;
+				case "idx":
+					var at = this.staticType(e.a, fr);
+					return at && /\[\]$/.test(at) ? at.slice(0, -2) : null;
+				case "call":
+					var tt = e.target ? (e.target.k === "super" ? (here && here.ext) : this.staticType(e.target, fr)) : (here ? here.name : null);
+					if (!tt) { return null; }
+					var base = erase(tt);
+					if (/^(ArrayList|LinkedList|List|Queue|Iterator|Collection)$/.test(base) && /^(get|remove|getFirst|getLast|removeFirst|removeLast|poll|peek|element|next|set)$/.test(e.name)) { return targ(tt, 0); }
+					if (/^(HashMap|Map)$/.test(base) && /^(get|remove|put|getOrDefault)$/.test(e.name)) { return targ(tt, 1); }
+					var found = null;
+					(function walkT(t, seen)
+					{
+						if (found || !t || seen[t]) { return; }
+						seen[t] = 1;
+						var c = self.classes[t];
+						if (c && c.methods[e.name] && c.methods[e.name].length) { found = c.methods[e.name][0].ret; return; }
+						self.superTypes(t).forEach(function (x) { walkT(erase(x), seen); });
+					})(base, {});
+					return found;
+			}
+			return null;
+		},
+		/* Le type t (ou un de ses ancêtres, classes et interfaces) déclare-t-il une méthode nommée name ? */
+		declares: function (t, name)
+		{
+			var self = this, seen = {}, todo = [erase(t)];
+			while (todo.length)
+			{
+				var x = todo.pop();
+				if (seen[x]) { continue; }
+				seen[x] = 1;
+				var c = this.classes[x];
+				if (!c) { if (x === "Comparable" && name === "compareTo") { return true; } continue; }
+				if (c.methods[name] && c.methods[name].length) { return true; }
+				todo = todo.concat(this.superTypes(x));
+			}
+			return false;
+		},
 		call: function (node, fr)
 		{
 			var name = node.name, args, list;
@@ -2676,8 +2835,21 @@ var JavaMini = (function ()
 				if (name === "length") { throw cErr("pour un tableau, length est un attribut, sans parenthèses : tab.length", node.line); }
 				throw cErr("un tableau n'a pas de méthode " + name + "()", node.line);
 			}
-			if (num(t.t) || t.t === "boolean") { throw cErr(t.t + " est un type de base : il n'a pas de méthode " + name + "()", node.line); }
-			if (t.v && t.v.coll) { return this.collCall(t, name, args, node, fr); }
+			if (t.box) { return this.wrapCall(t, name, args, node.line); }
+			if (num(t.t) || t.t === "boolean") { throw cErr(t.t + " est un type de base : il n'a pas de méthode " + name + "()", node.line, WRAPNAME[t.t] ? "Les méthodes (equals, compareTo...) existent sur l'objet enveloppe " + WRAPNAME[t.t] + ", pas sur le type de base " + t.t + "." : ""); }
+			if (t.v && t.v.coll)
+			{
+				/* Comme javac : seules les méthodes du type DÉCLARÉ (List, Queue...) sont permises. */
+				var ct = this.staticType(tg, fr), cb = ct ? erase(ct) : "";
+				var QUEUE = /^(add|offer|poll|peek|element|remove|size|isEmpty|contains|clear|iterator|toString|equals|hashCode|addAll|removeAll|containsAll)$/;
+				var LIST_NO = /^(offer|offerFirst|offerLast|poll|pollFirst|pollLast|peek|peekFirst|peekLast|element|push|pop)$/;
+				if ((cb === "Queue" && !QUEUE.test(name)) || ((cb === "List" || cb === "Collection") && (LIST_NO.test(name) || (name === "remove" && !args.length))) || (cb === "Queue" && name === "remove" && args.length === 1 && (args[0].t === "int") && !args[0].box))
+				{
+					throw cErr("symbole introuvable : méthode " + name + "(" + args.map(tName).join(", ") + ") dans le type " + cb, node.line,
+						"La variable est déclarée " + cb + " : on ne peut appeler que les méthodes de " + cb + ", même si l'objet est une " + t.v.kind + ".");
+				}
+				return this.collCall(t, name, args, node, fr);
+			}
 			if (t.v && t.v.isClass)
 			{
 				if (args.length || !/^(getSimpleName|getName)$/.test(name)) { throw cErr("sur un objet Class, seules getSimpleName() et getName() sont disponibles ici", node.line); }
@@ -2686,6 +2858,16 @@ var JavaMini = (function ()
 			if (name === "getClass" && !args.length && t.v && (t.v.cls || t.v.exc)) { return this.classOf(t.v); }
 			if (t.v && t.v.exc) { return this.throwableCall(t, name, args, node.line); }
 			var obj = t.v, cls = obj.cls;
+			/* Comme javac : on ne peut appeler que les méthodes du type DÉCLARÉ de la variable
+			   (interface ou classe mère), même si l'objet réel en a d'autres. */
+			var st = this.staticType(tg, fr);
+			st = st ? erase(st) : null;
+			if (st && st !== cls.name && this.classes[st] && !/^(toString|equals|hashCode|getClass)$/.test(name) &&
+				!(this.classes[st].isEnum && /^(ordinal|name|compareTo)$/.test(name)) && !(this.isThrowable(st) && /^(getMessage|printStackTrace)$/.test(name)) && !this.declares(st, name))
+			{
+				throw cErr("symbole introuvable : méthode " + name + "(...) dans le type " + st, node.line,
+					"La variable est déclarée de type " + st + " : on ne peut appeler que les méthodes de " + st + ", même si l'objet est un " + cls.name + ". Pour utiliser " + name + ", il faut un cast : ((" + cls.name + ") variable)." + name + "(...).");
+			}
 			list = this.methodsOf(cls, name);
 			if (!list.length)
 			{
@@ -2750,7 +2932,7 @@ var JavaMini = (function ()
 				else if (conv === "f")
 				{
 					if (!num(a.t) || a.t === "char") { throw rErr("java.util.IllegalFormatConversionException: f != " + a.t, line); }
-					if (a.t !== "double") { throw rErr("java.util.IllegalFormatConversionException: f != java.lang.Integer", line, "%f attend un double."); }
+					if (a.t !== "double" && a.t !== "float") { throw rErr("java.util.IllegalFormatConversionException: f != java.lang.Integer", line, "%f attend un double."); }
 					s = a.v.toFixed(prec === undefined ? 6 : parseInt(prec, 10)).replace(".", ","); // locale française, comme Java sur un poste en français
 				}
 				else if (conv === "c") { s = a.t === "char" ? String.fromCharCode(a.v) : self.str(a, line); }
@@ -2796,7 +2978,7 @@ var JavaMini = (function ()
 					}
 				}
 			}
-			function promote(a, b) { return (a.t === "double" || b.t === "double") ? "double" : ((a.t === "long" || b.t === "long") ? "long" : "int"); }
+			function promote(a, b) { return (a.t === "double" || b.t === "double") ? "double" : (a.t === "float" || b.t === "float") ? "float" : ((a.t === "long" || b.t === "long") ? "long" : "int"); }
 			var cls = this.classes[cname];
 			if (cls)
 			{
@@ -2860,7 +3042,7 @@ var JavaMini = (function ()
 					case "random": need(0); return mk("double", this.rng());
 					case "floor": need(1, ["num"]); return mk("double", Math.floor(a0.v));
 					case "ceil": need(1, ["num"]); return mk("double", Math.ceil(a0.v));
-					case "round": need(1, ["num"]); return a0.t === "double" ? mk("long", Math.floor(a0.v + 0.5)) : mk("int", a0.v);
+					case "round": need(1, ["num"]); return a0.t === "double" ? mk("long", Math.floor(a0.v + 0.5)) : (a0.t === "float" ? mk("int", Math.floor(a0.v + 0.5)) : mk("int", a0.v));
 				}
 				throw cErr("Math." + name + " n'est pas disponible ici", line);
 			}
@@ -2878,9 +3060,23 @@ var JavaMini = (function ()
 					need(1);
 					if (a0.t === "String") { return this.staticCall(cname, cname === "Integer" ? "parseInt" : "parseLong", args, node, fr); }
 					if (a0.t !== "int" && a0.t !== "char" && a0.t !== "long") { throw cErr(cname + ".valueOf attend un entier ou une String", line); }
-					return { t: cname === "Integer" ? "int" : "long", v: a0.t === "char" ? a0.v : a0.v, boxed: true };
+					return box({ t: cname === "Integer" ? "int" : "long", v: a0.v });
 				}
 				}
+			if (this.niveau >= 2 && (cname === "Double" || cname === "Float") && (name === "valueOf" || name === "toString" || name === "compare"))
+			{
+				if (name === "compare") { need(2, ["num", "num"]); return mk("int", a0.v < args[1].v ? -1 : (a0.v > args[1].v ? 1 : 0)); }
+				need(1);
+				var pt = cname === "Double" ? "double" : "float";
+				if (name === "toString") { return mkStr(this.str(convNum(unbox(a0), pt), line)); }
+				if (a0.t === "String") { return box(convNum(this.staticCall("Double", "parseDouble", args, node, fr), pt)); }
+				if (!num(a0.t) || a0.t === "char") { throw cErr(cname + ".valueOf attend un nombre ou une String", line); }
+				if (!widens(a0.t, pt) && a0.t !== pt) { throw cErr(cname + ".valueOf attend un " + pt, line); }
+				return box(convNum(unbox(a0), pt));
+			}
+			if (this.niveau >= 2 && (cname === "Integer" || cname === "Long") && name === "compare") { need(2, ["num", "num"]); return mk("int", a0.v < args[1].v ? -1 : (a0.v > args[1].v ? 1 : 0)); }
+			if (this.niveau >= 2 && cname === "Character" && name === "valueOf") { need(1); return box(mk("char", a0.v)); }
+			if (cname === "Float" && name === "parseFloat") { return convNum(this.staticCall("Double", "parseDouble", args, node, fr), "float"); }
 			if (cname === "Double" && name === "parseDouble")
 			{
 				need(1, ["String"]);
@@ -2978,7 +3174,7 @@ var JavaMini = (function ()
 		{
 			if (a.t === "null" || b.t === "null") { return a.t === b.t; }
 			if (a.t === "String" && b.t === "String") { return a.v.s === b.v.s; }
-			if (num(a.t) || a.t === "boolean") { return (num(b.t) || b.t === "boolean") && a.v === b.v && (a.t === "double") === (b.t === "double"); }
+			if (num(a.t) || a.t === "boolean") { return (num(b.t) || b.t === "boolean") && a.v === b.v && (a.t === b.t || (!a.box && !b.box && (a.t === "double") === (b.t === "double"))); }
 			var c = a.v && a.v.cls;
 			// comme Java : contains/indexOf/remove appellent equals(Object), pas une surcharge equals(Piece)
 			var eq = c && (c.methods.equals || []).filter(function (m) { return m.params.length === 1 && m.params[0].t === "Object"; })[0];
@@ -3093,7 +3289,13 @@ var JavaMini = (function ()
 		},
 		collCall: function (t, name, args, node, fr)
 		{
-			var o = t.v, line = node.line, a0 = args[0], self = this;
+			var o = t.v, line = node.line, self = this;
+			function bx(v) { return v && (num(v.t) || v.t === "boolean") ? box(v) : v; }
+			/* Une collection ne range que des objets : un int devient un Integer (sauf les indices). */
+			if (o.coll === "map" && (name === "put" || name === "getOrDefault")) { args = args.map(bx); }
+			else if (o.coll === "list" && args.length === 1 && /^(add|addFirst|addLast|offer|offerFirst|offerLast|push)$/.test(name)) { args = [bx(args[0])]; }
+			else if (o.coll === "list" && args.length === 2 && (name === "add" || name === "set")) { args = [args[0], bx(args[1])]; }
+			var a0 = args[0];
 			function need(n) { if (args.length !== n) { throw cErr(t.t + "." + name + " attend " + n + " paramètre(s)", line); } }
 			function idx(v, max)
 			{
@@ -3155,8 +3357,9 @@ var JavaMini = (function ()
 				case "get": need(1); return d[idx(a0, d.length)];
 				case "set": need(2); var k = idx(a0, d.length); var prev = d[k]; d[k] = args[1]; return prev;
 				case "remove":
+					if (!args.length && o.kind === "LinkedList") { empty(); o.mod++; return d.shift(); }
 					need(1);
-					if ((a0.t === "int" || a0.t === "char") && !a0.boxed) { var j = idx(a0, d.length); var rem = d.splice(j, 1)[0]; o.mod++; return rem; }
+					if ((a0.t === "int" || a0.t === "char") && !a0.box) { var j = idx(a0, d.length); var rem = d.splice(j, 1)[0]; o.mod++; return rem; }
 					for (var q = 0; q < d.length; q++) { if (this.eqVal(d[q], a0, line)) { d.splice(q, 1); o.mod++; return mk("boolean", true); } }
 					return mk("boolean", false);
 				case "size": need(0); return mk("int", d.length);
@@ -3180,6 +3383,14 @@ var JavaMini = (function ()
 					case "getLast": need(0); empty(); return d[d.length - 1];
 					case "removeFirst": need(0); empty(); o.mod++; return d.shift();
 					case "removeLast": need(0); empty(); o.mod++; return d.pop();
+					/* File d'attente (Queue) et pile (Deque) */
+					case "offer": case "offerLast": need(1); d.push(a0); o.mod++; return mk("boolean", true);
+					case "offerFirst": case "push": need(1); d.unshift(a0); o.mod++; return name === "push" ? VOID : mk("boolean", true);
+					case "poll": case "pollFirst": need(0); if (!d.length) { return NULLV; } o.mod++; return d.shift();
+					case "pollLast": need(0); if (!d.length) { return NULLV; } o.mod++; return d.pop();
+					case "peek": case "peekFirst": need(0); return d.length ? d[0] : NULLV;
+					case "peekLast": need(0); return d.length ? d[d.length - 1] : NULLV;
+					case "element": case "pop": need(0); empty(); if (name === "pop") { o.mod++; return d.shift(); } return d[0];
 				}
 			}
 			throw cErr("la méthode " + name + "() n'existe pas pour une " + o.kind + (o.kind === "ArrayList" && /First|Last/.test(name) ? " (addFirst, getFirst... sont des méthodes de LinkedList)" : ""), line);
@@ -3361,6 +3572,7 @@ var JavaMini = (function ()
 				case "cast": return this.cast(this.ev(n.e, fr), n.t, n.line);
 				case "instof":
 					v = this.ev(n.e, fr);
+					if (v.box) { return mk("boolean", WRAP[n.t] === v.t || n.t === "Object" || n.t === "Number" || n.t === "Comparable"); }
 					if (num(v.t) || v.t === "boolean") { throw cErr("instanceof s'applique à un objet, pas à un " + v.t, n.line); }
 					return mk("boolean", v.t !== "null" && this.isSub(v.t, n.t));
 				case "cond":
@@ -3383,6 +3595,8 @@ var JavaMini = (function ()
 					if (!num(old.t)) { throw cErr(n.op + " s'applique à une variable numérique", n.line); }
 					var nv = convNum(mk(old.t === "double" ? "double" : (old.t === "long" ? "long" : "int"), old.v + (n.op === "++" ? 1 : -1)), old.t);
 					if (old.t === "int") { nv = mk("int", (old.v + (n.op === "++" ? 1 : -1)) | 0); }
+					if (old.t === "float") { nv = mk("float", Math.fround(old.v + (n.op === "++" ? 1 : -1))); }
+					if (WRAP[erase(rf.t || "")]) { nv = box(nv); }
 					rf.set(nv);
 					return n.k === "pre" ? nv : old;
 				case "assign":
@@ -3428,7 +3642,10 @@ var JavaMini = (function ()
 			if (op === "==" || op === "!=")
 			{
 				var eq;
-				if (num(a.t) && num(b.t)) { eq = a.v === b.v; }
+				/* Deux objets Integer, Double... : == compare les références (attention au cache -128..127). */
+				if (a.box && b.box) { eq = a.box === b.box; }
+				else if ((a.box && b.t === "null") || (b.box && a.t === "null")) { eq = false; }
+				else if (num(a.t) && num(b.t)) { eq = a.v === b.v; }
 				else if (a.t === "boolean" && b.t === "boolean") { eq = a.v === b.v; }
 				else if (isRef(a.t) && isRef(b.t))
 				{
@@ -3449,8 +3666,23 @@ var JavaMini = (function ()
 				if (a.t === "boolean" || b.t === "boolean") { hint = "Pour combiner des conditions, utilise && (et) ou || (ou)."; }
 				throw cErr("l'opérateur " + op + " ne s'applique pas aux types " + a.t + " et " + b.t, line, hint);
 			}
-			var t = (a.t === "double" || b.t === "double") ? "double" : ((a.t === "long" || b.t === "long") ? "long" : "int");
+			var t = (a.t === "double" || b.t === "double") ? "double" : (a.t === "float" || b.t === "float") ? "float" : ((a.t === "long" || b.t === "long") ? "long" : "int");
 			var x = a.v, y = b.v;
+			if (t === "float")
+			{
+				switch (op)
+				{
+					case "<": return mk("boolean", x < y);
+					case ">": return mk("boolean", x > y);
+					case "<=": return mk("boolean", x <= y);
+					case ">=": return mk("boolean", x >= y);
+					case "+": return mk("float", Math.fround(x + y));
+					case "-": return mk("float", Math.fround(x - y));
+					case "*": return mk("float", Math.fround(x * y));
+					case "/": return mk("float", Math.fround(x / y));
+					case "%": return mk("float", Math.fround(x % y));
+				}
+			}
 			switch (op)
 			{
 				case "<": return mk("boolean", x < y);
@@ -3549,6 +3781,8 @@ var JavaMini = (function ()
 		try
 		{
 			var classes = parse(src);
+			TPARAMS = Object.create(null);
+			classes.forEach(function (c) { (c.tparams || []).forEach(function (p) { TPARAMS[p] = 1; }); });
 			var segs = fileRanges(src);
 			if (segs)
 			{
@@ -3602,7 +3836,7 @@ var JavaMini = (function ()
 	}
 
 	/* Comme javac : ArrayList, HashMap... ne sont connues qu'après import java.util.XXX; (ou java.util.*). */
-	var UTIL = { ArrayList: 1, LinkedList: 1, HashMap: 1, List: 1, Map: 1, Set: 1, Collections: 1, Iterator: 1, Comparator: 1, Collection: 1 };
+	var UTIL = { ArrayList: 1, LinkedList: 1, HashMap: 1, List: 1, Map: 1, Set: 1, Collections: 1, Iterator: 1, Comparator: 1, Collection: 1, Queue: 1, Deque: 1 };
 	function checkImports(classes, segs)
 	{
 		var mine = {}, imp = classes.imports || [], il = classes.importLines || [];
@@ -20967,6 +21201,785 @@ function enFichiers(code)
 })();
 
 /* ==========================================================================
+   Dév Objets (S2) : compléments écrits d'après les sujets des TP (R2.01).
+   Les unités avaient été construites à partir des solutions ; ces exercices
+   couvrent ce que les sujets demandent en plus :
+     TP2   identifiants auto-incrémentés en lettres (A, B... AA, AB...)
+     TP3   valeurs par défaut, constructeur par défaut, classe utilitaire, null
+     TP6   classe utilitaire d'affichage de tableaux, javadoc, javac -d, @compile.list
+     TP7,5 fabrique d'objets (méthode de classe qui peut refuser de créer)
+     TP9bis interfaces qui limitent ce qu'on peut faire sur un ensemble
+   On ajoute à la fin des exercices de l'unité : les identifiants existants ne
+   changent pas, la progression déjà faite est conservée.
+   ========================================================================== */
+(function ()
+{
+	function unite(id) { return OBJETS_UNITES.filter(function (c) { return c.id === id; })[0]; }
+	function ajouter(id, exos) { var c = unite(id); c.exos = c.exos.concat(exos); }
+
+	/* ---------------- TP2 et TP7,5 : identifiants et fabrique ---------------- */
+	ajouter("o02", [
+		{ id: "o02.lettre", k: "predict",
+			q: "Les casiers reçoivent une lettre à leur création. Qu'affiche ce programme ?",
+			code: T(`
+public class Casier
+{
+    private static char prochaineLettre = 'A';
+
+    private char lettre;
+
+    public Casier()
+    {
+        this.lettre = Casier.prochaineLettre;
+        Casier.prochaineLettre++;
+    }
+
+    public char getLettre()
+    {
+        return this.lettre;
+    }
+
+    public static void main(String[] args)
+    {
+        Casier c1 = new Casier();
+        Casier c2 = new Casier();
+        Casier c3 = new Casier();
+        System.out.println(c1.getLettre() + " " + c3.getLettre());
+        System.out.println(Casier.prochaineLettre);
+        System.out.println((char) (c2.getLettre() + 5));
+    }
+}`),
+			expl: "Un `char` s'incrémente comme un entier : le compteur de classe passe de `A` à `B`, `C`, puis vaut `D` après trois casiers. `c2` a reçu `B`, et `B` + 5 donne `G` (il faut le cast `(char)`, sinon on afficherait le code 71)." },
+		{ id: "o02.fabriqueqcm", k: "qcm", q: "Un billet doit coûter entre 5 et 80 €. Pourquoi passer par une **fabrique** `static Billet creer(String spectacle, double prix)` plutôt que par un test dans le constructeur ?",
+			opts: ["Un constructeur crée toujours l'objet : il ne peut pas renvoyer `null`. La fabrique, elle, peut refuser et renvoyer `null`.", "Un constructeur ne peut pas contenir de `if`", "Une méthode `static` s'exécute plus vite", "Pour pouvoir écrire `new` sans parenthèses"], a: 0,
+			expl: "Quand `new Billet(...)` s'exécute, l'objet existe déjà : le constructeur peut seulement corriger les valeurs. La fabrique teste d'abord, et n'appelle `new` (sur un constructeur `private`) que si les valeurs sont bonnes." },
+		{ id: "o02.casier", k: "code", mode: "class", fichier: "Casier.java",
+			enonce: "Les casiers d'un couloir reçoivent automatiquement un identifiant sur **2 lettres** : `AA`, `AB`... `AZ`, puis `BA`, `BB`... Écris la classe `Casier` avec un compteur de classe, `getIdentifiant()` et `toString()` (`casier AB`).",
+			regles: ["allman"],
+			harness: T(`
+public class TestCasier
+{
+    public static void main(String[] args)
+    {
+        Casier[] couloir = new Casier[30];
+        for (int i = 0; i < couloir.length; i++)
+        {
+            couloir[i] = new Casier();
+        }
+        System.out.println(couloir[0] + ", " + couloir[1] + ", " + couloir[2]);
+        System.out.println(couloir[25] + ", " + couloir[26]);
+        System.out.println(couloir[29].getIdentifiant());
+    }
+}`),
+			depart: T(`
+public class Casier
+{
+
+}`),
+			solution: T(`
+public class Casier
+{
+    private static int nbCasiers = 0;
+
+    private String identifiant;
+
+    public Casier()
+    {
+        int n = Casier.nbCasiers;
+        this.identifiant = "" + (char) ('A' + n / 26) + (char) ('A' + n % 26);
+        Casier.nbCasiers++;
+    }
+
+    public String getIdentifiant()
+    {
+        return this.identifiant;
+    }
+
+    public String toString()
+    {
+        return "casier " + this.identifiant;
+    }
+}`),
+			indices: ["Compte les casiers déjà créés (0 pour le premier). La 1re lettre change tous les 26 casiers, la 2de à chaque casier.",
+				"1re lettre : `(char) ('A' + n / 26)`, 2de lettre : `(char) ('A' + n % 26)`. Commence par `\"\" +` pour obtenir une `String` et pas une addition de nombres."] },
+		{ id: "o02.fabrique", k: "code", mode: "class", fichier: "Billet.java",
+			enonce: "Une salle vend des billets entre 5 et 80 €. Rends le constructeur `Billet(String spectacle, double prix)` **private**, et écris la fabrique `public static Billet creer(String spectacle, double prix)` : elle renvoie un nouveau billet si le prix est entre 5 et 80, sinon `null`. Chaque billet créé reçoit un numéro (1, 2, 3...) : un prix refusé ne consomme pas de numéro. `toString()` : `n°2 Cirque : 12.5 €`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestBillet
+{
+    public static void main(String[] args)
+    {
+        Billet b1 = Billet.creer("Hamlet", 25);
+        Billet b2 = Billet.creer("Opéra", 120);
+        Billet b3 = Billet.creer("Cirque", 12.5);
+        Billet b4 = Billet.creer("Conte", 4.99);
+        System.out.println(b1);
+        System.out.println(b2);
+        System.out.println(b3);
+        System.out.println(b4 == null);
+    }
+}`),
+			depart: T(`
+public class Billet
+{
+
+}`),
+			solution: T(`
+public class Billet
+{
+    private static int nbBillets = 0;
+
+    private int    numero;
+    private String spectacle;
+    private double prix;
+
+    private Billet(String spectacle, double prix)
+    {
+        Billet.nbBillets++;
+        this.numero    = Billet.nbBillets;
+        this.spectacle = spectacle;
+        this.prix      = prix;
+    }
+
+    public static Billet creer(String spectacle, double prix)
+    {
+        if (prix < 5 || prix > 80)
+        {
+            return null;
+        }
+        return new Billet(spectacle, prix);
+    }
+
+    public String toString()
+    {
+        return "n°" + this.numero + " " + this.spectacle + " : " + this.prix + " €";
+    }
+}`),
+			indices: ["Le numéro se donne dans le constructeur : il ne s'exécute que si la fabrique a accepté le prix, donc un billet refusé ne prend pas de numéro.",
+				"Dans `creer` : `if (prix < 5 || prix > 80) { return null; }` puis `return new Billet(spectacle, prix);`. Afficher une variable qui vaut `null` écrit simplement `null`."] }
+	]);
+
+	/* ---------------- TP3 : constructeurs et valeurs par défaut ---------------- */
+	ajouter("o03", [
+		{ id: "o03.defauts", k: "predict",
+			q: "La classe n'a aucun constructeur écrit, et aucun attribut n'est initialisé. Qu'affiche ce programme ?",
+			code: T(`
+public class Lampe
+{
+    private String  piece;
+    private int     watts;
+    private boolean allumee;
+    private double  prix;
+
+    public String toString()
+    {
+        return this.piece + " " + this.watts + " " + this.allumee + " " + this.prix;
+    }
+
+    public static void main(String[] args)
+    {
+        Lampe l = new Lampe();
+        System.out.println(l);
+    }
+}`),
+			expl: "Sans constructeur écrit, Java fournit un **constructeur par défaut** (sans paramètre). Les attributs prennent leur valeur par défaut : `null` pour un objet, `0` pour un entier, `false` pour un booléen, `0.0` pour un réel." },
+		{ id: "o03.disparu", k: "qcm", q: "`Lampe` n'avait aucun constructeur, et `new Lampe()` marchait. On lui ajoute `public Lampe(String piece, int watts) { ... }`. Que devient `new Lampe()` ?",
+			opts: ["Une erreur de compilation : dès qu'on écrit un constructeur, Java ne fournit plus le constructeur par défaut", "Ça marche toujours : Java garde le constructeur par défaut", "Ça compile, et `piece` vaut `\"\"`", "Une erreur seulement à l'exécution"], a: 0,
+			expl: "Le constructeur par défaut n'existe que si la classe n'en a **aucun**. Pour garder `new Lampe()`, il faut réécrire un constructeur sans paramètre." },
+		{ id: "o03.utilitaire", k: "qcm", q: "La classe `Calcul` n'a que des méthodes `static` (une classe utilitaire, comme `Math`). Comment empêcher d'écrire `new Calcul()` ?",
+			opts: ["Écrire un constructeur `private Calcul() { }`", "Ne mettre aucun constructeur", "Déclarer `static class Calcul`", "Rendre tous les attributs `final`"], a: 0,
+			expl: "Sans constructeur, Java en ajoute un `public` : `new Calcul()` marcherait. Un constructeur `private` n'est appelable que depuis la classe elle-même, donc plus personne ne peut l'instancier." },
+		{ id: "o03.null", k: "qcm", q: "`Lampe l = null;` Que font `System.out.println(l);` puis `System.out.println(l.toString());` ?",
+			opts: ["La 1re affiche `null`, la 2de lève une `NullPointerException`", "Les deux affichent `null`", "Les deux lèvent une `NullPointerException`", "Aucune des deux ne compile"], a: 0,
+			expl: "`println(l)` teste lui-même si `l` vaut `null` avant d'appeler `toString()`. Écrire `l.toString()`, c'est appeler une méthode sur rien : `NullPointerException`. Pratique pour afficher, mais ça peut cacher un objet jamais créé." },
+		{ id: "o03.pool", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+public class Couleurs
+{
+    public static void main(String[] args)
+    {
+        String a = "Rouge";
+        String b = "Rouge";
+        String c = new String("Rouge");
+        System.out.println(a == b);
+        System.out.println(a == c);
+        System.out.println(a.equals(c));
+    }
+}`),
+			expl: "Deux textes écrits tels quels dans le code partagent le **même** objet : `a == b` est vrai par chance. Un texte construit autrement (`new String`, ou saisi au clavier avec `Clavier.lireString()`) est un autre objet : `==` donne `false`. Dans `equals`, compare toujours des `String` avec `equals`." }
+	]);
+
+	/* ---------------- TP6 : classe utilitaire, javadoc, compilation ---------------- */
+	ajouter("o05", [
+		{ id: "o05.javadoc", k: "qcm", q: "Quel commentaire est repris par `javadoc` dans la documentation HTML d'une méthode ?",
+			opts: ["`/** Renvoie le nombre de pièces posées. */` juste avant la méthode", "`// Renvoie le nombre de pièces posées.` juste avant la méthode", "`/* Renvoie le nombre de pièces posées. */` dans le corps", "Tous les commentaires du fichier"], a: 0,
+			expl: "Seul le commentaire qui commence par `/**`, placé juste avant la classe, l'attribut ou la méthode, va dans la javadoc. On y met aussi des balises : `@param`, `@return`, `@author`." },
+		{ id: "o05.prive", k: "qcm", q: "Par défaut, `javadoc` ne documente que ce qui est `public` ou `protected`. Comment documenter aussi les membres `private` ?",
+			opts: ["Ajouter l'option `-private`", "Rendre tout `public`", "Ajouter `@private` dans chaque commentaire", "Ce n'est pas possible"], a: 0,
+			expl: "La javadoc est d'abord faite pour les **utilisateurs** de la classe, qui n'ont pas à voir ce qui est privé (encapsulation). Pour le développeur : `javadoc ... -d documentation -private`." },
+		{ id: "o05.liste", k: "qcm", q: "Le fichier `compile.list` contient trois lignes : `quarto/Controleur.java`, `quarto/metier/Plateau.java`, `quarto/ihm/Ihm.java`. Que fait `javac @compile.list` ?",
+			opts: ["La même chose que `javac quarto/Controleur.java quarto/metier/Plateau.java quarto/ihm/Ihm.java`", "Il compile seulement le fichier `compile.list`", "Il crée un fichier `.jar`", "Il cherche les fichiers dans le dossier `@compile`"], a: 0,
+			expl: "`@fichier` recopie le contenu du fichier dans la ligne de commande. Pratique quand les classes sont dans plusieurs paquetages qui se citent entre eux : on les compile toutes d'un coup." },
+		{ id: "o05.dest", k: "qcm", q: "La classe `MonTest` commence par `package utilitaire.dev;`. Où `javac MonTest.java -d ~/TP/java/paquetage_class` range-t-il `MonTest.class` ?",
+			opts: ["Dans `~/TP/java/paquetage_class/utilitaire/dev/`", "Dans `~/TP/java/paquetage_class/`", "À côté de `MonTest.java`", "Dans `utilitaire/dev/` du dossier courant"], a: 0,
+			expl: "`-d` donne la racine des paquetages : `javac` crée les sous-dossiers qui correspondent au `package`. Si cette racine est dans le CLASSPATH, n'importe quel programme peut faire `import utilitaire.dev.MonTest;`." },
+		{ id: "o05.affiche", k: "code", mode: "method",
+			enonce: "Pour une classe utilitaire d'affichage, écris `static String afficher(int[][] tab, int largeur)` : une ligne par ligne du tableau, qui commence par son numéro et ` |`, puis chaque valeur sur `largeur` caractères (calée à droite) suivie de `|`. Chaque ligne se termine par un retour à la ligne.",
+			regles: ["allman"],
+			harness: T(`
+		int[][] notes = { { 462, 498, 297 }, { 691, 4, 503 } };
+		System.out.print(afficher(notes, 3));
+		int[][] petit = { { 1, 2 }, { 3, 40 }, { 5, 6 } };
+		System.out.print(afficher(petit, 4));`),
+			depart: T(`
+	static String afficher(int[][] tab, int largeur)
+	{
+
+	}`),
+			solution: T(`
+	static String afficher(int[][] tab, int largeur)
+	{
+		String s = "";
+		for (int lig = 0; lig < tab.length; lig++)
+		{
+			s += lig + " |";
+			for (int col = 0; col < tab[lig].length; col++)
+			{
+				s += String.format("%" + largeur + "d", tab[lig][col]) + "|";
+			}
+			s += "\\n";
+		}
+		return s;
+	}`),
+			indices: ["Deux boucles imbriquées : les lignes (`tab.length`), puis les colonnes de chaque ligne (`tab[lig].length`).",
+				"Le format se construit avec la largeur : `String.format(\"%\" + largeur + \"d\", valeur)` donne par exemple `%3d`."] }
+	]);
+
+	/* ---------------- TP9 bis : des interfaces pour limiter un ensemble ---------------- */
+	ajouter("o08", [
+		{ id: "o08.limiter", k: "qcm", q: "`Paquet` implémente `IPioche` (`piocher()`) et `IDefausse` (`defausser(String c)`). On écrit `IPioche pioche = new Paquet();` puis `pioche.defausser(\"As\");`. Que se passe-t-il ?",
+			opts: ["Erreur de compilation : la variable est de type `IPioche`, qui ne déclare pas `defausser`", "Ça marche : l'objet est un `Paquet`, qui a bien `defausser`", "Ça compile mais lève une exception à l'exécution", "L'appel est ignoré"], a: 0,
+			expl: "À la **compilation**, Java regarde le type de la **variable** ; à l'**exécution**, il exécute la méthode de l'**objet**. Déclarer la pioche en `IPioche` empêche de faire sur elle autre chose que piocher : c'est le but de ces interfaces." },
+		{ id: "o08.paquet", k: "code", mode: "class", fichier: "Paquet.java",
+			enonce: "Écris la classe `Paquet`, qui range des cartes (des `String`) dans une `ArrayList` et implémente les deux interfaces fournies. Le **dessus** du paquet est la **fin** de la liste. `ajouter(String c)` pose une carte sur le dessus ; `piocher()` retire et renvoie la carte du dessus (`null` si le paquet est vide) ; `estVide()` ; `defausser(String c)` pose une carte sur le dessus ; `sommet()` renvoie la carte du dessus sans la retirer (`null` si vide).",
+			regles: ["allman"],
+			harness: T(`
+public class TestPaquet
+{
+    public static void main(String[] args)
+    {
+        Paquet p = new Paquet();
+        p.ajouter("As");
+        p.ajouter("Roi");
+        p.ajouter("Dame");
+        IPioche pioche = p;
+        System.out.println(pioche.piocher());
+        IDefausse defausse = new Paquet();
+        System.out.println(defausse.sommet());
+        defausse.defausser("Valet");
+        defausse.defausser(pioche.piocher());
+        System.out.println(defausse.sommet());
+        System.out.println(pioche.piocher() + " " + pioche.estVide());
+        System.out.println(pioche.piocher());
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+
+interface IPioche
+{
+    String  piocher();
+    boolean estVide();
+}
+
+interface IDefausse
+{
+    void   defausser(String carte);
+    String sommet();
+}
+
+public class Paquet
+{
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+
+interface IPioche
+{
+    String  piocher();
+    boolean estVide();
+}
+
+interface IDefausse
+{
+    void   defausser(String carte);
+    String sommet();
+}
+
+public class Paquet implements IPioche, IDefausse
+{
+    private ArrayList<String> cartes;
+
+    public Paquet()
+    {
+        this.cartes = new ArrayList<String>();
+    }
+
+    public void ajouter(String carte)
+    {
+        this.cartes.add(carte);
+    }
+
+    public String piocher()
+    {
+        if (this.cartes.isEmpty())
+        {
+            return null;
+        }
+        return this.cartes.remove(this.cartes.size() - 1);
+    }
+
+    public boolean estVide()
+    {
+        return this.cartes.isEmpty();
+    }
+
+    public void defausser(String carte)
+    {
+        this.cartes.add(carte);
+    }
+
+    public String sommet()
+    {
+        if (this.cartes.isEmpty())
+        {
+            return null;
+        }
+        return this.cartes.get(this.cartes.size() - 1);
+    }
+}`),
+			indices: ["`class Paquet implements IPioche, IDefausse` : il faut alors écrire les 4 méthodes des interfaces, en `public`, plus `ajouter`.",
+				"Le dessus est la fin : `this.cartes.remove(this.cartes.size() - 1)` retire et renvoie la dernière carte, `get(size() - 1)` la lit sans la retirer. Teste d'abord `isEmpty()`."] }
+	]);
+	/* ---------------- TP5 : types enveloppes (nouvelle unité, après l'unité 4) ---------------- */
+	var enveloppes = {
+		id: "o04b", num: 5, titre: "Types enveloppes : Integer, Double...", badge: "Emballeur",
+		idee: [
+			"Chaque type de base a sa **classe enveloppe** : `int` → `Integer`, `double` → `Double`, `char` → `Character`, `boolean` → `Boolean`. Une collection ne range que des objets : `ArrayList<Integer>`. Java passe de l'un à l'autre tout seul : c'est le **boxing** (`Integer n = 5;`) et l'**unboxing** (`int x = n;`).",
+			"Un `Integer` est un **objet** : il peut valoir `null` (et `int x = n;` lève alors une `NullPointerException`), et `==` compare les **références**. Java garde en cache les valeurs de -128 à 127 : avec 100, `a == b` est vrai, avec 1000 il est faux. Compare toujours avec `equals`.",
+			"Le boxing exige le type **exact** : `Double d = 5;` ne compile pas (écris `5.0`). Texte vers nombre : `Integer.parseInt(\"42\")`, `Double.parseDouble(\"12.4\")` ; nombre vers texte : `String.valueOf(x)`. Les paramètres sont passés **par valeur** : une méthode ne peut pas échanger deux `int` de l'appelant."
+		],
+		exemple: {
+			java: T(`
+import java.util.ArrayList;
+
+public class Releves
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Double> temperatures = new ArrayList<Double>();
+        temperatures.add(12.5);                       // boxing : double -> Double
+        temperatures.add(Double.parseDouble("14.0")); // texte -> double -> Double
+        double somme = 0;
+        for (double t : temperatures)                 // unboxing à chaque tour
+        {
+            somme = somme + t;
+        }
+        System.out.println("moyenne : " + somme / temperatures.size());
+
+        Integer a = 1000;
+        Integer b = 1000;
+        System.out.println(a == b);      // false : deux objets différents
+        System.out.println(a.equals(b)); // true  : même valeur
+    }
+}`),
+			note: "Affiche `moyenne : 13.25`, puis `false` et `true`. Avec `Integer a = 100; Integer b = 100;`, `a == b` vaudrait `true` à cause du cache : c'est justement ce qui rend `==` piégeux."
+		},
+		exos: [
+			{ id: "o04b.liste", k: "qcm", q: "Quelle ligne ne compile **pas** ?",
+				opts: ["`ArrayList<int> l = new ArrayList<int>();`", "`ArrayList<Integer> l = new ArrayList<Integer>();`", "`Integer n = 5;`", "`int x = Integer.parseInt(\"5\");`"], a: 0,
+				expl: "Entre `< >`, il faut une classe : `int` est un type de base, on écrit son enveloppe `Integer`. Ensuite `l.add(5)` marche grâce au boxing." },
+			{ id: "o04b.cache", k: "predict",
+				q: "Qu'affiche ce programme ?",
+				code: T(`
+public class Tickets
+{
+    public static void main(String[] args)
+    {
+        Integer a = 127;
+        Integer b = 127;
+        Integer c = 128;
+        Integer d = 128;
+        System.out.println(a == b);
+        System.out.println(c == d);
+        System.out.println(c.equals(d));
+        System.out.println(c == 128);
+    }
+}`),
+				expl: "`==` entre deux `Integer` compare les objets. Java réutilise le même objet pour -128 à 127 (`a == b` vrai), mais en crée un nouveau pour 128 (`c == d` faux). `equals` compare les valeurs. Dans `c == 128`, un côté est un `int` : Java déballe `c` et compare les nombres." },
+			{ id: "o04b.double", k: "qcm", q: "`Double prix = 5;` ne compile pas. Pourquoi ?",
+				opts: ["Le boxing exige le type exact : `5` est un `int`, il ne peut devenir qu'un `Integer`", "Un `Double` ne peut pas contenir une valeur entière", "Il faut écrire `new Double(5)`", "Il manque `import java.lang.Double;`"], a: 0,
+				expl: "Java sait élargir un `int` en `double` (`double x = 5;` marche), **ou** emballer un `double` dans un `Double`, mais pas les deux d'un coup. Écris `Double prix = 5.0;`." },
+			{ id: "o04b.null", k: "qcm", q: "`Integer stock = null;` puis `int x = stock;`. Que se passe-t-il ?",
+				opts: ["Ça compile, mais l'exécution lève une `NullPointerException`", "`x` vaut 0", "Erreur de compilation", "`x` vaut `null`"], a: 0,
+				expl: "`int x = stock;` appelle en cachette `stock.intValue()`. Sur `null`, c'est une `NullPointerException`. Un `int` ne peut jamais valoir `null`." },
+			{ id: "o04b.echange", k: "predict",
+				q: "Qu'affiche ce programme ?",
+				code: T(`
+public class Echanges
+{
+    static void echanger(int x, int y)
+    {
+        int tmp = x;
+        x = y;
+        y = tmp;
+    }
+
+    static void echanger(int[] t)
+    {
+        int tmp = t[0];
+        t[0] = t[1];
+        t[1] = tmp;
+    }
+
+    public static void main(String[] args)
+    {
+        int a = 5;
+        int b = 8;
+        echanger(a, b);
+        System.out.println(a + " " + b);
+        int[] tab = { 5, 8 };
+        echanger(tab);
+        System.out.println(tab[0] + " " + tab[1]);
+    }
+}`),
+				expl: "Java passe une **copie** de chaque valeur : la première méthode échange ses copies `x` et `y`, pas `a` et `b`. Pour un tableau, la copie est celle de la **référence** : la méthode modifie bien le même tableau." },
+			{ id: "o04b.conv", k: "fill", q: "Complète les conversions entre texte et nombres.",
+				code: T(`
+double x = Double.___("12.4");
+int n = Integer.___("42");
+String s = String.___(x + n);`),
+				trous: [["parseDouble"], ["parseInt"], ["valueOf"]],
+				expl: "`parseDouble` et `parseInt` lisent un nombre dans une `String` (et lèvent `NumberFormatException` si ce n'en est pas un). `String.valueOf` fait l'inverse, comme `\"\" + (x + n)`." },
+			{ id: "o04b.remove", k: "bug",
+				code: T(`
+import java.util.ArrayList;
+
+public class Notes
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Integer> notes = new ArrayList<Integer>();
+        notes.add(15);
+        notes.add(12);
+        notes.add(18);
+        notes.remove(12);
+        System.out.println(notes);
+    }
+}`),
+				ligne: 11, fix: ["notes.remove(Integer.valueOf(12));", "notes.remove((Integer) 12);"],
+				expl: "Avec un `int`, `remove(12)` enlève la case d'**indice** 12 : `IndexOutOfBoundsException`. Pour enlever la **valeur** 12, il faut lui passer un objet `Integer` : `notes.remove(Integer.valueOf(12))`." },
+			{ id: "o04b.bilan", k: "code", mode: "method",
+				enonce: "Les mesures arrivent sous forme de texte. Écris `static String bilan(String[] mesures)` (au moins une mesure) : convertis chaque texte avec `Double.parseDouble`, puis renvoie 3 lignes : combien de fois la **première** mesure apparaît, la plus petite et la plus grande. Exemple pour `{\"13.5\", \"2.3\", \"15.6\", \"13.5\"}` : `13.5 apparait 2 fois`, `min : 2.3`, `max : 15.6` (chaque ligne finit par un retour à la ligne).",
+				regles: ["allman"],
+				harness: T(`
+		String[] m1 = { "13.5", "2.3", "15.6", "13.5" };
+		System.out.print(bilan(m1));
+		String[] m2 = { "7", "-1.25", "7.0", "42", "7" };
+		System.out.print(bilan(m2));`),
+				depart: T(`
+	static String bilan(String[] mesures)
+	{
+
+	}`),
+				solution: T(`
+	static String bilan(String[] mesures)
+	{
+		double premiere = Double.parseDouble(mesures[0]);
+		double min = premiere;
+		double max = premiere;
+		int nb = 0;
+		for (int i = 0; i < mesures.length; i++)
+		{
+			double v = Double.parseDouble(mesures[i]);
+			if (v == premiere)
+			{
+				nb++;
+			}
+			if (v < min)
+			{
+				min = v;
+			}
+			if (v > max)
+			{
+				max = v;
+			}
+		}
+		return premiere + " apparait " + nb + " fois\\n" + "min : " + min + "\\n" + "max : " + max + "\\n";
+	}`),
+				indices: ["Convertis d'abord la première mesure : elle sert de point de départ pour le minimum, le maximum et le comptage.",
+				"`\"7\"` et `\"7.0\"` donnent le même `double` 7.0 : compare les nombres convertis, pas les textes."] },
+			{ id: "o04b.horaire", k: "code", mode: "class", fichier: "Horaire.java",
+				enonce: "Écris `Horaire(int h, int m)` qui implémente `Comparable<Horaire>`. `equals(Object o)` : vrai si `o` est un `Horaire` de même heure et mêmes minutes. `compareTo(Horaire autre)` renvoie le **nombre de minutes** qui séparent les deux horaires (négatif si l'horaire courant est plus tôt). `toString()` : `08:05`.",
+				regles: ["allman"],
+				harness: T(`
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class TestHoraire
+{
+    public static void main(String[] args)
+    {
+        Horaire a = new Horaire(8, 5);
+        Horaire b = new Horaire(10, 0);
+        System.out.println(a + " " + b);
+        System.out.println(a.compareTo(b) + " " + b.compareTo(a));
+        System.out.println(a.equals(new Horaire(8, 5)) + " " + a.equals(b) + " " + a.equals("08:05"));
+        ArrayList<Horaire> journee = new ArrayList<Horaire>();
+        journee.add(new Horaire(17, 30));
+        journee.add(a);
+        journee.add(new Horaire(12, 15));
+        journee.add(b);
+        Collections.sort(journee);
+        System.out.println(journee);
+    }
+}`),
+				depart: T(`
+public class Horaire
+{
+
+}`),
+				solution: T(`
+public class Horaire implements Comparable<Horaire>
+{
+    private int h;
+    private int m;
+
+    public Horaire(int h, int m)
+    {
+        this.h = h;
+        this.m = m;
+    }
+
+    private int enMinutes()
+    {
+        return this.h * 60 + this.m;
+    }
+
+    public boolean equals(Object o)
+    {
+        if (!(o instanceof Horaire))
+        {
+            return false;
+        }
+        Horaire autre = (Horaire) o;
+        return this.h == autre.h && this.m == autre.m;
+    }
+
+    public int compareTo(Horaire autre)
+    {
+        return this.enMinutes() - autre.enMinutes();
+    }
+
+    public String toString()
+    {
+        return String.format("%02d:%02d", this.h, this.m);
+    }
+}`),
+				indices: ["Ramène chaque horaire en minutes depuis minuit (`h * 60 + m`) : `compareTo` n'a plus qu'à faire une soustraction.",
+				"`equals(Object o)` : teste d'abord `o instanceof Horaire`, puis caste `(Horaire) o` pour lire ses attributs. `String.format(\"%02d:%02d\", ...)` ajoute les zéros."] }
+		]
+	};
+	var pos = OBJETS_UNITES.indexOf(unite("o04")) + 1;
+	OBJETS_UNITES.splice(pos, 0, enveloppes);
+	OBJETS_UNITES.forEach(function (c, i) { c.num = i + 1; });
+
+	/* ---------------- TP9 : la file d'attente avec l'interface Queue ---------------- */
+	ajouter("o08", [
+		{ id: "o08.queue", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class Guichet
+{
+    public static void main(String[] args)
+    {
+        Queue<String> file = new LinkedList<String>();
+        file.offer("Ana");
+        file.offer("Bob");
+        file.offer("Chloé");
+        System.out.println(file.poll());
+        System.out.println(file.peek());
+        file.offer("Dan");
+        System.out.println(file);
+        System.out.println(file.poll() + " " + file.poll() + " " + file.poll());
+        System.out.println(file.poll());
+    }
+}`),
+			expl: "`offer` ajoute en queue, `poll` retire et renvoie la tête, `peek` la lit sans la retirer. Sur une file vide, `poll` et `peek` renvoient `null` (alors que `remove()` et `element()` lèveraient une exception)." },
+		{ id: "o08.queuetype", k: "qcm", q: "`Queue<String> file = new LinkedList<String>();` puis `file.get(1);`. Que se passe-t-il ?",
+			opts: ["Erreur de compilation : l'interface `Queue` n'a pas de méthode `get`", "Ça renvoie le 2e élément, car l'objet est une `LinkedList`", "Ça lève une exception à l'exécution", "Ça renvoie `null`"], a: 0,
+			expl: "Déclarer la variable en `Queue` limite volontairement les opérations à celles d'une file : on ne peut plus aller chercher quelqu'un au milieu. C'est le type de la **variable** qui compte à la compilation." }
+	]);
+
+	/* ---------------- TP11 : une classe générique ---------------- */
+	ajouter("o11", [
+		{ id: "o11.generique", k: "code", mode: "class", fichier: "FileAttente.java",
+			enonce: "Plutôt que d'écrire une file pour chaque type, écris une classe **générique** `FileAttente<T>`, faite de cellules chaînées `Maillon<T>` (fournie dans le code de départ). `enfiler(T v)` ajoute en queue, `defiler()` retire et renvoie la tête (`null` si vide), `estVide()` et `taille()`. `toString()` : `[Ana, Bob]`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestFile
+{
+    public static void main(String[] args)
+    {
+        FileAttente<String> noms = new FileAttente<String>();
+        noms.enfiler("Ana");
+        noms.enfiler("Bob");
+        noms.enfiler("Chloé");
+        System.out.println(noms + " " + noms.taille());
+        String premier = noms.defiler();
+        System.out.println(premier + " " + noms);
+        FileAttente<Integer> nombres = new FileAttente<Integer>();
+        System.out.println(nombres.estVide() + " " + nombres.defiler());
+        nombres.enfiler(10);
+        nombres.enfiler(32);
+        int somme = nombres.defiler() + nombres.defiler();
+        System.out.println(somme + " " + nombres.estVide() + " " + nombres);
+    }
+}`),
+			depart: T(`
+class Maillon<T>
+{
+    private T valeur;
+    private Maillon<T> svt;
+
+    public Maillon(T valeur)
+    {
+        this.valeur = valeur;
+        this.svt = null;
+    }
+
+    public T getValeur()
+    {
+        return this.valeur;
+    }
+
+    public Maillon<T> getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setSvt(Maillon<T> svt)
+    {
+        this.svt = svt;
+    }
+}
+
+public class FileAttente<T>
+{
+
+}`),
+			solution: T(`
+class Maillon<T>
+{
+    private T valeur;
+    private Maillon<T> svt;
+
+    public Maillon(T valeur)
+    {
+        this.valeur = valeur;
+        this.svt = null;
+    }
+
+    public T getValeur()
+    {
+        return this.valeur;
+    }
+
+    public Maillon<T> getSvt()
+    {
+        return this.svt;
+    }
+
+    public void setSvt(Maillon<T> svt)
+    {
+        this.svt = svt;
+    }
+}
+
+public class FileAttente<T>
+{
+    private Maillon<T> tete;
+    private Maillon<T> queue;
+    private int nb;
+
+    public void enfiler(T v)
+    {
+        Maillon<T> m = new Maillon<T>(v);
+        if (this.queue == null)
+        {
+            this.tete = m;
+        }
+        else
+        {
+            this.queue.setSvt(m);
+        }
+        this.queue = m;
+        this.nb++;
+    }
+
+    public T defiler()
+    {
+        if (this.tete == null)
+        {
+            return null;
+        }
+        T v = this.tete.getValeur();
+        this.tete = this.tete.getSvt();
+        if (this.tete == null)
+        {
+            this.queue = null;
+        }
+        this.nb--;
+        return v;
+    }
+
+    public boolean estVide()
+    {
+        return this.tete == null;
+    }
+
+    public int taille()
+    {
+        return this.nb;
+    }
+
+    public String toString()
+    {
+        String s = "[";
+        for (Maillon<T> m = this.tete; m != null; m = m.getSvt())
+        {
+            s += m.getValeur();
+            if (m.getSvt() != null)
+            {
+                s += ", ";
+            }
+        }
+        return s + "]";
+    }
+}`),
+			indices: ["Partout où tu écrirais `String` ou `Etudiant`, écris `T` : `private Maillon<T> tete;`, `public void enfiler(T v)`, `public T defiler()`.",
+				"Garde la tête **et** la queue : on enfile après la queue (`this.queue.setSvt(m)`), on défile à la tête. Quand la file devient vide, remets aussi `queue` à `null`."] }
+	]);
+
+})();
+
+/* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
    format que CHAPITRES), puis l'ajouter ici.
@@ -22701,7 +23714,11 @@ function lessonOpen(l)
 {
 	if (allOpen()) { return true; }
 	var all = allLessons(), i = all.indexOf(l);
-	return i <= 0 || lessonDone(all[i - 1].id);
+	if (i <= 0 || lessonDone(all[i - 1].id) || lessonDone(l.id)) { return true; }
+	/* Une leçon ajoutée plus tard (nouvelle unité) ne doit pas reverrouiller ce
+	   qu'on a déjà atteint : si une leçon plus loin est faite, celle-ci reste ouverte. */
+	for (var k = i + 1; k < all.length; k++) { if (lessonDone(all[k].id)) { return true; } }
+	return false;
 }
 function uniteDone(c) { return lessonsOf(c).every(function (l) { return lessonDone(l.id); }); }
 function chapIndex(id) { for (var i = 0; i < CH.length; i++) { if (CH[i].id === id) { return i; } } return -1; }
