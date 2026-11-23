@@ -1131,7 +1131,7 @@ var JavaMini = (function ()
 			var a = [];
 			do
 			{
-				if (this.accept("?")) { a.push("?"); if (this.accept("extends") || this.accept("super")) { a[a.length - 1] = this.rawType(); } continue; }
+				if (this.accept("?")) { a.push("?"); if (this.accept("extends")) { a[a.length - 1] = "?extends " + this.rawType(); } else if (this.accept("super")) { a[a.length - 1] = "?super " + this.rawType(); } continue; }
 				a.push(this.rawType());
 			} while (this.accept(","));
 			this.expect(">", "pour fermer les paramètres de type");
@@ -1831,6 +1831,16 @@ var JavaMini = (function ()
 	var EXC_PKG = { NoSuchElementException: "java.util", ConcurrentModificationException: "java.util", InputMismatchException: "java.util" };
 	Object.keys(EXC).forEach(function (k) { KNOWN_TYPES[k] = 1; if (EXC[k]) { SUPERS[k] = [EXC[k]]; } });
 	function erase(t) { return String(t).replace(/<.*>/, ""); }
+	/* Arguments de type de premier niveau : "Map<String, List<X>>" -> ["String", "List<X>"] (espaces retirés). */
+	function targsOf(t)
+	{
+		var m = String(t).replace(/\s+/g, "").match(/<(.*)>$/);
+		if (!m) { return null; }
+		var parts = [], depth = 0, cur = "";
+		m[1].split("").forEach(function (ch) { if (ch === "<") { depth++; } if (ch === ">") { depth--; } if (ch === "," && !depth) { parts.push(cur); cur = ""; } else { cur += ch; } });
+		parts.push(cur);
+		return parts;
+	}
 	/* hashCode de Java, pour reproduire l'ordre de parcours d'une HashMap */
 	function javaHash(v)
 	{
@@ -1898,6 +1908,35 @@ var JavaMini = (function ()
 			var c = this.classes[t];
 			if (c) { return (c.ext ? [erase(c.ext)] : c.isEnum ? ["Comparable"] : []).concat(c.impls.map(erase)); }
 			return SUPERS[t] || [];
+		},
+		/* Comme javac : List<Nuitee> n'est pas une List<ITarif> (les génériques sont invariants),
+		   sauf avec un joker : List<? extends ITarif>, List<? super Nuitee>, List<?>. */
+		genCheck: function (st, t, line)
+		{
+			var a = st ? targsOf(st) : null, b = targsOf(t);
+			if (!a || !b || a.length !== b.length || !this.isSub(st, t)) { return; }
+			for (var k = 0; k < b.length; k++)
+			{
+				var x = a[k], y = b[k], ok;
+				if (x === "" || y === "?" || TPARAMS[erase(x)] || TPARAMS[erase(y)]) { continue; }
+				var xb = x.replace(/^\?(extends|super)/, "");
+				if (/^\?extends/.test(y)) { ok = !/^\?super/.test(x) && x !== "?" && this.isSub(xb, y.slice(8)) && (erase(xb) === xb || xb === y.slice(8)); }
+				else if (/^\?super/.test(y)) { ok = !/^\?extends/.test(x) && x !== "?" && this.isSub(y.slice(6), xb); }
+				else { ok = x === y; }
+				if (!ok)
+				{
+					var nice = function (u) { return String(u).replace(/\s+/g, "").replace(/\?(extends|super)/g, "? $1 ").replace(/,/g, ", "); };
+					throw cErr("types incompatibles : " + nice(st) + " ne peut pas être converti en " + nice(t), line,
+						/^\?/.test(y) ? "" : "Les génériques ne suivent pas l'héritage : une " + erase(st) + "<" + nice(x) + "> n'est pas une " + erase(t) + "<" + nice(y) + ">, même si " + nice(xb) + " est un sous-type de " + nice(y) + ". Pour accepter les deux, déclare le paramètre " + erase(t) + "<? extends " + nice(y) + ">.");
+				}
+			}
+		},
+		genArgs: function (m, argNodes, fr, line)
+		{
+			for (var i = 0; i < m.params.length && i < argNodes.length; i++)
+			{
+				if (/</.test(m.params[i].t)) { this.genCheck(this.staticType(argNodes[i], fr), m.params[i].t, line); }
+			}
 		},
 		isSub: function (from, to)
 		{
@@ -2107,6 +2146,7 @@ var JavaMini = (function ()
 		{
 			if (init.k === "arrInit") { return this.arrInit(init, t, fr); }
 			var v = this.ev(init, fr);
+			if (/</.test(t)) { this.genCheck(this.staticType(init, fr), t, init.line); }
 			return this.conv(v, t, init.line, init);
 		},
 		/* Conversion lors d'une affectation ou d'un passage de paramètre. */
@@ -2463,6 +2503,7 @@ var JavaMini = (function ()
 					{
 						if (fr.meth.ret === "void") { throw cErr("la méthode " + fr.meth.name + " est void : elle ne peut pas renvoyer de valeur", s.line); }
 						var rv = this.ev(s.e, fr);
+						if (/</.test(fr.meth.ret)) { this.genCheck(this.staticType(s.e, fr), fr.meth.ret, s.line); }
 						return { ret: this.conv(rv, fr.meth.ret, s.line, s.e) };
 					}
 					if (fr.meth.ret !== "void") { throw cErr("valeur de retour manquante : la méthode " + fr.meth.name + " doit renvoyer un " + fr.meth.ret, s.line); }
@@ -2709,7 +2750,7 @@ var JavaMini = (function ()
 				}
 				return null;
 			}
-			function targ(t, k) { var m = String(t).match(/<(.*)>$/); if (!m) { return null; } var parts = [], depth = 0, cur = ""; m[1].split("").forEach(function (ch) { if (ch === "<") { depth++; } if (ch === ">") { depth--; } if (ch === "," && !depth) { parts.push(cur.trim()); cur = ""; } else { cur += ch; } }); parts.push(cur.trim()); return parts[k] || null; }
+			function targ(t, k) { var m = String(t).match(/<(.*)>$/); if (!m) { return null; } var parts = [], depth = 0, cur = ""; m[1].split("").forEach(function (ch) { if (ch === "<") { depth++; } if (ch === ">") { depth--; } if (ch === "," && !depth) { parts.push(cur.trim()); cur = ""; } else { cur += ch; } }); parts.push(cur.trim()); var r = parts[k] || null; if (r && r.charAt(0) === "?") { r = /^\?extends /.test(r) ? r.slice(9) : "Object"; } return r; }
 			var here = fr.meth && fr.meth.cls ? fr.meth.cls : fr.cls;
 			switch (e.k)
 			{
@@ -2790,6 +2831,7 @@ var JavaMini = (function ()
 					throw cErr("la méthode " + name + " n'est pas static : elle ne peut pas être appelée depuis une méthode static sans objet", node.line,
 						"Ajoute static à sa déclaration, ou appelle-la sur un objet : obj." + name + "(...).");
 				}
+				this.genArgs(m, node.args, fr, node.line);
 				return this.invoke(m, m.stat ? null : fr.self, args, node.line);
 			}
 			var tg = node.target;
@@ -2815,6 +2857,7 @@ var JavaMini = (function ()
 				var sm = this.pick(sl, args, "la méthode " + name, node.line);
 				if (sm.abs) { throw cErr("la méthode " + name + " est abstract dans " + parent.name + " : super." + name + "(...) n'a rien à exécuter", node.line); }
 				if (sm.priv) { throw cErr(name + "(...) a un accès private dans " + parent.name, node.line); }
+				this.genArgs(sm, node.args, fr, node.line);
 				return this.invoke(sm, sm.stat ? null : fr.self, args, node.line);
 			}
 			if (tg.k === "field" && tg.obj.k === "name" && tg.obj.name === "System" && !this.findVar(fr, "System"))
@@ -2880,6 +2923,7 @@ var JavaMini = (function ()
 			}
 			var mm = this.pick(list, args, "la méthode " + name, node.line);
 			if (mm.priv && fr.cls !== mm.cls) { throw cErr(name + "(...) a un accès private dans " + mm.cls.name, node.line); }
+			this.genArgs(mm, node.args, fr, node.line);
 			return this.invoke(mm, mm.stat ? null : obj, args, node.line);
 		},
 		printCall: function (node, fr)
@@ -2998,6 +3042,7 @@ var JavaMini = (function ()
 				var m = this.pick(list, args, "la méthode " + cname + "." + name, line);
 				if (!m.stat) { throw cErr("la méthode " + name + " n'est pas static : il faut l'appeler sur un objet, pas sur la classe " + cname, line); }
 				if (m.priv && fr.cls !== m.cls) { throw cErr(name + "(...) a un accès private dans " + m.cls.name, line); }
+				if (node.args) { this.genArgs(m, node.args, fr, line); }
 				return this.invoke(m, null, args, line);
 			}
 			if (cname === "Clavier")
@@ -21107,6 +21152,1003 @@ public class TestEtape3
 });
 
 
+/* ----------------------------------- D : les pâturages du plateau (inspiré du DS1) */
+var RD_IMP = "import java.util.ArrayList;\nimport java.util.List;";
+var RD_TROUPEAU = T(`
+public class Troupeau
+{
+    private static int nbTroupeaux = 0;
+
+    private int    numero;
+    private String berger;
+    private int    nbBetes;
+
+    public Troupeau(String berger, int nbBetes)
+    {
+        Troupeau.nbTroupeaux++;
+        this.numero  = Troupeau.nbTroupeaux;
+        this.berger  = berger;
+        this.nbBetes = nbBetes;
+    }
+
+    public Troupeau(String berger)
+    {
+        this(berger, 12);
+    }
+
+    public int getNumero()
+    {
+        return this.numero;
+    }
+
+    public String getBerger()
+    {
+        return this.berger;
+    }
+
+    public int getNbBetes()
+    {
+        return this.nbBetes;
+    }
+
+    public boolean prendreBetes(int nb)
+    {
+        if (nb < 1 || nb > this.nbBetes)
+        {
+            return false;
+        }
+        this.nbBetes -= nb;
+        return true;
+    }
+
+    public void rendreBetes(int nb)
+    {
+        if (nb > 0)
+        {
+            this.nbBetes += nb;
+        }
+    }
+
+    public String toString()
+    {
+        return "Troupeau " + this.numero + " (" + this.berger + ") : " + this.nbBetes + " bêtes en réserve";
+    }
+
+    public static String tableau(Troupeau[] tab)
+    {
+        String bord = "+----+------------+-----+\\n";
+        String s = bord;
+        for (Troupeau t : tab)
+        {
+            s += String.format("| %2d | %-10s | %3d |", t.getNumero(), t.getBerger(), t.getNbBetes()) + "\\n";
+        }
+        return s + bord;
+    }
+}`);
+var RD_PAT_DEBUT = T(`
+public class Paturage
+{
+    private int     numero;
+    private String  vegetation;
+    private boolean bordRoute;`);
+var RD_PAT_GET = T(`
+    public int getNumero()
+    {
+        return this.numero;
+    }
+
+    public String getVegetation()
+    {
+        return this.vegetation;
+    }
+
+    public boolean isBordRoute()
+    {
+        return this.bordRoute;
+    }`);
+var RD_PAT2 = J2(RD_PAT_DEBUT + "\n" + T(`
+    public Paturage(int numero, String vegetation, boolean bordRoute)
+    {
+        this.numero     = numero;
+        this.vegetation = vegetation;
+        this.bordRoute  = bordRoute;
+    }`), RD_PAT_GET, T(`
+    public String toString()
+    {
+        String s = "P" + this.numero + " " + this.vegetation;
+        if (this.bordRoute)
+        {
+            s += ", bord de route";
+        }
+        return s;
+    }
+}`));
+var RD_PAT_VOISINS = T(`
+    public int getNbVoisins()
+    {
+        return this.voisins.size();
+    }
+
+    public boolean estVoisin(Paturage p)
+    {
+        return this.voisins.contains(p);
+    }
+
+    public boolean ajouterVoisin(Paturage p)
+    {
+        if (p == null || p == this || this.estVoisin(p))
+        {
+            return false;
+        }
+        this.voisins.add(p);
+        p.voisins.add(this);
+        return true;
+    }`);
+var RD_PAT_TS3 = T(`
+        String s = "P" + this.numero + " " + this.vegetation;
+        if (this.bordRoute)
+        {
+            s += ", bord de route";
+        }
+        s += " ; voisins :";
+        if (this.voisins.isEmpty())
+        {
+            s += " aucun";
+        }
+        for (Paturage v : this.voisins)
+        {
+            s += " " + v.getNumero();
+        }`);
+var RD_PAT3 = J2(RD_PAT_DEBUT + "\n" + T(`
+    private List<Paturage> voisins;
+
+    public Paturage(int numero, String vegetation, boolean bordRoute)
+    {
+        this.numero     = numero;
+        this.vegetation = vegetation;
+        this.bordRoute  = bordRoute;
+        this.voisins    = new ArrayList<Paturage>();
+    }`), RD_PAT_GET, RD_PAT_VOISINS, T(`
+    public String toString()
+    {`) + "\n" + RD_PAT_TS3 + "\n" + T(`
+        return s;
+    }
+}`));
+var RD_PAT4 = J2(RD_PAT_DEBUT + "\n" + T(`
+    private List<Paturage> voisins;
+    private Troupeau       troupeau;
+    private int            nbBetes;
+
+    public Paturage(int numero, String vegetation, boolean bordRoute)
+    {
+        this.numero     = numero;
+        this.vegetation = vegetation;
+        this.bordRoute  = bordRoute;
+        this.voisins    = new ArrayList<Paturage>();
+        this.troupeau   = null;
+        this.nbBetes    = 0;
+    }`), RD_PAT_GET, T(`
+    public Troupeau getTroupeau()
+    {
+        return this.troupeau;
+    }
+
+    public int getNbBetes()
+    {
+        return this.nbBetes;
+    }`), RD_PAT_VOISINS, T(`
+    public boolean accueillir(Troupeau t)
+    {
+        if (t == null || this.troupeau != null || !t.prendreBetes(1))
+        {
+            return false;
+        }
+        this.troupeau = t;
+        this.nbBetes  = 1;
+        return true;
+    }
+
+    public boolean ajouterBetes(int nb)
+    {
+        if (this.troupeau == null || !this.troupeau.prendreBetes(nb))
+        {
+            return false;
+        }
+        this.nbBetes += nb;
+        return true;
+    }
+
+    public boolean retirerBetes(int nb)
+    {
+        if (this.troupeau == null || nb < 1 || nb > this.nbBetes)
+        {
+            return false;
+        }
+        this.nbBetes -= nb;
+        this.troupeau.rendreBetes(nb);
+        if (this.nbBetes == 0)
+        {
+            this.troupeau = null;
+        }
+        return true;
+    }
+
+    public String toString()
+    {`) + "\n" + RD_PAT_TS3 + "\n" + T(`
+        if (this.troupeau == null)
+        {
+            s += " ; libre";
+        }
+        else
+        {
+            s += " ; " + this.troupeau.getBerger() + " (" + this.nbBetes + ")";
+        }
+        return s;
+    }
+}`));
+var RD_PLATEAU_DEBUT = T(`
+public class Plateau
+{
+    private List<Paturage> paturages;
+
+    public Plateau(String[] vegetations, boolean[] bordRoute)
+    {
+        this.paturages = new ArrayList<Paturage>();
+        for (int i = 0; i < vegetations.length; i++)
+        {
+            this.paturages.add(new Paturage(i + 1, vegetations[i], bordRoute[i]));
+        }
+    }
+
+    public int getNbPaturages()
+    {
+        return this.paturages.size();
+    }
+
+    public Paturage getPaturage(int numero)
+    {
+        if (numero < 1 || numero > this.paturages.size())
+        {
+            return null;
+        }
+        return this.paturages.get(numero - 1);
+    }`);
+var RD_PLATEAU_RELIER = T(`
+    public int relier(int[][] liens)
+    {
+        int nb = 0;
+        for (int[] l : liens)
+        {
+            Paturage a = this.getPaturage(l[0]);
+            Paturage b = this.getPaturage(l[1]);
+            if (a != null && a.ajouterVoisin(b))
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }`);
+var RD_PLATEAU_INSTALLER = T(`
+    public int nbPaturages(Troupeau t)
+    {
+        int nb = 0;
+        for (Paturage p : this.paturages)
+        {
+            if (p.getTroupeau() == t)
+            {
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    public int nbBetesAuPre(Troupeau t)
+    {
+        int nb = 0;
+        for (Paturage p : this.paturages)
+        {
+            if (p.getTroupeau() == t)
+            {
+                nb += p.getNbBetes();
+            }
+        }
+        return nb;
+    }
+
+    public boolean installer(Troupeau t, int numero)
+    {
+        Paturage cible = this.getPaturage(numero);
+        if (t == null || cible == null)
+        {
+            return false;
+        }
+        if (this.nbPaturages(t) == 0)
+        {
+            if (!cible.isBordRoute())
+            {
+                return false;
+            }
+        }
+        else
+        {
+            boolean voisin = false;
+            for (Paturage p : this.paturages)
+            {
+                if (p.getTroupeau() == t && p.estVoisin(cible))
+                {
+                    voisin = true;
+                }
+            }
+            if (!voisin)
+            {
+                return false;
+            }
+        }
+        return cible.accueillir(t);
+    }`);
+var RD_PLATEAU_FIN = T(`
+    public String toString()
+    {
+        String s = "";
+        for (Paturage p : this.paturages)
+        {
+            s += p + "\\n";
+        }
+        return s;
+    }
+}`);
+var RD_PLATEAU2 = J2(RD_PLATEAU_DEBUT, RD_PLATEAU_FIN);
+var RD_PLATEAU3 = J2(RD_PLATEAU_DEBUT, RD_PLATEAU_RELIER, RD_PLATEAU_FIN);
+var RD_PLATEAU5 = J2(RD_PLATEAU_DEBUT, RD_PLATEAU_RELIER, RD_PLATEAU_INSTALLER, RD_PLATEAU_FIN);
+
+OBJETS_EVALS.push({
+	id: "oevD", theme: "Plateau et voisinages", titre: "Les pâturages du plateau", duree: "2h",
+	prerequis: "attribut de classe, constructeurs surchargés et `this(...)`, `String.format`, `List`, liens dans les deux sens, méthodes qui renvoient un `boolean`.",
+	intro: "Inspiré du DS1 : une coopérative de bergers se partage les **pâturages** d'un plateau. Chaque troupeau garde une réserve de bêtes ; il en envoie dans les pâturages, qui sont reliés entre eux par des chemins. Chaque classe est publique et a son propre fichier (un onglet chacun), comme sur machine. Indentation Allman exigée.",
+	regles: ["allman"],
+	etapes: [
+		{ id: "oevD.1", k: "code", mode: "class", titre: "Les troupeaux", fichier: "Troupeau.java", xp: 30,
+			enonce: "Écris `Troupeau` : un numéro attribué automatiquement grâce à un attribut de classe (le premier troupeau créé a le numéro 1), le nom du berger et le nombre de bêtes **en réserve**. Deux constructeurs : `Troupeau(String berger, int nbBetes)` et `Troupeau(String berger)`, qui donne 12 bêtes par défaut. Accesseurs `getNumero()`, `getBerger()`, `getNbBetes()`.\n\n`prendreBetes(int nb)` retire `nb` bêtes de la réserve et renvoie `true` ; elle renvoie `false` sans rien changer si `nb` est inférieur à 1 ou dépasse la réserve. `rendreBetes(int nb)` les remet en réserve (rien ne se passe si `nb` est inférieur à 1).\n\n`toString()` : `Troupeau 1 (Lucas) : 20 bêtes en réserve`. Enfin, la méthode de classe `tableau(Troupeau[] tab)` renvoie un tableau texte : une ligne `+----+------------+-----+` avant et après, et pour chaque troupeau une ligne au format `\"| %2d | %-10s | %3d |\"` (numéro, berger, réserve). Chaque ligne se termine par un retour à la ligne.",
+			regles: ["allman"],
+			harness: T(`
+public class TestBergers1
+{
+    public static void main(String[] args)
+    {
+        Troupeau a = new Troupeau("Lucas", 20);
+        Troupeau b = new Troupeau("Inès");
+        Troupeau c = new Troupeau("Bastien", 7);
+        System.out.println(a);
+        System.out.println(b);
+        System.out.println(a.prendreBetes(5) + " " + a.prendreBetes(0) + " " + a.prendreBetes(16) + " " + c.prendreBetes(7) + " " + c.prendreBetes(1));
+        b.rendreBetes(3);
+        b.rendreBetes(-4);
+        System.out.println(a.getNbBetes() + " " + b.getNbBetes() + " " + c.getNbBetes() + " " + c.getNumero());
+        System.out.print(Troupeau.tableau(new Troupeau[] { a, b, c }));
+    }
+}`),
+			depart: T(`
+public class Troupeau
+{
+
+}`),
+			solution: RD_TROUPEAU,
+			indices: ["`private static int nbTroupeaux = 0;` est partagé par tous les troupeaux : le constructeur l'augmente puis le recopie dans `this.numero`.",
+				"Le second constructeur ne recopie rien : il appelle le premier avec `this(berger, 12);`, qui doit être sa toute première instruction.",
+				"`String.format(\"| %2d | %-10s | %3d |\", ...)` : `%2d` cale le nombre à droite sur 2 caractères, `%-10s` cale le texte à gauche sur 10."] },
+		{ id: "oevD.2", k: "code", mode: "class", titre: "Le plateau et ses pâturages", fichier: "Plateau.java", xp: 25,
+			enonce: "Écris `Paturage(int numero, String vegetation, boolean bordRoute)` avec ses accesseurs `getNumero()`, `getVegetation()` et `isBordRoute()`. `toString()` : `P1 prairie, bord de route`, ou `P2 lande` si le pâturage n'est pas au bord de la route.\n\nPuis `Plateau(String[] vegetations, boolean[] bordRoute)` : les deux tableaux ont la même taille, la case `i` décrit le pâturage numéro `i + 1`. Le plateau range ses pâturages dans une `List<Paturage>`. `getNbPaturages()`, `getPaturage(int numero)` (`null` si aucun pâturage ne porte ce numéro) et `toString()`, qui met un pâturage par ligne (chaque ligne se termine par un retour à la ligne).",
+			regles: ["allman"],
+			harness: T(`
+public class TestBergers2
+{
+    public static void main(String[] args)
+    {
+        Plateau pl = new Plateau(new String[] { "prairie", "lande", "alpage", "prairie" }, new boolean[] { true, false, false, true });
+        System.out.print(pl);
+        System.out.println(pl.getNbPaturages() + " " + pl.getPaturage(3).getVegetation() + " " + pl.getPaturage(3).isBordRoute() + " " + pl.getPaturage(0) + " " + pl.getPaturage(5));
+    }
+}`),
+			depart: "",
+			solution: J2(RD_IMP, RD_TROUPEAU, RD_PAT2, RD_PLATEAU2),
+			indices: ["Le constructeur de `Plateau` crée la liste, puis une boucle `for (int i = 0; i < vegetations.length; i++)` ajoute `new Paturage(i + 1, vegetations[i], bordRoute[i])`.",
+				"Le pâturage numéro `n` est à l'indice `n - 1` de la liste. Vérifie que `n` est entre 1 et `size()` avant d'appeler `get`."] },
+		{ id: "oevD.3", k: "code", mode: "class", titre: "Les chemins entre pâturages", fichier: "Plateau.java", xp: 30,
+			enonce: "Chaque pâturage connaît maintenant ses voisins dans une `List<Paturage>`. `ajouterVoisin(Paturage p)` relie les deux pâturages **dans les deux sens** et renvoie `true` ; elle renvoie `false` si `p` vaut `null`, si `p` est le pâturage lui-même, ou s'ils sont déjà voisins. Ajoute `estVoisin(Paturage p)` et `getNbVoisins()`.\n\nLe `toString()` d'un pâturage affiche ensuite ses voisins, dans l'ordre où ils ont été ajoutés : `P2 lande ; voisins : 1 3 5`, ou `P4 prairie, bord de route ; voisins : aucun`.\n\nDans `Plateau`, `relier(int[][] liens)` lit des paires de numéros `{ a, b }`, relie les pâturages correspondants et renvoie le nombre de chemins **réellement créés**. Une paire est ignorée si un des numéros n'existe pas ou si `ajouterVoisin` refuse.",
+			regles: ["allman"],
+			harness: T(`
+public class TestBergers3
+{
+    public static void main(String[] args)
+    {
+        Plateau pl = new Plateau(new String[] { "prairie", "lande", "alpage", "prairie", "lande" }, new boolean[] { true, false, false, true, false });
+        System.out.println(pl.relier(new int[][] { { 1, 2 }, { 2, 3 }, { 3, 2 }, { 4, 4 }, { 4, 5 }, { 1, 9 }, { 0, 1 }, { 2, 5 } }));
+        System.out.print(pl);
+        System.out.println(pl.getPaturage(2).estVoisin(pl.getPaturage(3)) + " " + pl.getPaturage(3).estVoisin(pl.getPaturage(2)) + " " + pl.getPaturage(3).estVoisin(pl.getPaturage(1)) + " " + pl.getPaturage(2).getNbVoisins());
+    }
+}`),
+			depart: "",
+			solution: J2(RD_IMP, RD_TROUPEAU, RD_PAT3, RD_PLATEAU3),
+			indices: ["Dans `ajouterVoisin`, on est dans la classe `Paturage` : on a le droit d'écrire `p.voisins.add(this)`, même si l'attribut est `private`.",
+				"`estVoisin` tient en une ligne avec `this.voisins.contains(p)`.",
+				"Dans `relier`, `getPaturage` renvoie `null` pour un numéro inconnu : teste `a != null` avant d'appeler `a.ajouterVoisin(b)` ; si c'est `b` qui vaut `null`, `ajouterVoisin` refuse déjà."] },
+		{ id: "oevD.4", k: "code", mode: "class", titre: "Mener les bêtes au pré", fichier: "Paturage.java", xp: 35,
+			enonce: "Un pâturage peut être occupé par **un seul** troupeau, avec un certain nombre de bêtes. Ajoute `getTroupeau()` (`null` si le pâturage est libre) et `getNbBetes()`.\n\n- `accueillir(Troupeau t)` : si `t` n'est pas `null`, que le pâturage est libre et que le troupeau a au moins une bête en réserve, une bête quitte la réserve pour le pâturage, qui appartient désormais à `t` ; renvoie `true`. Sinon `false`.\n- `ajouterBetes(int nb)` : le troupeau occupant envoie `nb` bêtes de plus, prises dans sa réserve. `false` si le pâturage est libre ou si la réserve refuse (voir `prendreBetes`).\n- `retirerBetes(int nb)` : `nb` bêtes retournent dans la réserve de leur troupeau. `false` si le pâturage est libre, si `nb` est inférieur à 1 ou dépasse les bêtes présentes. Quand la dernière bête part, le pâturage redevient **libre**.\n\nLe `toString()` se termine par ` ; libre` ou ` ; Lucas (4)` (le berger, puis le nombre de bêtes présentes).",
+			regles: ["allman"],
+			harness: T(`
+public class TestBergers4
+{
+    public static void main(String[] args)
+    {
+        Plateau pl = new Plateau(new String[] { "prairie", "lande", "alpage" }, new boolean[] { true, false, true });
+        pl.relier(new int[][] { { 1, 2 }, { 2, 3 } });
+        Troupeau a = new Troupeau("Lucas", 5);
+        Troupeau b = new Troupeau("Inès", 1);
+        Paturage p1 = pl.getPaturage(1);
+        Paturage p2 = pl.getPaturage(2);
+        Paturage p3 = pl.getPaturage(3);
+        System.out.println(p1.accueillir(a) + " " + p1.accueillir(b) + " " + p2.accueillir(null) + " " + p2.accueillir(b) + " " + p3.accueillir(b));
+        System.out.println(p1.ajouterBetes(3) + " " + p1.ajouterBetes(2) + " " + p3.ajouterBetes(1));
+        System.out.print(pl);
+        System.out.println(p1.retirerBetes(5) + " " + p1.retirerBetes(0) + " " + p1.retirerBetes(2) + " " + p2.retirerBetes(1));
+        System.out.print(pl);
+        System.out.println(a.getNbBetes() + " " + b.getNbBetes() + " " + p2.getTroupeau() + " " + p1.getTroupeau().getBerger());
+    }
+}`),
+			depart: "",
+			solution: J2(RD_IMP, RD_TROUPEAU, RD_PAT4, RD_PLATEAU3),
+			indices: ["Le pâturage ne compte pas les bêtes de la réserve : c'est le troupeau qui s'en charge. Appelle `t.prendreBetes(...)` et regarde ce qu'elle renvoie avant de changer quoi que ce soit.",
+				"Dans `accueillir`, l'ordre du test compte : `t == null || this.troupeau != null || !t.prendreBetes(1)`. Grâce au `||`, `prendreBetes` n'est appelée que si les deux premières conditions sont fausses, donc on ne retire pas de bête pour rien.",
+				"Dans `retirerBetes`, rends les bêtes avec `this.troupeau.rendreBetes(nb)` **avant** de remettre `this.troupeau` à `null`."] },
+		{ id: "oevD.5", k: "code", mode: "class", titre: "Les règles d'installation", fichier: "Plateau.java", xp: 40,
+			enonce: "Le plateau fait maintenant respecter les règles de la coopérative. Ajoute à `Plateau` :\n\n- `nbPaturages(Troupeau t)` : nombre de pâturages occupés par `t` (`t` n'est jamais `null`) ;\n- `nbBetesAuPre(Troupeau t)` : nombre total de ses bêtes présentes dans ces pâturages ;\n- `installer(Troupeau t, int numero)` : envoie une bête de `t` dans le pâturage `numero` (avec `accueillir`) et renvoie le résultat. Mais avant, elle renvoie `false` si `t` vaut `null` ou si le pâturage n'existe pas, puis applique la règle : un troupeau qui n'occupe encore **aucun** pâturage doit commencer **au bord de la route** ; sinon, le pâturage visé doit être **voisin** d'un pâturage qu'il occupe déjà.",
+			regles: ["allman"],
+			harness: T(`
+public class TestBergers5
+{
+    public static void main(String[] args)
+    {
+        Plateau pl = new Plateau(new String[] { "prairie", "lande", "alpage", "prairie", "lande" }, new boolean[] { true, false, false, true, false });
+        pl.relier(new int[][] { { 1, 2 }, { 2, 3 }, { 4, 5 }, { 2, 5 } });
+        Troupeau a = new Troupeau("Lucas", 6);
+        Troupeau b = new Troupeau("Inès", 4);
+        System.out.println(pl.installer(a, 3) + " " + pl.installer(a, 1) + " " + pl.installer(a, 3) + " " + pl.installer(a, 2) + " " + pl.installer(a, 3));
+        System.out.println(pl.installer(b, 2) + " " + pl.installer(b, 1) + " " + pl.installer(b, 4) + " " + pl.installer(b, 5) + " " + pl.installer(a, 5) + " " + pl.installer(a, 9) + " " + pl.installer(null, 4));
+        pl.getPaturage(1).ajouterBetes(2);
+        System.out.print(pl);
+        System.out.println(a.getNbBetes() + " " + pl.nbPaturages(a) + " " + pl.nbBetesAuPre(a) + " | " + b.getNbBetes() + " " + pl.nbPaturages(b) + " " + pl.nbBetesAuPre(b));
+        pl.getPaturage(1).retirerBetes(3);
+        System.out.println(pl.installer(b, 1) + " " + pl.installer(a, 1));
+        System.out.println(pl.getPaturage(1));
+    }
+}`),
+			depart: "",
+			solution: J2(RD_IMP, RD_TROUPEAU, RD_PAT4, RD_PLATEAU5),
+			indices: ["Commence par `nbPaturages` : `installer` s'en sert pour savoir si c'est la première installation du troupeau.",
+				"Pour la règle du voisinage, parcours les pâturages : il suffit d'en trouver **un** dont `getTroupeau() == t` et qui `estVoisin(cible)`. Un `boolean` initialisé à `false` fait l'affaire.",
+				"Laisse `accueillir` gérer le reste (pâturage déjà occupé, réserve vide) : ne refais pas ces tests."] }
+	]
+});
+
+/* ----------------------------------- E : l'auberge du carrefour (inspiré du DS3) */
+var RE_IMP = "import java.util.ArrayList;\nimport java.util.List;";
+var RE_PLAT = T(`
+public enum Plat
+{
+    SOUPE("Soupe", 4), TOURTE("Tourte", 7), RAGOUT("Ragoût", 9), CIDRE("Cidre", 3);
+
+    private String libelle;
+    private int    prix;
+
+    Plat(String libelle, int prix)
+    {
+        this.libelle = libelle;
+        this.prix    = prix;
+    }
+
+    public String getLibelle()
+    {
+        return this.libelle;
+    }
+
+    public int getPrix()
+    {
+        return this.prix;
+    }
+}`);
+var RE_COMMANDE = T(`
+public class Commande
+{
+    private static int nbCommandes = 0;
+
+    private int  numero;
+    private Plat plat;
+    private int  quantite;
+
+    private Commande(Plat plat, int quantite)
+    {
+        Commande.nbCommandes++;
+        this.numero   = Commande.nbCommandes;
+        this.plat     = plat;
+        this.quantite = quantite;
+    }
+
+    public static Commande creer(Plat plat, int quantite)
+    {
+        if (plat == null || quantite < 1 || quantite > 20)
+        {
+            return null;
+        }
+        return new Commande(plat, quantite);
+    }
+
+    public int getNumero()
+    {
+        return this.numero;
+    }
+
+    public Plat getPlat()
+    {
+        return this.plat;
+    }
+
+    public int getQuantite()
+    {
+        return this.quantite;
+    }
+
+    public int getPrix()
+    {
+        return this.plat.getPrix() * this.quantite;
+    }
+
+    public String toString()
+    {
+        return String.format("%2d %-8s x%d = %3d", this.numero, this.plat.getLibelle(), this.quantite, this.getPrix());
+    }
+}`);
+var RE_COMMANDE5 = RE_COMMANDE.replace("public class Commande\n", "public class Commande implements ITarif\n");
+var RE_CUISINE = T(`
+public class Cuisine
+{
+    private List<Commande> commandes;
+
+    public Cuisine()
+    {
+        this.commandes = new ArrayList<Commande>();
+    }
+
+    public boolean commander(Plat plat, int quantite)
+    {
+        Commande c = Commande.creer(plat, quantite);
+        if (c == null)
+        {
+            return false;
+        }
+        this.commandes.add(c);
+        return true;
+    }
+
+    public int quantite(Plat plat)
+    {
+        int total = 0;
+        for (Commande c : this.commandes)
+        {
+            if (c.getPlat() == plat)
+            {
+                total += c.getQuantite();
+            }
+        }
+        return total;
+    }
+
+    public Plat lePlusDemande()
+    {
+        Plat meilleur = null;
+        for (Plat p : Plat.values())
+        {
+            if (this.quantite(p) > 0 && (meilleur == null || this.quantite(p) > this.quantite(meilleur)))
+            {
+                meilleur = p;
+            }
+        }
+        return meilleur;
+    }
+
+    public String bilan()
+    {
+        String s = "";
+        for (Plat p : Plat.values())
+        {
+            s += String.format("%-8s : %2d", p.getLibelle(), this.quantite(p)) + "\\n";
+        }
+        return s;
+    }
+}`);
+var RE_CHAMBRE = T(`
+public class Chambre
+{
+    private int     numero;
+    private Chambre gauche;
+    private Chambre droite;
+
+    public Chambre(int numero)
+    {
+        this.numero = numero;
+        this.gauche = null;
+        this.droite = null;
+    }
+
+    public int getNumero()
+    {
+        return this.numero;
+    }
+
+    public Chambre getVoisine(char dir)
+    {
+        if (dir == 'G')
+        {
+            return this.gauche;
+        }
+        if (dir == 'D')
+        {
+            return this.droite;
+        }
+        return null;
+    }
+
+    public boolean relier(char dir, Chambre c)
+    {
+        if (c == null || c == this)
+        {
+            return false;
+        }
+        if (dir == 'G' && this.gauche == null && c.droite == null)
+        {
+            this.gauche = c;
+            c.droite    = this;
+            return true;
+        }
+        if (dir == 'D' && this.droite == null && c.gauche == null)
+        {
+            this.droite = c;
+            c.gauche    = this;
+            return true;
+        }
+        return false;
+    }
+
+    public String toString()
+    {
+        return "chambre " + this.numero;
+    }
+}`);
+var RE_VOYAGEUR = T(`
+public class Voyageur
+{
+    private String  nom;
+    private Chambre chambre;
+
+    public Voyageur(String nom, Chambre chambre)
+    {
+        this.nom     = nom;
+        this.chambre = chambre;
+    }
+
+    public Chambre getChambre()
+    {
+        return this.chambre;
+    }
+
+    public boolean deplacer(char dir)
+    {
+        Chambre suivante = this.chambre.getVoisine(dir);
+        if (suivante == null)
+        {
+            return false;
+        }
+        this.chambre = suivante;
+        return true;
+    }
+
+    public String toString()
+    {
+        return this.nom + " est dans la " + this.chambre;
+    }
+}`);
+var RE_ESCALIER = T(`
+public class Escalier extends Chambre
+{
+    private Escalier haut;
+    private Escalier bas;
+
+    public Escalier(int numero)
+    {
+        super(numero);
+        this.haut = null;
+        this.bas  = null;
+    }
+
+    public Chambre getVoisine(char dir)
+    {
+        if (dir == 'H')
+        {
+            return this.haut;
+        }
+        if (dir == 'B')
+        {
+            return this.bas;
+        }
+        return super.getVoisine(dir);
+    }
+
+    public boolean relier(char dir, Chambre c)
+    {
+        if (dir != 'H' && dir != 'B')
+        {
+            return super.relier(dir, c);
+        }
+        if (!(c instanceof Escalier) || c == this)
+        {
+            return false;
+        }
+        Escalier e = (Escalier) c;
+        if (dir == 'H' && this.haut == null && e.bas == null)
+        {
+            this.haut = e;
+            e.bas     = this;
+            return true;
+        }
+        if (dir == 'B' && this.bas == null && e.haut == null)
+        {
+            this.bas = e;
+            e.haut   = this;
+            return true;
+        }
+        return false;
+    }
+
+    public String toString()
+    {
+        return "cage d'escalier " + this.getNumero();
+    }
+}`);
+var RE_TARIF = T(`
+public interface ITarif
+{
+    int getPrix();
+}
+
+public class Nuitee implements ITarif
+{
+    private static final int PRIX_NUIT = 40;
+
+    private Chambre chambre;
+    private int     nbNuits;
+
+    public Nuitee(Chambre chambre, int nbNuits)
+    {
+        this.chambre = chambre;
+        this.nbNuits = nbNuits;
+    }
+
+    public int getPrix()
+    {
+        return Nuitee.PRIX_NUIT * this.nbNuits;
+    }
+
+    public String toString()
+    {
+        return this.chambre + " x" + this.nbNuits + " nuits = " + this.getPrix();
+    }
+}
+
+public class Note
+{
+    private String         client;
+    private List<Commande> commandes;
+    private List<Nuitee>   nuitees;
+
+    public Note(String client)
+    {
+        this.client    = client;
+        this.commandes = new ArrayList<Commande>();
+        this.nuitees   = new ArrayList<Nuitee>();
+    }
+
+    public void ajouter(Commande c)
+    {
+        this.commandes.add(c);
+    }
+
+    public void ajouter(Nuitee n)
+    {
+        this.nuitees.add(n);
+    }
+
+    public static int total(List<? extends ITarif> lst)
+    {
+        int total = 0;
+        for (ITarif t : lst)
+        {
+            total += t.getPrix();
+        }
+        return total;
+    }
+
+    public int getTotal()
+    {
+        return Note.total(this.commandes) + Note.total(this.nuitees);
+    }
+
+    public String toString()
+    {
+        String s = "Note de " + this.client + "\\n";
+        for (Nuitee n : this.nuitees)
+        {
+            s += "  " + n + "\\n";
+        }
+        for (Commande c : this.commandes)
+        {
+            s += "  " + c + "\\n";
+        }
+        return s + "Total : " + this.getTotal() + " euros";
+    }
+}`);
+
+OBJETS_EVALS.push({
+	id: "oevE", theme: "Enum, héritage et interface", titre: "L'auberge du carrefour", duree: "3h",
+	prerequis: "`enum` avec attributs et `values()`, méthode de classe qui fabrique les objets, liens dans les deux sens, héritage avec `super`, redéfinition, `instanceof`, interface, joker `List<? extends ...>`.",
+	intro: "Inspiré du DS3 : on informatise une auberge. D'abord la **cuisine** (un enum des plats, des commandes fabriquées par une méthode de classe), puis les **chambres** reliées entre elles et un voyageur qui s'y promène, un **escalier** qui ajoute deux directions, et enfin la **note** du client, calculée grâce à une interface. Le code de chaque étape reprend celui de la précédente. Chaque classe est publique et a son propre fichier (un onglet chacun), comme sur machine. Indentation Allman exigée.",
+	regles: ["allman"],
+	etapes: [
+		{ id: "oevE.1", k: "code", mode: "class", titre: "Le menu et les commandes", fichier: "Commande.java", xp: 30,
+			enonce: "Écris l'enum `Plat` : `SOUPE` (libellé `Soupe`, 4 €), `TOURTE` (`Tourte`, 7 €), `RAGOUT` (`Ragoût`, 9 €) et `CIDRE` (`Cidre`, 3 €), dans cet ordre, avec `getLibelle()` et `getPrix()`.\n\nPuis `Commande` : un numéro automatique (la première commande a le numéro 1), un plat et une quantité. Son constructeur est `private` : on fabrique une commande avec la méthode de classe `Commande.creer(Plat plat, int quantite)`, qui renvoie `null` si le plat vaut `null` ou si la quantité n'est pas entre 1 et 20. Une commande refusée ne consomme **pas** de numéro.\n\nAccesseurs `getNumero()`, `getPlat()`, `getQuantite()`, et `getPrix()` (prix du plat × quantité). `toString()` utilise le format `\"%2d %-8s x%d = %3d\"` (numéro, libellé, quantité, prix) : ` 1 Soupe    x2 =   8`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestAuberge1
+{
+    public static void main(String[] args)
+    {
+        Commande a = Commande.creer(Plat.SOUPE, 2);
+        Commande b = Commande.creer(Plat.RAGOUT, 0);
+        Commande c = Commande.creer(null, 3);
+        Commande d = Commande.creer(Plat.CIDRE, 21);
+        Commande e = Commande.creer(Plat.TOURTE, 3);
+        System.out.println(a);
+        System.out.println(e);
+        System.out.println((b == null) + " " + (c == null) + " " + (d == null) + " " + e.getNumero() + " " + e.getPrix() + " " + e.getPlat());
+        for (Plat p : Plat.values())
+        {
+            System.out.println(p.ordinal() + " " + p + " " + p.getLibelle() + " " + p.getPrix());
+        }
+    }
+}`),
+			depart: T(`
+public enum Plat
+{
+
+}
+
+public class Commande
+{
+
+}`),
+			solution: J2(RE_PLAT, RE_COMMANDE),
+			indices: ["Les constantes d'un enum avec attributs s'écrivent `SOUPE(\"Soupe\", 4), ...;` (point-virgule après la dernière), suivies des attributs et d'un constructeur sans `public`.",
+				"`creer` est `static` et peut appeler le constructeur `private` puisqu'elle est dans la même classe. Fais les tests **avant** le `new` : ainsi une commande refusée n'augmente pas le compteur."] },
+		{ id: "oevE.2", k: "code", mode: "class", titre: "Le bilan de la cuisine", fichier: "Cuisine.java", xp: 30,
+			enonce: "Écris `Cuisine`, qui garde ses commandes dans une `List<Commande>`.\n\n- `commander(Plat plat, int quantite)` fabrique la commande avec `Commande.creer` ; elle renvoie `false` (et n'ajoute rien) si la commande est refusée.\n- `quantite(Plat plat)` : quantité totale commandée pour ce plat.\n- `bilan()` : une ligne par plat, **tous** les plats dans l'ordre de l'enum (même ceux à 0), au format `\"%-8s : %2d\"` (libellé, quantité), chaque ligne terminée par un retour à la ligne.\n- `lePlusDemande()` : le plat le plus commandé, `null` si rien n'a été commandé. En cas d'égalité, c'est celui qui vient en premier dans l'enum.",
+			regles: ["allman"],
+			harness: T(`
+public class TestAuberge2
+{
+    public static void main(String[] args)
+    {
+        Cuisine k = new Cuisine();
+        System.out.println(k.lePlusDemande());
+        System.out.println(k.commander(Plat.TOURTE, 2) + " " + k.commander(Plat.SOUPE, 0) + " " + k.commander(Plat.CIDRE, 4) + " " + k.commander(Plat.TOURTE, 1) + " " + k.commander(Plat.SOUPE, 3));
+        System.out.print(k.bilan());
+        System.out.println(k.lePlusDemande() + " " + k.quantite(Plat.RAGOUT) + " " + k.quantite(Plat.TOURTE));
+        k.commander(Plat.SOUPE, 1);
+        System.out.println(k.lePlusDemande().getLibelle());
+    }
+}`),
+			depart: "",
+			solution: J2(RE_IMP, RE_PLAT, RE_COMMANDE, RE_CUISINE),
+			indices: ["`Plat.values()` renvoie le tableau des constantes dans l'ordre de leur déclaration : `for (Plat p : Plat.values())` parcourt tout le menu.",
+				"Pour l'égalité : ne remplace le meilleur que si la quantité est **strictement** plus grande. Le premier plat rencontré reste alors en tête.",
+				"Autre façon de compter : un tableau `int[] qte = new int[Plat.values().length];` indexé par `c.getPlat().ordinal()`."] },
+		{ id: "oevE.3", k: "code", mode: "class", titre: "Les chambres et le voyageur", fichier: "Chambre.java", xp: 30,
+			enonce: "Les chambres d'un étage sont alignées. Écris `Chambre(int numero)`, avec une voisine à gauche et une à droite (`null` au départ), `getNumero()` et `toString()` : `chambre 3`.\n\n- `getVoisine(char dir)` renvoie la voisine de gauche pour `'G'`, de droite pour `'D'`, et `null` pour toute autre lettre.\n- `relier(char dir, Chambre c)` pose `c` du côté `dir` **et** la chambre courante du côté opposé de `c`, puis renvoie `true`. Elle renvoie `false` si `c` vaut `null` ou est la chambre elle-même, si `dir` n'est ni `'G'` ni `'D'`, ou si l'un des deux côtés concernés est déjà pris.\n\nPuis `Voyageur(String nom, Chambre chambre)` : `getChambre()`, `deplacer(char dir)` (passe dans la voisine si elle existe et renvoie `true`, sinon reste sur place et renvoie `false`) et `toString()` : `Ana est dans la chambre 3`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestAuberge3
+{
+    public static void main(String[] args)
+    {
+        Chambre[] c = new Chambre[4];
+        for (int i = 0; i < 4; i++)
+        {
+            c[i] = new Chambre(i + 1);
+        }
+        System.out.println(c[0].relier('D', c[1]) + " " + c[2].relier('G', c[1]) + " " + c[3].relier('G', c[1]) + " " + c[1].relier('D', c[1]) + " " + c[2].relier('X', c[3]) + " " + c[2].relier('D', c[3]) + " " + c[0].relier('D', null));
+        Voyageur v = new Voyageur("Ana", c[0]);
+        System.out.println(v.deplacer('G') + " " + v.deplacer('D') + " " + v.deplacer('D') + " " + v.deplacer('D') + " " + v.deplacer('D') + " " + v.deplacer('H'));
+        System.out.println(v);
+        System.out.println(c[1].getVoisine('G') + " " + c[3].getVoisine('D') + " " + c[3].getVoisine('Z') + " " + v.getChambre().getNumero());
+    }
+}`),
+			depart: "",
+			solution: J2(RE_IMP, RE_PLAT, RE_COMMANDE, RE_CUISINE, RE_CHAMBRE, RE_VOYAGEUR),
+			indices: ["Si la chambre courante prend `c` à sa **gauche**, alors elle devient la voisine de **droite** de `c` : il faut vérifier `this.gauche == null` **et** `c.droite == null`, puis remplir les deux.",
+				"Dans `relier`, on est dans `Chambre` : `c.droite` est accessible, même `private`.",
+				"`deplacer` n'a pas besoin de tester la lettre : `getVoisine` renvoie déjà `null` pour une direction inconnue."] },
+		{ id: "oevE.4", k: "code", mode: "class", titre: "L'escalier", fichier: "Escalier.java", xp: 35,
+			enonce: "Écris `Escalier`, une `Chambre` qui a en plus une voisine en haut et une en bas, qui sont elles aussi des escaliers.\n\n- `getVoisine(char dir)` gère `'H'` et `'B'`, et laisse `Chambre` s'occuper des autres lettres.\n- `relier(char dir, Chambre c)` : pour `'H'` ou `'B'`, elle relie les deux escaliers dans les deux sens (le bas de l'escalier du dessus est l'escalier courant) ; elle renvoie `false` si `c` n'est pas un `Escalier` (ou vaut `null`), si `c` est l'escalier lui-même, ou si un des deux côtés est déjà pris. Pour toute autre lettre, c'est le `relier` de `Chambre`.\n- `toString()` : `cage d'escalier 2`.\n\nNe modifie ni `Chambre` ni `Voyageur` : grâce à la redéfinition, un voyageur peut déjà monter et descendre.",
+			regles: ["allman"],
+			harness: T(`
+public class TestAuberge4
+{
+    public static void main(String[] args)
+    {
+        Chambre c1 = new Chambre(1);
+        Escalier e2 = new Escalier(2);
+        Chambre c3 = new Chambre(3);
+        Escalier e12 = new Escalier(12);
+        Chambre c11 = new Chambre(11);
+        System.out.println(c1.relier('D', e2) + " " + e2.relier('D', c3) + " " + e2.relier('H', e12) + " " + e2.relier('H', c11) + " " + c1.relier('H', e2) + " " + e12.relier('G', c11) + " " + e12.relier('B', e2) + " " + e2.relier('B', e2));
+        Voyageur v = new Voyageur("Ana", c1);
+        System.out.println(v.deplacer('D') + " " + v.deplacer('H') + " " + v.deplacer('H') + " " + v.deplacer('G') + " " + v.deplacer('B'));
+        System.out.println(v);
+        Chambre x = e12;
+        System.out.println(x.getVoisine('B') + " / " + x + " / " + x.getVoisine('G') + " / " + c1.getVoisine('H') + " / " + e2.getVoisine('B'));
+        v.deplacer('D');
+        v.deplacer('B');
+        System.out.println(v);
+    }
+}`),
+			depart: "",
+			solution: J2(RE_IMP, RE_PLAT, RE_COMMANDE, RE_CUISINE, RE_CHAMBRE, RE_VOYAGEUR, RE_ESCALIER),
+			indices: ["Le constructeur commence par `super(numero);` : le numéro est rangé dans `Chambre`.",
+				"`return super.getVoisine(dir);` et `return super.relier(dir, c);` réutilisent le code de la classe mère pour `'G'` et `'D'`.",
+				"`c instanceof Escalier` vaut `false` si `c` est `null`. Une fois le test passé, le cast `(Escalier) c` donne accès à `haut` et `bas` de l'autre escalier.",
+				"Dans `toString()`, le numéro est `private` dans `Chambre` : passe par `this.getNumero()`."] },
+		{ id: "oevE.5", k: "code", mode: "class", titre: "La note du client", fichier: "Note.java", xp: 40,
+			enonce: "Tout ce qui se paie a un prix : écris l'interface `ITarif` avec `int getPrix()`, et fais-la implémenter par `Commande` (sa méthode existe déjà).\n\n`Nuitee(Chambre chambre, int nbNuits)` implémente aussi `ITarif` : 40 € la nuit (une constante de classe). `toString()` : `chambre 3 x2 nuits = 80`.\n\n`Note(String client)` garde deux listes : ses `Commande` et ses `Nuitee`, remplies par deux méthodes `ajouter` (une pour chaque type). Écris **une seule** méthode de classe `public static int total(...)` qui fait la somme des prix de **n'importe quelle** liste d'objets qui implémentent `ITarif` : elle doit accepter une `List<Commande>`, une `List<Nuitee>` comme une `List<ITarif>`. `getTotal()` l'utilise sur les deux listes. `toString()` : `Note de Ana`, puis les nuitées puis les commandes, une par ligne précédée de deux espaces, puis `Total : 107 euros` (sans retour à la ligne final).",
+			regles: ["allman"],
+			harness: T(`
+import java.util.ArrayList;
+import java.util.List;
+
+public class TestAuberge5
+{
+    public static void main(String[] args)
+    {
+        Chambre c3 = new Chambre(3);
+        Note n = new Note("Ana");
+        n.ajouter(new Nuitee(c3, 2));
+        n.ajouter(Commande.creer(Plat.RAGOUT, 2));
+        n.ajouter(Commande.creer(Plat.CIDRE, 3));
+        System.out.println(n);
+        List<Nuitee> nuits = new ArrayList<Nuitee>();
+        nuits.add(new Nuitee(new Escalier(7), 1));
+        nuits.add(new Nuitee(c3, 3));
+        List<ITarif> tout = new ArrayList<ITarif>();
+        tout.add(Commande.creer(Plat.SOUPE, 1));
+        tout.add(nuits.get(0));
+        System.out.println(Note.total(nuits) + " " + Note.total(tout) + " " + Note.total(new ArrayList<Commande>()) + " " + n.getTotal());
+        System.out.println(nuits.get(0));
+    }
+}`),
+			depart: "",
+			solution: J2(RE_IMP, RE_PLAT, RE_COMMANDE5, RE_CUISINE, RE_CHAMBRE, RE_VOYAGEUR, RE_ESCALIER, RE_TARIF),
+			indices: ["Une `List<Nuitee>` n'est **pas** une `List<ITarif>`, même si `Nuitee` implémente `ITarif` : un paramètre `List<ITarif>` refuserait la liste des nuitées.",
+				"Le joker règle le problème : `public static int total(List<? extends ITarif> lst)` accepte une liste de n'importe quel type qui implémente `ITarif`. Dans la boucle, chaque élément est vu comme un `ITarif` : `for (ITarif t : lst)`.",
+				"`private static final int PRIX_NUIT = 40;` dans `Nuitee`, puis `Nuitee.PRIX_NUIT * this.nbNuits`."] }
+	]
+});
+
 /* ==========================================================================
    Plusieurs fichiers, comme sur machine : dans ces projets et ces sujets de DS,
    chaque classe (ou interface, ou enum) est publique et va dans son propre
@@ -21180,7 +22222,7 @@ function enFichiers(code)
 		});
 	}
 	["o07", "o09", "o10"].forEach(function (id) { OBJETS_PROJETS[id].etapes.forEach(conv); });
-	OBJETS_EVALS.filter(function (v) { return v.id === "oevA" || v.id === "oevB"; }).forEach(function (v)
+	OBJETS_EVALS.filter(function (v) { return /^oev[ABDE]$/.test(v.id); }).forEach(function (v)
 	{
 		v.etapes.forEach(conv);
 		v.intro = v.intro.replace(/Tout se passe dans (le fichier )?`\w+\.java`\./, "Chaque classe est publique et a son propre fichier (un onglet chacun), comme sur machine.");
