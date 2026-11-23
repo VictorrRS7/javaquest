@@ -798,6 +798,51 @@ input[type="search"] { width: 100%; }
 .fileform { margin: 6px 0 0; }
 .fileform .row input { flex: 1; min-width: 0; }
 
+/* ---------- Fenêtres Swing simulées (Dév IHM) : aspect « Metal » clair, quel que soit le thème ---------- */
+.jq-zone { margin: 4px 0 8px; }
+.jq-host { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; max-width: 100%; overflow: hidden; }
+.jq-wrap { max-width: 100%; }
+.jq-win { display: inline-flex; flex-direction: column; transform-origin: top left; background: #eeeeee; border: 1px solid #6d7b8a; border-radius: 6px 6px 2px 2px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); color: #333; font: 12px Arial, Helvetica, sans-serif; text-align: left; color-scheme: light; }
+.jq-bar { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 0 0 10px; background: linear-gradient(#fdfdfd, #e3e8ee); border-bottom: 1px solid #b8c4d0; border-radius: 6px 6px 0 0; user-select: none; }
+.jq-ico { width: 14px; height: 14px; border-radius: 3px; background: linear-gradient(135deg, #e8933a, #b5531b); flex: none; }
+.jq-title { flex: 1; font: 13px Arial, Helvetica, sans-serif; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jq-close { width: 44px; height: 29px; border: 0; background: transparent; color: #333; font-size: 14px; cursor: pointer; border-radius: 0 6px 0 0; }
+.jq-close:hover, .jq-close:focus-visible { background: #e81123; color: #fff; }
+.jq-menubar { display: flex; background: #f4f6f8; border-bottom: 1px solid #c9d2db; }
+.jq-menu { position: relative; }
+.jq-mtitle, .jq-mitem { border: 0; background: transparent; font: 12px Arial, Helvetica, sans-serif; color: #222; padding: 5px 10px; cursor: pointer; text-align: left; }
+.jq-mtitle:hover, .jq-mitem:hover, .jq-mtitle:focus-visible, .jq-mitem:focus-visible { background: #b8cfe5; }
+.jq-drop { position: absolute; left: 0; top: 100%; z-index: 5; display: flex; flex-direction: column; min-width: 150px; background: #fff; border: 1px solid #8a9aab; box-shadow: 2px 3px 8px rgba(0, 0, 0, .2); padding: 2px 0; }
+.jq-sep { border: 0; border-top: 1px solid #c9d2db; margin: 3px 0; }
+.jq-body { display: flex; min-width: 40px; min-height: 20px; overflow: hidden; }
+.jq-content { flex: 1; }
+.jq-panel { position: relative; box-sizing: border-box; min-width: 0; min-height: 0; }
+.jq-panel > :not(.jq-canvas):not(.jq-btitre) { position: relative; z-index: 1; }
+.jq-canvas { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
+.jq-btitre { position: absolute; top: 0; left: 8px; z-index: 1; font: 12px Arial, Helvetica, sans-serif; color: #2b4a6a; background: inherit; padding: 0 3px; }
+.jq-btn { box-sizing: border-box; font: bold 12px Arial, Helvetica, sans-serif; color: #333; padding: 4px 14px; min-height: 26px; border: 1px solid #7a8a99; border-radius: 2px; background: linear-gradient(#ffffff, #dde8f3); cursor: pointer; white-space: nowrap; }
+.jq-btn:hover:not(:disabled) { border-color: #4a6a8a; }
+.jq-btn:active:not(:disabled), .jq-btn.on { background: #b8cfe5; }
+.jq-btn:focus-visible, .jq-check:focus-visible, .jq-txt:focus-visible, .jq-combo:focus-visible { outline: 2px solid #3b78c4; outline-offset: 1px; }
+.jq-btn:disabled { color: #999; cursor: default; }
+.jq-check { display: inline-flex; align-items: center; gap: 5px; padding: 3px 4px; cursor: pointer; white-space: nowrap; user-select: none; box-sizing: border-box; }
+.jq-check .mk { width: 13px; height: 13px; border: 1px solid #7a8a99; background: linear-gradient(#fff, #dde8f3); flex: none; display: inline-grid; place-items: center; box-sizing: border-box; }
+.jq-check.radio .mk { border-radius: 50%; }
+.jq-check.box.on .mk::after { content: "✓"; font: bold 11px/1 Arial, sans-serif; color: #1f3d5c; }
+.jq-check.radio.on .mk::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #1f3d5c; }
+.jq-check.off { color: #999; cursor: default; }
+.jq-label { display: flex; align-items: center; white-space: pre; min-height: 16px; box-sizing: border-box; overflow: hidden; }
+.jq-txt { box-sizing: border-box; height: 22px; padding: 1px 3px; border: 1px solid #7a8a99; border-radius: 0; color: #333; background: #fff; min-width: 0; }
+.jq-txt[readonly] { color: #333; }
+.jq-combo { box-sizing: border-box; height: 24px; border: 1px solid #7a8a99; background: #fff; color: #333; font: bold 12px Arial, sans-serif; }
+.jq-sb { display: flex; align-items: stretch; min-height: 17px; background: #eee; box-sizing: border-box; }
+.jq-sb.vert { flex-direction: column; min-width: 17px; }
+.jq-sbtn { flex: none; width: 17px; min-height: 17px; padding: 0; border: 1px solid #7a8a99; background: linear-gradient(#fff, #dde8f3); color: #333; font-size: 8px; cursor: pointer; }
+.jq-range { flex: 1; margin: 0 2px; min-width: 40px; accent-color: #6d8fb3; }
+.jq-sb.vert .jq-range { writing-mode: vertical-lr; min-height: 40px; min-width: 0; margin: 2px 0; }
+.jq-mouse { touch-action: none; }
+.jq-fin { margin: 4px 0; padding: 10px 12px; border-radius: 8px; background: var(--card2, rgba(127, 127, 127, .12)); font-size: .9rem; }
+
 </style>
 </head>
 <body>
@@ -871,9 +916,9 @@ var JavaMini = (function ()
 	var OPS2 = ["->", "++", "--", "+=", "-=", "*=", "/=", "%=", "==", "!=", "<=", ">=", "&&", "||", "&=", "|="];
 	var OPS1 = "+-*/%=<>!&|^?:;,.()[]{}~@";
 
-	function lex(src)
+	function lex(src, base)
 	{
-		var toks = [], i = 0, line = 1, n = src.length;
+		var toks = [], i = 0, line = base || 1, n = src.length;
 		function push(type, v, l) { toks.push({ type: type, v: v, line: l }); }
 		function escape(l)
 		{
@@ -989,9 +1034,9 @@ var JavaMini = (function ()
 	}
 	function arr(t, d) { while (d-- > 0) { t += "[]"; } return t; }
 
-	function Parser(src)
+	function Parser(src, base)
 	{
-		this.toks = lex(src);
+		this.toks = lex(src, base);
 		this.p = 0;
 		this.pool = Object.create(null); // chaînes littérales partagées (comme le « pool » de Java)
 	}
@@ -1033,8 +1078,9 @@ var JavaMini = (function ()
 					if (isImport) { classes.imports.push(path); classes.importLines.push(this.toks[this.p - 1].line); }
 					continue;
 				}
-				classes.push(this.classDecl());
+				(function add(c) { classes.push(c); (c.nested || []).forEach(add); })(this.classDecl());
 			}
+			(this.anons || []).forEach(function (c) { classes.push(c); });
 			if (!classes.length) { throw cErr("aucune classe : un programme Java commence par public class NomDeLaClasse", 1); }
 			return classes;
 		},
@@ -1104,16 +1150,19 @@ var JavaMini = (function ()
 			var cls = { name: name, pub: !!m["public"], line: t.line, fields: [], methods: Object.create(null), ctors: [], statics: Object.create(null), finfo: Object.create(null),
 				iface: iface, abs: !!m["abstract"] || iface, ext: ext, impls: impls, tparams: tparams };
 			this.expect("{", "après le nom de la classe");
+			(this.clsStack = this.clsStack || []).push(cls);
 			while (!this.is("}"))
 			{
 				if (this.peek().type === "eof") { throw cErr("accolade } manquante à la fin de la classe " + name, this.prevLine()); }
 				this.member(cls);
 			}
+			this.clsStack.pop();
 			this.next();
 			return cls;
 		},
 		type: function ()
 		{
+			this.skipPkg();
 			var t = this.peek();
 			var base;
 			if ((t.type === "kw" && (PRIM[t.v] || t.v === "void")) || t.type === "id") { base = normType(this.next().v); }
@@ -1139,6 +1188,7 @@ var JavaMini = (function ()
 		},
 		rawType: function ()
 		{
+			this.skipPkg();
 			var t = this.peek();
 			if (t.type !== "id" && !(t.type === "kw" && PRIM[t.v])) { throw cErr("type attendu, trouvé « " + t.v + " »", t.line); }
 			if (t.type === "kw") { throw cErr("un type de base (" + t.v + ") ne peut pas servir de paramètre de type : écris " + ({ "int": "Integer", "double": "Double", "char": "Character", "boolean": "Boolean", "long": "Long" }[t.v] || "sa classe enveloppe"), t.line); }
@@ -1163,6 +1213,19 @@ var JavaMini = (function ()
 		},
 		member: function (cls)
 		{
+			/* Classe interne (ou interface, enum) déclarée dans la classe. */
+			var save0 = this.p, m0 = this.mods();
+			if (this.is("class") || this.is("interface") || this.is("enum"))
+			{
+				this.p = save0;
+				var nc = this.classDecl();
+				nc.outer = cls.name;
+				nc.stat = !!m0["static"] || nc.iface || !!nc.isEnum;
+				nc.pub = false;
+				(cls.nested = cls.nested || []).push(nc);
+				return;
+			}
+			this.p = save0;
 			var line = this.peek().line;
 			var m = this.mods();
 			if (this.peek().type === "id" && this.peek().v === cls.name && this.is("(", 1))
@@ -1534,6 +1597,7 @@ var JavaMini = (function ()
 				var t = this.peek();
 				if (this.accept("."))
 				{
+					if (this.is("this") && e.k === "name") { this.next(); e = { k: "outerThis", cls: e.name, line: t.line }; continue; }
 					var n = this.ident("membre");
 					if (this.is("(")) { e = { k: "call", target: e, name: n, args: this.args(), line: t.line }; }
 					else { e = { k: "field", obj: e, name: n, line: t.line }; }
@@ -1561,8 +1625,16 @@ var JavaMini = (function ()
 			this.expect(")", "pour fermer les paramètres de l'appel");
 			return a;
 		},
+		/* Nom complet java.awt.BorderLayout : on saute le paquetage, il reste BorderLayout. */
+		skipPkg: function ()
+		{
+			var t = this.peek();
+			if (t.type !== "id" || (t.v !== "java" && t.v !== "javax") || !this.is(".", 1)) { return; }
+			while (this.peek().type === "id" && /^[a-z]/.test(this.peek().v) && this.is(".", 1) && this.peek(2).type === "id") { this.next(); this.next(); }
+		},
 		primary: function ()
 		{
+			this.skipPkg();
 			var t = this.peek(), line = t.line;
 			switch (t.type)
 			{
@@ -1598,6 +1670,7 @@ var JavaMini = (function ()
 			}
 			if (this.accept("new"))
 			{
+				this.skipPkg();
 				var bt = this.peek();
 				if (!(bt.type === "id" || (bt.type === "kw" && PRIM[bt.v]))) { throw cErr("type attendu après new", line); }
 				var base = normType(this.next().v);
@@ -1606,7 +1679,27 @@ var JavaMini = (function ()
 				if (this.is("("))
 				{
 					if (PRIM[base]) { throw cErr("new " + base + "(...) n'existe pas : " + base + " est un type de base", line); }
-					return { k: "new", cls: base, targs: targs, args: this.args(), line: line };
+					var nargs = this.args();
+					if (this.is("{"))
+					{
+						/* Classe anonyme : new ActionListener() { ... } */
+						var cur = this.clsStack && this.clsStack[this.clsStack.length - 1];
+						this.anonN = (this.anonN || 0) + 1;
+						var an = { name: (cur ? cur.name : "Anonyme") + "$" + this.anonN, anon: true, base: base + (targs === "<>" ? "" : targs), pub: false, line: line, fields: [], methods: Object.create(null), ctors: [], statics: Object.create(null), finfo: Object.create(null),
+							iface: false, abs: false, ext: null, impls: [], tparams: [], outer: cur ? cur.name : null };
+						this.next();
+						(this.clsStack = this.clsStack || []).push(an);
+						while (!this.is("}"))
+						{
+							if (this.peek().type === "eof") { throw cErr("accolade } manquante à la fin de la classe anonyme", this.prevLine()); }
+							this.member(an);
+						}
+						this.clsStack.pop();
+						this.next();
+						(this.anons = this.anons || []).push(an);
+						return { k: "new", cls: an.name, targs: "", args: nargs, line: line, anon: true };
+					}
+					return { k: "new", cls: base, targs: targs, args: nargs, line: line };
 				}
 				if (!this.is("[")) { throw cErr("« ( » ou « [ » attendu après new " + base, line); }
 				var dims = [], extra = 0;
@@ -1701,6 +1794,8 @@ var JavaMini = (function ()
 	{
 		if (from === to) { return true; }
 		if (TPARAMS[erase(to)]) { return from !== "void"; }
+		/* Tableau d'un paramètre de type (E[] dans JComboBox<E>) : tout tableau d'objets convient. */
+		if (/\[\]$/.test(to) && TPARAMS[to.replace(/(\[\])+$/, "")]) { return /\[\]$/.test(from) && !PRIM[from.replace(/(\[\])+$/, "")]; }
 		if (WRAP[to]) { return from === WRAP[to] || from === "null"; }
 		if (num(from) && num(to)) { return widens(from, to); }
 		if (from === "null") { return isRef(to); }
@@ -1866,6 +1961,15 @@ var JavaMini = (function ()
 			var self0 = this;
 			classes.forEach(function (c)
 			{
+				if ((c.outer || c.anon) && self0.niveau < 2) { throw cErr("les classes internes et anonymes ne sont pas au programme du semestre 1", c.line); }
+				if (c.anon)
+				{
+					var ab = erase(c.base), abc = self0.classes[ab];
+					if ((abc && abc.iface) || (!abc && /^(Comparator|Comparable|Iterator)$/.test(ab))) { c.impls = [c.base]; } else { c.ext = c.base; }
+				}
+			});
+			classes.forEach(function (c)
+			{
 			if (self0.niveau < 2 && c.isEnum) { throw cErr("les enum ne sont pas au programme du semestre 1 : utilise des constantes (static final int)", c.line); }
 			if (self0.niveau < 2 && (c.iface || c.abs || c.ext || c.impls.length))
 			{
@@ -1966,10 +2070,55 @@ var JavaMini = (function ()
 			for (var c = cls; c && out.length < 60; c = c.ext ? this.classes[erase(c.ext)] : null) { out.push(c); }
 			return out;
 		},
+		/* Comme javac : un membre private est accessible partout dans la même classe de premier niveau (classes internes comprises). */
+		topOf: function (c) { var n = 0; while (c && c.outer && this.classes[c.outer] && n++ < 20) { c = this.classes[c.outer]; } return c; },
+		privOK: function (from, owner) { return from === owner || (!!from && !!owner && this.topOf(from) === this.topOf(owner)); },
+		/* Objet englobant d'une classe interne : on remonte this, puis this.outer... jusqu'à une instance de la classe englobante. */
+		enclosing: function (fr, outerName)
+		{
+			for (var o = fr.self, n = 0; o && n < 20; o = o.outer, n++) { if (this.isSub(o.cls.name, outerName)) { return o; } }
+			return null;
+		},
+		/* Variables locales vues par une classe anonyme au moment de sa création (copie : elles sont effectivement final). */
+		capture: function (fr)
+		{
+			var cap = Object.create(null);
+			if (fr.self && fr.self.cap) { for (var k0 in fr.self.cap) { cap[k0] = fr.self.cap[k0]; } }
+			fr.scopes.forEach(function (sc) { for (var k in sc) { cap[k] = { t: sc[k].t, val: sc[k].val, init: sc[k].init }; } });
+			return cap;
+		},
+		/* Nom introuvable dans la classe : variable capturée, puis attribut d'une classe englobante. */
+		outerRef: function (fr, n, line)
+		{
+			var o = fr.self;
+			if (o && o.cap && o.cap[n] && !(fr.meth && fr.meth.stat))
+			{
+				var e = o.cap[n];
+				return { t: e.t, get: function () { return e.val; }, set: function () { throw cErr("la variable locale " + n + " est utilisée dans une classe anonyme : on ne peut plus la modifier (elle doit être final ou effectivement final)", line); } };
+			}
+			for (var c = fr.cls, k = 0; c && c.outer && k < 20; k++)
+			{
+				var oc = this.classes[c.outer], oo = (o && !c.stat) ? o.outer : null;
+				if (oc && this.findField(oc, n)) { return this.fieldRef(oc, oo, n, line, fr, false); }
+				c = oc; o = oo;
+			}
+			return null;
+		},
 		findField: function (cls, n)
 		{
 			var ch = this.chain(cls);
 			for (var i = 0; i < ch.length; i++) { if (ch[i].finfo[n]) { return { f: ch[i].finfo[n], owner: ch[i] }; } }
+			/* Constantes héritées d'une interface (JLabel.CENTER vient de SwingConstants). */
+			var seen = {}, todo = [];
+			ch.forEach(function (c) { todo = todo.concat(c.impls || []); });
+			while (todo.length)
+			{
+				var x = erase(todo.shift()), ic = this.classes[x];
+				if (!ic || seen[x]) { continue; }
+				seen[x] = 1;
+				if (ic.finfo[n] && ic.finfo[n].stat) { return { f: ic.finfo[n], owner: ic }; }
+				todo = todo.concat(ic.impls || []);
+			}
 			return null;
 		},
 		/* Méthodes d'un nom donné, vues depuis cls : une méthode redéfinie cache celle de la mère (liaison dynamique). */
@@ -2090,6 +2239,7 @@ var JavaMini = (function ()
 		},
 		tick: function (line)
 		{
+			if (line < LIB_LINE) { this.lastUserLine = line; }
 			if (++this.steps > this.maxSteps)
 			{
 				throw JErr("limit", "Le programme ne s'arrête pas (plus de " + this.maxSteps + " étapes) : boucle infinie probable.", line,
@@ -2169,6 +2319,7 @@ var JavaMini = (function ()
 			}
 			/* Paramètre de type (T d'une classe générique) ou Object : un nombre y est rangé dans son enveloppe. */
 			if (TPARAMS[et] && !this.classes[et]) { return (num(v.t) || v.t === "boolean") ? box(v) : v; }
+			if (/\[\]$/.test(t) && TPARAMS[t.replace(/(\[\])+$/, "")] && (v.t === "null" || (/\[\]$/.test(v.t) && !PRIM[v.t.replace(/(\[\])+$/, "")]))) { return v; }
 			if ((et === "Object" || et === "Number" || et === "Comparable") && (num(v.t) || v.t === "boolean")) { return box(v); }
 			/* Depuis une enveloppe vers un type de base : unboxing (NullPointerException si null). */
 			if (PRIM[t] && v.t === "null" && !(node && node.k === "lit"))
@@ -2348,12 +2499,14 @@ var JavaMini = (function ()
 			{
 				if (implicit)
 				{
+					var alt = this.outerRef(fr, n, line);
+					if (alt) { return alt; }
 					if (this.classes[n] || BUILTIN[n]) { return { t: "class", get: function () { return mk("class", n); }, set: function () { throw cErr(n + " est une classe", line); } }; }
 					throw cErr("symbole introuvable : variable " + n, line, "Vérifie l'orthographe (Java distingue majuscules et minuscules) et que la variable est déclarée avant, dans le même bloc.");
 				}
 				throw cErr("symbole introuvable : " + n + " n'est pas un attribut de " + cls.name, line);
 			}
-			if (f.priv && fr.cls !== owner)
+			if (f.priv && !this.privOK(fr.cls, owner))
 			{
 				throw cErr(n + " a un accès private dans " + owner.name, line, owner !== cls ? "Un attribut private de la classe mère n'est pas accessible dans la classe fille : déclare-le protected, ou passe par un accesseur." : "Un attribut private ne se lit que depuis sa classe : passe par un accesseur (get" + n.charAt(0).toUpperCase() + n.slice(1) + "()).");
 			}
@@ -2756,6 +2909,7 @@ var JavaMini = (function ()
 			{
 				case "paren": return this.staticType(e.e, fr);
 				case "this": return here ? here.name : null;
+				case "outerThis": return e.cls;
 				case "cast": return e.t;
 				case "new": return e.cls + (e.targs || "");
 				case "name":
@@ -2821,6 +2975,20 @@ var JavaMini = (function ()
 				}
 				if (!list.length)
 				{
+					/* Méthode d'une classe englobante (appel depuis une classe interne ou anonyme). */
+					for (var ic = fr.cls, io = fr.self && !(fr.meth && fr.meth.stat) ? fr.self : null, ik = 0; ic && ic.outer && ik < 20; ik++)
+					{
+						var occ = this.classes[ic.outer], ooo = (io && !ic.stat) ? io.outer : null;
+						var ol = occ ? this.methodsOf(ooo ? ooo.cls : occ, name) : [];
+						if (ol.length)
+						{
+							args = this.evArgs(node.args, fr);
+							var om = this.pick(ol, args, "la méthode " + name, node.line);
+							if (!om.stat && !ooo) { throw cErr("la méthode " + name + " n'est pas static : pas d'objet " + occ.name + " ici", node.line); }
+							return this.invoke(om, om.stat ? null : ooo, args, node.line);
+						}
+						ic = occ; io = ooo;
+					}
 					throw cErr("symbole introuvable : méthode " + name + "(...)", node.line,
 						"Vérifie le nom (majuscules comprises). Pour une méthode d'une autre classe : NomClasse." + name + "(...).");
 				}
@@ -2922,7 +3090,7 @@ var JavaMini = (function ()
 				throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe " + cls.name, node.line);
 			}
 			var mm = this.pick(list, args, "la méthode " + name, node.line);
-			if (mm.priv && fr.cls !== mm.cls) { throw cErr(name + "(...) a un accès private dans " + mm.cls.name, node.line); }
+			if (mm.priv && !this.privOK(fr.cls, mm.cls)) { throw cErr(name + "(...) a un accès private dans " + mm.cls.name, node.line); }
 			this.genArgs(mm, node.args, fr, node.line);
 			return this.invoke(mm, mm.stat ? null : obj, args, node.line);
 		},
@@ -2959,7 +3127,7 @@ var JavaMini = (function ()
 		{
 			if (!args.length || args[0].t !== "String") { throw cErr("le premier paramètre de format/printf est une chaîne de format", line); }
 			var f = args[0].v.s, k = 1, self = this;
-			return f.replace(/%([-0+,]*)(\d+)?(?:\.(\d+))?([dsfcnbx%])/g, function (all, flags, width, prec, conv)
+			return f.replace(/%([-0+,]*)(\d+)?(?:\.(\d+))?([dsfcnbxX%])/g, function (all, flags, width, prec, conv)
 			{
 				if (conv === "%") { return "%"; }
 				if (conv === "n") { return "\n"; }
@@ -2980,7 +3148,7 @@ var JavaMini = (function ()
 					s = a.v.toFixed(prec === undefined ? 6 : parseInt(prec, 10)).replace(".", ","); // locale française, comme Java sur un poste en français
 				}
 				else if (conv === "c") { s = a.t === "char" ? String.fromCharCode(a.v) : self.str(a, line); }
-				else if (conv === "x") { s = (a.v >>> 0).toString(16); }
+				else if (conv === "x" || conv === "X") { s = (a.v >>> 0).toString(16); if (conv === "X") { s = s.toUpperCase(); } }
 				else { s = self.str(a, line); if (prec !== undefined) { s = s.slice(0, parseInt(prec, 10)); } }
 				if (width)
 				{
@@ -3041,7 +3209,7 @@ var JavaMini = (function ()
 				if (!list.length) { throw cErr("symbole introuvable : méthode " + name + "(...) dans la classe " + cname, line); }
 				var m = this.pick(list, args, "la méthode " + cname + "." + name, line);
 				if (!m.stat) { throw cErr("la méthode " + name + " n'est pas static : il faut l'appeler sur un objet, pas sur la classe " + cname, line); }
-				if (m.priv && fr.cls !== m.cls) { throw cErr(name + "(...) a un accès private dans " + m.cls.name, line); }
+				if (m.priv && !this.privOK(fr.cls, m.cls)) { throw cErr(name + "(...) a un accès private dans " + m.cls.name, line); }
 				if (node.args) { this.genArgs(m, node.args, fr, line); }
 				return this.invoke(m, null, args, line);
 			}
@@ -3093,11 +3261,24 @@ var JavaMini = (function ()
 			}
 			if (cname === "Integer" || cname === "Long")
 			{
+				if ((name === "parseInt" || name === "parseLong") && args.length === 2 && this.niveau >= 2)
+				{
+					/* parseInt(texte, base) : base 16 pour l'hexadécimal (TP6 de Dév IHM). */
+					need(2, ["String", "num"]);
+					var bs = args[1].v, digs = "0123456789abcdefghijklmnopqrstuvwxyz".slice(0, bs);
+					if (!new RegExp("^[-+]?[" + digs + "]+$", "i").test(a0.v.s)) { throw rErr("java.lang.NumberFormatException: For input string: \"" + a0.v.s + "\"" + (bs !== 10 ? " under radix " + bs : ""), line); }
+					return mk(name === "parseInt" ? "int" : "long", parseInt(a0.v.s, bs));
+				}
 				if (name === "parseInt" || name === "parseLong")
 				{
 					need(1, ["String"]);
 					if (!/^[-+]?\d+$/.test(a0.v.s)) { throw rErr("java.lang.NumberFormatException: For input string: \"" + a0.v.s + "\"", line); }
 					return mk(name === "parseInt" ? "int" : "long", parseInt(a0.v.s, 10));
+				}
+				if ((name === "toHexString" || name === "toBinaryString" || name === "toOctalString") && this.niveau >= 2)
+				{
+					need(1, ["num"]);
+					return mkStr((a0.v >>> 0).toString(name === "toHexString" ? 16 : (name === "toBinaryString" ? 2 : 8)));
 				}
 				if (name === "toString") { need(1); return mkStr(this.str(a0, line)); }
 				if (name === "valueOf" && this.niveau >= 2)
@@ -3472,6 +3653,16 @@ var JavaMini = (function ()
 			if (cls.abs) { throw cErr(cname + " est " + (cls.iface ? "une interface" : "abstraite") + " : on ne peut pas créer d'objet avec new " + cname, node.line, "On crée un objet d'une classe concrète qui " + (cls.iface ? "implémente l'interface." : "hérite de " + cname + ".")); }
 			if (cls.isEnum) { throw cErr("on ne peut pas créer d'objet d'un enum avec new : utilise ses constantes (" + cname + "." + (cls.consts[0] ? cls.consts[0].name : "X") + ")", node.line); }
 			var obj = { cls: cls, f: {}, finit: {}, id: this.nextId++ };
+			if (cls.outer && !cls.stat)
+			{
+				obj.outer = this.enclosing(fr, cls.outer);
+				if (!obj.outer && !cls.anon)
+				{
+					throw cErr("la classe interne " + cname + " n'est pas static : on ne crée un " + cname + " que depuis une méthode d'instance de " + cls.outer, node.line,
+						"Crée l'objet dans le constructeur (ou une méthode non static) de " + cls.outer + ", ou déclare la classe interne static.");
+				}
+			}
+			if (cls.anon) { obj.cap = this.capture(fr); }
 			this.chain(cls).forEach(function (c) { c.fields.forEach(function (f) { if (!f.stat) { obj.f[f.name] = defVal(f.t); } }); });
 			this.construct(cls, obj, args, node.line, fr);
 			return mk(cname, obj);
@@ -3480,13 +3671,14 @@ var JavaMini = (function ()
 		{
 			if (!cls.ctors.length)
 			{
+				if (cls.anon) { this.superInit(cls, obj, args, line, true, fr); this.initFields(cls, obj); return; }
 				if (args.length) { throw cErr("la classe " + cls.name + " n'a pas de constructeur avec paramètres", line); }
 				this.superInit(cls, obj, [], line, false);
 				this.initFields(cls, obj);
 				return;
 			}
 			var c = this.pick(cls.ctors, args, "le constructeur " + cls.name, line);
-			if (c.priv && fr.cls !== cls) { throw cErr("le constructeur " + cls.name + " est private", line); }
+			if (c.priv && !this.privOK(fr.cls, cls)) { throw cErr("le constructeur " + cls.name + " est private", line); }
 			c.name = cls.name;
 			c.isCtor = true;
 			c.ret = "void";
@@ -3604,6 +3796,9 @@ var JavaMini = (function ()
 				case "superCall": throw cErr("super(...) doit être la première instruction d'un constructeur", n.line);
 				case "super": throw cErr("super s'utilise avec un point : super.methode(...)", n.line);
 				case "new": return this.newObj(n, fr);
+				case "outerThis":
+					for (var ot = fr.self, otn = 0; ot && otn < 20; ot = ot.outer, otn++) { if (this.isSub(ot.cls.name, n.cls)) { return mk(ot.cls.name, ot); } }
+					throw cErr(n.cls + ".this : il n'y a pas d'objet " + n.cls + " englobant ici", n.line);
 				case "newArr":
 					var sizes = n.dims.map(function (d)
 					{
@@ -3777,7 +3972,27 @@ var JavaMini = (function ()
 	};
 
 	/* ======================= 5. Points d'entrée ======================= */
-	function parse(src) { return new Parser(src).program(); }
+	function parse(src, base) { return new Parser(src, base).program(); }
+
+	/* ---- Mini-Swing (Dév IHM, niveau 3) : bibliothèque écrite en Java (swing-lib.java),
+	   analysée à part avec des numéros de ligne à partir de LIB_LINE pour ne jamais se
+	   mélanger aux lignes de l'élève. ---- */
+	var LIB_LINE = 1000000, LIB = { swing: null };
+	function setLib(src) { LIB.swing = src; }
+	function libSrc()
+	{
+		if (LIB.swing === null && typeof require === "function" && typeof __dirname === "string")
+		{
+			try { LIB.swing = require("fs").readFileSync(require("path").join(__dirname, "swing-lib.java"), "utf8"); } catch (e) { LIB.swing = ""; }
+		}
+		return LIB.swing || "";
+	}
+	/* Paquetage de chaque classe de la bibliothèque : il faut l'importer, comme avec javac. */
+	var LIBPKG = {};
+	"Color Font Dimension Point FlowLayout GridLayout BorderLayout LayoutManager Graphics Component Container AWTEvent".split(" ").forEach(function (n) { LIBPKG[n] = "java.awt"; });
+	"ActionEvent ItemEvent AdjustmentEvent MouseEvent ActionListener ItemListener AdjustmentListener MouseListener MouseMotionListener MouseAdapter MouseMotionAdapter".split(" ").forEach(function (n) { LIBPKG[n] = "java.awt.event"; });
+	"SwingConstants BorderFactory JComponent JPanel JFrame AbstractButton JButton JToggleButton JCheckBox JRadioButton ButtonGroup JLabel JTextField JScrollBar JComboBox JMenuBar JMenuItem JMenu".split(" ").forEach(function (n) { LIBPKG[n] = "javax.swing"; });
+	LIBPKG.Border = "javax.swing.border";
 
 	/* ---- Plusieurs fichiers : un seul texte, chaque fichier commence par la ligne
 	   « //// Fichier : Nom.java » (un commentaire, donc du Java valide). ---- */
@@ -3826,8 +4041,14 @@ var JavaMini = (function ()
 		try
 		{
 			var classes = parse(src);
+			var lib = [];
+			if ((opts.niveau || DEFAULTS.niveau) >= 3 && libSrc())
+			{
+				lib = parse(libSrc(), LIB_LINE).filter(function (c) { return !classes.some(function (u) { return u.name === c.name; }); });
+				lib.forEach(function (c) { c.lib = true; });
+			}
 			TPARAMS = Object.create(null);
-			classes.forEach(function (c) { (c.tparams || []).forEach(function (p) { TPARAMS[p] = 1; }); });
+			classes.concat(lib).forEach(function (c) { (c.tparams || []).forEach(function (p) { TPARAMS[p] = 1; }); });
 			var segs = fileRanges(src);
 			if (segs)
 			{
@@ -3852,14 +4073,16 @@ var JavaMini = (function ()
 				}
 			}
 			checkReturns(classes);
-			if ((opts.niveau || DEFAULTS.niveau) >= 2) { checkImports(classes, segs); }
-			m = new Machine(classes, opts);
+			if ((opts.niveau || DEFAULTS.niveau) >= 2) { checkImports(classes, segs, lib.length ? LIBPKG : null); }
+			m = new Machine(lib.length ? classes.concat(lib) : classes, opts);
 			m.start();
-			return { out: m.out.join(""), error: null, steps: m.steps };
+			return { out: m.out.join(""), error: null, steps: m.steps, gui: opts.gui ? makeGui(m) : null };
 		}
 		catch (e)
 		{
-			if (e && e.kind === "exit") { return { out: m.out.join(""), error: null, steps: m.steps }; }
+			if (e && e.kind === "exit") { return { out: m.out.join(""), error: null, steps: m.steps, exited: true }; }
+			if (e && e.jline >= LIB_LINE) { e.jline = m && m.lastUserLine || 0; }
+			if (e && e.line >= LIB_LINE) { e.line = m && m.lastUserLine || 0; }
 			if (e && e.jthrow && m)
 			{
 				var txt;
@@ -3882,13 +4105,23 @@ var JavaMini = (function ()
 
 	/* Comme javac : ArrayList, HashMap... ne sont connues qu'après import java.util.XXX; (ou java.util.*). */
 	var UTIL = { ArrayList: 1, LinkedList: 1, HashMap: 1, List: 1, Map: 1, Set: 1, Collections: 1, Iterator: 1, Comparator: 1, Collection: 1, Queue: 1, Deque: 1 };
-	function checkImports(classes, segs)
+	function checkImports(classes, segs, libpkg)
 	{
 		var mine = {}, imp = classes.imports || [], il = classes.importLines || [];
 		classes.forEach(function (c) { mine[c.name] = 1; });
 		(classes.toks || []).forEach(function (t, i)
 		{
 			var prev = classes.toks[i - 1];
+			if (t.type === "id" && libpkg && libpkg[t.v] && !mine[t.v] && !(prev && prev.v === "."))
+			{
+				var pk = libpkg[t.v], sg = segs ? segOf(segs, t.line) : null;
+				var okl = imp.some(function (p, k) { return (p === pk + "." + t.v || p === pk + ".*") && (!sg || segOf(segs, il[k]) === sg); });
+				if (!okl)
+				{
+					throw cErr("symbole introuvable : classe " + t.v, t.line, "Ajoute en haut du fichier" + (sg ? " " + sg.name : "") + " : import " + pk + "." + t.v + "; (ou import " + pk + ".*;)");
+				}
+				return;
+			}
 			if (t.type !== "id" || !UTIL[t.v] || mine[t.v] || (prev && prev.v === ".")) { return; }
 			/* Plusieurs fichiers : un import ne vaut que pour le fichier où il est écrit. */
 			var seg = segs ? segOf(segs, t.line) : null;
@@ -4039,11 +4272,92 @@ var JavaMini = (function ()
 
 	/* Niveau par défaut des exécutions : 1 (S1, sans API) ou 2 (S2 : collections, interfaces...). */
 	function setNiveau(n) { DEFAULTS.niveau = n || 1; }
-	return { run: run, check: check, parse: parse, lex: lex, fmtDouble: fmtDouble, setNiveau: setNiveau, isMulti: isMulti, splitFiles: splitFiles, joinFiles: joinFiles, whereLine: whereLine };
+	/* Après un main qui a ouvert des fenêtres : de quoi les afficher et leur envoyer des événements. */
+	function makeGui(m)
+	{
+		function jsToVal(x)
+		{
+			if (x === null || x === undefined) { return NULLV; }
+			if (typeof x === "boolean") { return mk("boolean", x); }
+			if (typeof x === "number") { return mk("int", x | 0); }
+			if (typeof x === "string") { return mkStr(x); }
+			return x;
+		}
+		var api = {
+			machine: m,
+			closed: false,
+			frames: function ()
+			{
+				var jf = m.classes.JFrame;
+				if (!jf || !jf.lib || !jf.statics.jqFenetres) { return []; }
+				var l = jf.statics.jqFenetres.val;
+				return (l && l.v ? l.v.data : []).map(function (x) { return x.v; }).filter(function (o) { return o && o.f.jqVisible && o.f.jqVisible.v; });
+			},
+			chain: function (obj) { return m.chain(obj.cls).map(function (c) { return c.name; }); },
+			userMethod: function (obj, name)
+			{
+				var l = m.methodsOf(obj.cls, name);
+				return l.length && !l[0].cls.lib ? l[0] : null;
+			},
+			create: function (cname)
+			{
+				var cls = m.classes[cname];
+				return m.newObj({ k: "new", cls: cname, args: [], line: 0 }, { cls: cls, scopes: [Object.create(null)], self: null, meth: null }).v;
+			},
+			/* Appelle obj.name(args) ; renvoie { out, error } (texte affiché pendant l'appel). */
+			call: function (obj, name, args)
+			{
+				var before = m.out.length;
+				args = (args || []).map(jsToVal);
+				m.steps = 0;
+				m.depth = 0;
+				try
+				{
+					var list = m.methodsOf(obj.cls, name).filter(function (x) { return x.params.length === args.length; });
+					if (!list.length) { throw cErr("méthode " + name + " introuvable", 0); }
+					var r = m.invoke(list[0], obj, args, 0);
+					return { out: m.out.slice(before).join(""), error: null, ret: r };
+				}
+				catch (e)
+				{
+					var out = m.out.slice(before).join("");
+					if (e && e.kind === "exit") { api.closed = true; return { out: out, error: null, exited: true }; }
+					if (e && e.jline >= LIB_LINE) { e.jline = m.lastUserLine || 0; }
+					if (e && e.line >= LIB_LINE) { e.line = m.lastUserLine || 0; }
+					if (e && e.jthrow)
+					{
+						var txt;
+						try { txt = e.jthrow.v && e.jthrow.v.cls ? m.excText(e.jthrow) : m.str(e.jthrow, e.line); } catch (x) { txt = e.jthrow.t; }
+						e = JErr("runtime", 'Exception in thread "AWT-EventQueue-0" ' + txt, e.line, "Cette exception est survenue pendant le traitement d'un événement (clic, saisie...).");
+					}
+					if (!e || !e.isJava) { e = JErr("runtime", "Erreur interne de l'interpréteur : " + (e && e.message), 0); }
+					return { out: out, error: { kind: e.kind, msg: e.message, line: e.jline, hint: e.hint } };
+				}
+			},
+			get: function (obj, field)
+			{
+				var v = obj && obj.f[field];
+				if (!v || v.t === "null") { return null; }
+				if (v.t === "String") { return v.v.s; }
+				if (v.v && v.v.coll === "list") { return v.v.data.map(function (x) { return x.t === "String" ? x.v.s : (x.t === "null" ? null : (x.v && x.v.cls ? x.v : x.v)); }); }
+				return v.v;
+			},
+			set: function (obj, field, x) { obj.f[field] = jsToVal(x); },
+			text: function (x)
+			{
+				if (x === null || x === undefined) { return "null"; }
+				if (typeof x !== "object") { return String(x); }
+				try { return m.str(mk(x.cls ? x.cls.name : "Object", x), 0); } catch (e) { return "?"; }
+			}
+		};
+		return api;
+	}
+	return { run: run, check: check, parse: parse, lex: lex, fmtDouble: fmtDouble, setNiveau: setNiveau, setLib: setLib, isMulti: isMulti, splitFiles: splitFiles, joinFiles: joinFiles, whereLine: whereLine };
 })();
 
 if (typeof module !== "undefined") { module.exports = JavaMini; }
 
+JavaMini.setLib("// Mini-Swing de JavaQuest : une version simplifiée de java.awt et javax.swing,\n// écrite en Java et exécutée par l'interpréteur (niveau 3, Dév IHM).\n// Les noms internes commencent par jq pour ne jamais gêner le code des élèves.\n// Le rendu (fenêtres, mise en page, dessin) est fait en JavaScript par swing-ui.js,\n// qui lit les attributs jq... de ces objets et rappelle les méthodes jq... sur un clic.\n\nclass Color\n{\n\tpublic static final Color WHITE = new Color(255, 255, 255);\n\tpublic static final Color LIGHT_GRAY = new Color(192, 192, 192);\n\tpublic static final Color GRAY = new Color(128, 128, 128);\n\tpublic static final Color DARK_GRAY = new Color(64, 64, 64);\n\tpublic static final Color BLACK = new Color(0, 0, 0);\n\tpublic static final Color RED = new Color(255, 0, 0);\n\tpublic static final Color PINK = new Color(255, 175, 175);\n\tpublic static final Color ORANGE = new Color(255, 200, 0);\n\tpublic static final Color YELLOW = new Color(255, 255, 0);\n\tpublic static final Color GREEN = new Color(0, 255, 0);\n\tpublic static final Color MAGENTA = new Color(255, 0, 255);\n\tpublic static final Color CYAN = new Color(0, 255, 255);\n\tpublic static final Color BLUE = new Color(0, 0, 255);\n\tpublic static final Color white = WHITE;\n\tpublic static final Color lightGray = LIGHT_GRAY;\n\tpublic static final Color gray = GRAY;\n\tpublic static final Color darkGray = DARK_GRAY;\n\tpublic static final Color black = BLACK;\n\tpublic static final Color red = RED;\n\tpublic static final Color pink = PINK;\n\tpublic static final Color orange = ORANGE;\n\tpublic static final Color yellow = YELLOW;\n\tpublic static final Color green = GREEN;\n\tpublic static final Color magenta = MAGENTA;\n\tpublic static final Color cyan = CYAN;\n\tpublic static final Color blue = BLUE;\n\n\tprivate int jqR;\n\tprivate int jqG;\n\tprivate int jqB;\n\n\tpublic Color(int r, int g, int b)\n\t{\n\t\tif (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)\n\t\t{\n\t\t\tString bad = \"\";\n\t\t\tif (r < 0 || r > 255) { bad += \" Red\"; }\n\t\t\tif (g < 0 || g > 255) { bad += \" Green\"; }\n\t\t\tif (b < 0 || b > 255) { bad += \" Blue\"; }\n\t\t\tthrow new IllegalArgumentException(\"Color parameter outside of expected range:\" + bad);\n\t\t}\n\t\tthis.jqR = r;\n\t\tthis.jqG = g;\n\t\tthis.jqB = b;\n\t}\n\n\tpublic Color(int rgb)\n\t{\n\t\tthis.jqR = Color.jqOctet(rgb, 65536);\n\t\tthis.jqG = Color.jqOctet(rgb, 256);\n\t\tthis.jqB = Color.jqOctet(rgb, 1);\n\t}\n\n\tpublic int getRed() { return this.jqR; }\n\tpublic int getGreen() { return this.jqG; }\n\tpublic int getBlue() { return this.jqB; }\n\tpublic int getAlpha() { return 255; }\n\tpublic int getRGB() { return -16777216 + this.jqR * 65536 + this.jqG * 256 + this.jqB; }\n\n\tprivate static int jqOctet(int v, int div)\n\t{\n\t\tint q = v / div;\n\t\tif (v < 0 && v % div != 0) { q--; }\n\t\treturn ((q % 256) + 256) % 256;\n\t}\n\n\tpublic Color darker()\n\t{\n\t\treturn new Color(Math.max((int) (this.jqR * 0.7), 0), Math.max((int) (this.jqG * 0.7), 0), Math.max((int) (this.jqB * 0.7), 0));\n\t}\n\n\tpublic Color brighter()\n\t{\n\t\tint r = this.jqR;\n\t\tint g = this.jqG;\n\t\tint b = this.jqB;\n\t\tint i = 3;\n\t\tif (r == 0 && g == 0 && b == 0) { return new Color(i, i, i); }\n\t\tif (r > 0 && r < i) { r = i; }\n\t\tif (g > 0 && g < i) { g = i; }\n\t\tif (b > 0 && b < i) { b = i; }\n\t\treturn new Color(Math.min((int) (r / 0.7), 255), Math.min((int) (g / 0.7), 255), Math.min((int) (b / 0.7), 255));\n\t}\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Color)) { return false; }\n\t\tColor c = (Color) o;\n\t\treturn c.jqR == this.jqR && c.jqG == this.jqG && c.jqB == this.jqB;\n\t}\n\n\tpublic int hashCode() { return this.getRGB(); }\n\n\tpublic String toString()\n\t{\n\t\treturn \"java.awt.Color[r=\" + this.jqR + \",g=\" + this.jqG + \",b=\" + this.jqB + \"]\";\n\t}\n}\n\nclass Font\n{\n\tpublic static final int PLAIN = 0;\n\tpublic static final int BOLD = 1;\n\tpublic static final int ITALIC = 2;\n\tpublic static final String SERIF = \"Serif\";\n\tpublic static final String SANS_SERIF = \"SansSerif\";\n\tpublic static final String MONOSPACED = \"Monospaced\";\n\tpublic static final String DIALOG = \"Dialog\";\n\n\tprivate String jqNom;\n\tprivate int jqStyle;\n\tprivate int jqTaille;\n\n\tpublic Font(String nom, int style, int taille)\n\t{\n\t\tthis.jqNom = nom;\n\t\tthis.jqStyle = style;\n\t\tthis.jqTaille = taille;\n\t}\n\n\tpublic String getName() { return this.jqNom; }\n\tpublic String getFamily() { return this.jqNom; }\n\tpublic int getStyle() { return this.jqStyle; }\n\tpublic int getSize() { return this.jqTaille; }\n\tpublic boolean isBold() { return this.jqStyle % 2 == 1; }\n\tpublic boolean isItalic() { return (this.jqStyle / 2) % 2 == 1; }\n\tpublic Font deriveFont(int style) { return new Font(this.jqNom, style, this.jqTaille); }\n}\n\nclass Dimension\n{\n\tpublic int width;\n\tpublic int height;\n\n\tpublic Dimension() { }\n\n\tpublic Dimension(int width, int height)\n\t{\n\t\tthis.width = width;\n\t\tthis.height = height;\n\t}\n\n\tpublic double getWidth() { return this.width; }\n\tpublic double getHeight() { return this.height; }\n\tpublic void setSize(int width, int height) { this.width = width; this.height = height; }\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Dimension)) { return false; }\n\t\tDimension d = (Dimension) o;\n\t\treturn d.width == this.width && d.height == this.height;\n\t}\n\n\tpublic String toString() { return \"java.awt.Dimension[width=\" + this.width + \",height=\" + this.height + \"]\"; }\n}\n\nclass Point\n{\n\tpublic int x;\n\tpublic int y;\n\n\tpublic Point() { }\n\n\tpublic Point(int x, int y)\n\t{\n\t\tthis.x = x;\n\t\tthis.y = y;\n\t}\n\n\tpublic double getX() { return this.x; }\n\tpublic double getY() { return this.y; }\n\tpublic void setLocation(int x, int y) { this.x = x; this.y = y; }\n\tpublic void translate(int dx, int dy) { this.x += dx; this.y += dy; }\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Point)) { return false; }\n\t\tPoint p = (Point) o;\n\t\treturn p.x == this.x && p.y == this.y;\n\t}\n\n\tpublic String toString() { return \"java.awt.Point[x=\" + this.x + \",y=\" + this.y + \"]\"; }\n}\n\ninterface SwingConstants\n{\n\tint CENTER = 0;\n\tint TOP = 1;\n\tint LEFT = 2;\n\tint BOTTOM = 3;\n\tint RIGHT = 4;\n\tint HORIZONTAL = 0;\n\tint VERTICAL = 1;\n\tint LEADING = 10;\n\tint TRAILING = 11;\n}\n\ninterface LayoutManager\n{\n}\n\nclass FlowLayout implements LayoutManager\n{\n\tpublic static final int LEFT = 0;\n\tpublic static final int CENTER = 1;\n\tpublic static final int RIGHT = 2;\n\tpublic static final int LEADING = 3;\n\tpublic static final int TRAILING = 4;\n\n\tprivate int jqAlign;\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\n\tpublic FlowLayout() { this(1, 5, 5); }\n\tpublic FlowLayout(int align) { this(align, 5, 5); }\n\n\tpublic FlowLayout(int align, int hgap, int vgap)\n\t{\n\t\tthis.jqAlign = align;\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getAlignment() { return this.jqAlign; }\n\tpublic void setAlignment(int align) { this.jqAlign = align; }\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n}\n\nclass GridLayout implements LayoutManager\n{\n\tprivate int jqRows;\n\tprivate int jqCols;\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\n\tpublic GridLayout() { this(1, 0, 0, 0); }\n\tpublic GridLayout(int rows, int cols) { this(rows, cols, 0, 0); }\n\n\tpublic GridLayout(int rows, int cols, int hgap, int vgap)\n\t{\n\t\tif (rows == 0 && cols == 0) { throw new IllegalArgumentException(\"rows and cols cannot both be zero\"); }\n\t\tthis.jqRows = rows;\n\t\tthis.jqCols = cols;\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getRows() { return this.jqRows; }\n\tpublic int getColumns() { return this.jqCols; }\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setRows(int r) { this.jqRows = r; }\n\tpublic void setColumns(int c) { this.jqCols = c; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n}\n\nclass BorderLayout implements LayoutManager\n{\n\tpublic static final String NORTH = \"North\";\n\tpublic static final String SOUTH = \"South\";\n\tpublic static final String EAST = \"East\";\n\tpublic static final String WEST = \"West\";\n\tpublic static final String CENTER = \"Center\";\n\tpublic static final String PAGE_START = \"First\";\n\tpublic static final String PAGE_END = \"Last\";\n\tpublic static final String LINE_START = \"Before\";\n\tpublic static final String LINE_END = \"After\";\n\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\tprivate Component jqNorth;\n\tprivate Component jqSouth;\n\tprivate Component jqEast;\n\tprivate Component jqWest;\n\tprivate Component jqCenter;\n\n\tpublic BorderLayout() { this(0, 0); }\n\n\tpublic BorderLayout(int hgap, int vgap)\n\t{\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n\n\tvoid jqPoser(Component c, Object cons)\n\t{\n\t\tif (cons != null && !(cons instanceof String)) { throw new IllegalArgumentException(\"cannot add to layout: constraint must be a string (or null)\"); }\n\t\tString z = (String) cons;\n\t\tif (z == null || z.equals(\"Center\")) { this.jqCenter = c; }\n\t\telse if (z.equals(\"North\") || z.equals(\"First\")) { this.jqNorth = c; }\n\t\telse if (z.equals(\"South\") || z.equals(\"Last\")) { this.jqSouth = c; }\n\t\telse if (z.equals(\"East\") || z.equals(\"After\")) { this.jqEast = c; }\n\t\telse if (z.equals(\"West\") || z.equals(\"Before\")) { this.jqWest = c; }\n\t\telse { throw new IllegalArgumentException(\"cannot add to layout: unknown constraint: \" + z); }\n\t}\n\n\tvoid jqOter(Component c)\n\t{\n\t\tif (this.jqCenter == c) { this.jqCenter = null; }\n\t\tif (this.jqNorth == c) { this.jqNorth = null; }\n\t\tif (this.jqSouth == c) { this.jqSouth = null; }\n\t\tif (this.jqEast == c) { this.jqEast = null; }\n\t\tif (this.jqWest == c) { this.jqWest = null; }\n\t}\n\n\tpublic Object getConstraints(Component c)\n\t{\n\t\tif (c == null) { return null; }\n\t\tif (c == this.jqCenter) { return \"Center\"; }\n\t\tif (c == this.jqNorth) { return \"North\"; }\n\t\tif (c == this.jqSouth) { return \"South\"; }\n\t\tif (c == this.jqEast) { return \"East\"; }\n\t\tif (c == this.jqWest) { return \"West\"; }\n\t\treturn null;\n\t}\n\n\tpublic Component getLayoutComponent(Object cons)\n\t{\n\t\tif (\"Center\".equals(cons)) { return this.jqCenter; }\n\t\tif (\"North\".equals(cons)) { return this.jqNorth; }\n\t\tif (\"South\".equals(cons)) { return this.jqSouth; }\n\t\tif (\"East\".equals(cons)) { return this.jqEast; }\n\t\tif (\"West\".equals(cons)) { return this.jqWest; }\n\t\tthrow new IllegalArgumentException(\"cannot get component: unknown constraint: \" + cons);\n\t}\n}\n\nclass AWTEvent\n{\n\tprivate Object jqSource;\n\tprivate int jqId;\n\n\tpublic AWTEvent(Object source, int id)\n\t{\n\t\tthis.jqSource = source;\n\t\tthis.jqId = id;\n\t}\n\n\tpublic Object getSource() { return this.jqSource; }\n\tpublic int getID() { return this.jqId; }\n}\n\nclass ActionEvent extends AWTEvent\n{\n\tpublic static final int ACTION_PERFORMED = 1001;\n\tprivate String jqCmd;\n\n\tpublic ActionEvent(Object source, int id, String command)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqCmd = command;\n\t}\n\n\tpublic String getActionCommand() { return this.jqCmd; }\n\tpublic int getModifiers() { return 0; }\n\tpublic String paramString() { return \"ACTION_PERFORMED,cmd=\" + this.jqCmd + \",modifiers=\"; }\n}\n\nclass ItemEvent extends AWTEvent\n{\n\tpublic static final int ITEM_STATE_CHANGED = 701;\n\tpublic static final int SELECTED = 1;\n\tpublic static final int DESELECTED = 2;\n\tprivate Object jqItem;\n\tprivate int jqEtat;\n\n\tpublic ItemEvent(Object source, int id, Object item, int stateChange)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqItem = item;\n\t\tthis.jqEtat = stateChange;\n\t}\n\n\tpublic Object getItem() { return this.jqItem; }\n\tpublic int getStateChange() { return this.jqEtat; }\n\tpublic Object getItemSelectable() { return this.getSource(); }\n}\n\nclass AdjustmentEvent extends AWTEvent\n{\n\tpublic static final int ADJUSTMENT_VALUE_CHANGED = 601;\n\tpublic static final int UNIT_INCREMENT = 1;\n\tpublic static final int UNIT_DECREMENT = 2;\n\tpublic static final int BLOCK_DECREMENT = 3;\n\tpublic static final int BLOCK_INCREMENT = 4;\n\tpublic static final int TRACK = 5;\n\tprivate int jqType;\n\tprivate int jqValeur;\n\n\tpublic AdjustmentEvent(Object source, int id, int type, int value)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqType = type;\n\t\tthis.jqValeur = value;\n\t}\n\n\tpublic int getValue() { return this.jqValeur; }\n\tpublic int getAdjustmentType() { return this.jqType; }\n\tpublic Object getAdjustable() { return this.getSource(); }\n}\n\nclass MouseEvent extends AWTEvent\n{\n\tpublic static final int MOUSE_CLICKED = 500;\n\tpublic static final int MOUSE_PRESSED = 501;\n\tpublic static final int MOUSE_RELEASED = 502;\n\tpublic static final int MOUSE_MOVED = 503;\n\tpublic static final int MOUSE_ENTERED = 504;\n\tpublic static final int MOUSE_EXITED = 505;\n\tpublic static final int MOUSE_DRAGGED = 506;\n\tpublic static final int NOBUTTON = 0;\n\tpublic static final int BUTTON1 = 1;\n\tpublic static final int BUTTON2 = 2;\n\tpublic static final int BUTTON3 = 3;\n\tprivate int jqX;\n\tprivate int jqY;\n\tprivate int jqClics;\n\tprivate int jqBouton;\n\n\tpublic MouseEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger)\n\t{\n\t\tthis(source, id, when, modifiers, x, y, clickCount, popupTrigger, 0);\n\t}\n\n\tpublic MouseEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger, int button)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqX = x;\n\t\tthis.jqY = y;\n\t\tthis.jqClics = clickCount;\n\t\tthis.jqBouton = button;\n\t}\n\n\tpublic int getX() { return this.jqX; }\n\tpublic int getY() { return this.jqY; }\n\tpublic Point getPoint() { return new Point(this.jqX, this.jqY); }\n\tpublic int getClickCount() { return this.jqClics; }\n\tpublic int getButton() { return this.jqBouton; }\n\tpublic Component getComponent() { return (Component) this.getSource(); }\n\tpublic boolean isPopupTrigger() { return false; }\n}\n\ninterface ActionListener\n{\n\tvoid actionPerformed(ActionEvent e);\n}\n\ninterface ItemListener\n{\n\tvoid itemStateChanged(ItemEvent e);\n}\n\ninterface AdjustmentListener\n{\n\tvoid adjustmentValueChanged(AdjustmentEvent e);\n}\n\ninterface MouseListener\n{\n\tvoid mouseClicked(MouseEvent e);\n\tvoid mousePressed(MouseEvent e);\n\tvoid mouseReleased(MouseEvent e);\n\tvoid mouseEntered(MouseEvent e);\n\tvoid mouseExited(MouseEvent e);\n}\n\ninterface MouseMotionListener\n{\n\tvoid mouseDragged(MouseEvent e);\n\tvoid mouseMoved(MouseEvent e);\n}\n\nabstract class MouseAdapter implements MouseListener, MouseMotionListener\n{\n\tpublic void mouseClicked(MouseEvent e) { }\n\tpublic void mousePressed(MouseEvent e) { }\n\tpublic void mouseReleased(MouseEvent e) { }\n\tpublic void mouseEntered(MouseEvent e) { }\n\tpublic void mouseExited(MouseEvent e) { }\n\tpublic void mouseDragged(MouseEvent e) { }\n\tpublic void mouseMoved(MouseEvent e) { }\n}\n\nabstract class MouseMotionAdapter implements MouseMotionListener\n{\n\tpublic void mouseDragged(MouseEvent e) { }\n\tpublic void mouseMoved(MouseEvent e) { }\n}\n\nclass Graphics\n{\n\tprivate ArrayList<String> jqOps = new ArrayList<String>();\n\tprivate Color jqCouleur = Color.BLACK;\n\tprivate Font jqPolice = new Font(\"Dialog\", 0, 12);\n\n\tpublic void setColor(Color c)\n\t{\n\t\tif (c == null) { return; }\n\t\tthis.jqCouleur = c;\n\t\tthis.jqOps.add(\"c \" + c.getRed() + \" \" + c.getGreen() + \" \" + c.getBlue());\n\t}\n\n\tpublic Color getColor() { return this.jqCouleur; }\n\n\tpublic void setFont(Font f)\n\t{\n\t\tif (f == null) { return; }\n\t\tthis.jqPolice = f;\n\t\tthis.jqOps.add(\"f \" + f.getSize() + \" \" + f.getStyle() + \" \" + f.getName());\n\t}\n\n\tpublic Font getFont() { return this.jqPolice; }\n\tpublic void drawLine(int x1, int y1, int x2, int y2) { this.jqOps.add(\"l \" + x1 + \" \" + y1 + \" \" + x2 + \" \" + y2); }\n\tpublic void drawRect(int x, int y, int w, int h) { this.jqOps.add(\"r \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void fillRect(int x, int y, int w, int h) { this.jqOps.add(\"R \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void clearRect(int x, int y, int w, int h) { this.jqOps.add(\"C \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void drawOval(int x, int y, int w, int h) { this.jqOps.add(\"o \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void fillOval(int x, int y, int w, int h) { this.jqOps.add(\"O \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void drawRoundRect(int x, int y, int w, int h, int aw, int ah) { this.jqOps.add(\"q \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + aw + \" \" + ah); }\n\tpublic void fillRoundRect(int x, int y, int w, int h, int aw, int ah) { this.jqOps.add(\"Q \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + aw + \" \" + ah); }\n\tpublic void drawArc(int x, int y, int w, int h, int start, int arc) { this.jqOps.add(\"a \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + start + \" \" + arc); }\n\tpublic void fillArc(int x, int y, int w, int h, int start, int arc) { this.jqOps.add(\"A \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + start + \" \" + arc); }\n\tpublic void drawString(String s, int x, int y) { this.jqOps.add(\"s \" + x + \" \" + y + \" \" + s); }\n\n\tpublic void drawPolygon(int[] xs, int[] ys, int n) { this.jqPoly(\"p\", xs, ys, n); }\n\tpublic void fillPolygon(int[] xs, int[] ys, int n) { this.jqPoly(\"P\", xs, ys, n); }\n\tpublic void drawPolyline(int[] xs, int[] ys, int n) { this.jqPoly(\"L\", xs, ys, n); }\n\n\tprivate void jqPoly(String k, int[] xs, int[] ys, int n)\n\t{\n\t\tString s = k + \" \" + n;\n\t\tfor (int i = 0; i < n; i++)\n\t\t{\n\t\t\ts += \" \" + xs[i] + \" \" + ys[i];\n\t\t}\n\t\tthis.jqOps.add(s);\n\t}\n}\n\ninterface Border\n{\n}\n\nclass JqBordure implements Border\n{\n\tString jqGenre;\n\tColor jqCouleur;\n\tint jqEpaisseur;\n\tint jqHaut;\n\tint jqGauche;\n\tint jqBas;\n\tint jqDroite;\n\tString jqTitre;\n\n\tJqBordure(String genre)\n\t{\n\t\tthis.jqGenre = genre;\n\t}\n}\n\nclass BorderFactory\n{\n\tpublic static Border createLineBorder(Color c) { return createLineBorder(c, 1); }\n\n\tpublic static Border createLineBorder(Color c, int epaisseur)\n\t{\n\t\tJqBordure b = new JqBordure(\"ligne\");\n\t\tb.jqCouleur = c;\n\t\tb.jqEpaisseur = epaisseur;\n\t\treturn b;\n\t}\n\n\tpublic static Border createEmptyBorder(int haut, int gauche, int bas, int droite)\n\t{\n\t\tJqBordure b = new JqBordure(\"vide\");\n\t\tb.jqHaut = haut;\n\t\tb.jqGauche = gauche;\n\t\tb.jqBas = bas;\n\t\tb.jqDroite = droite;\n\t\treturn b;\n\t}\n\n\tpublic static Border createTitledBorder(String titre)\n\t{\n\t\tJqBordure b = new JqBordure(\"titre\");\n\t\tb.jqTitre = titre;\n\t\treturn b;\n\t}\n\n\tpublic static Border createEtchedBorder() { return new JqBordure(\"grave\"); }\n\tpublic static Border createRaisedBevelBorder() { return new JqBordure(\"relief\"); }\n\tpublic static Border createLoweredBevelBorder() { return new JqBordure(\"creux\"); }\n}\n\nabstract class Component\n{\n\tprivate Container jqParent;\n\tprivate Color jqFond;\n\tprivate Color jqCouleurTexte;\n\tprivate Font jqPolice;\n\tprivate boolean jqVisible = true;\n\tprivate boolean jqActif = true;\n\tprivate int jqPrefL = -1;\n\tprivate int jqPrefH = -1;\n\tprivate int jqX;\n\tprivate int jqY;\n\tprivate int jqL;\n\tprivate int jqH;\n\tprivate String jqNom;\n\tprivate ArrayList<MouseListener> jqSouris = new ArrayList<MouseListener>();\n\tprivate ArrayList<MouseMotionListener> jqMouvement = new ArrayList<MouseMotionListener>();\n\n\tpublic Container getParent() { return this.jqParent; }\n\tvoid jqSetParent(Container c) { this.jqParent = c; }\n\n\tpublic void setBackground(Color c) { this.jqFond = c; }\n\tpublic Color getBackground() { return this.jqFond; }\n\tpublic void setForeground(Color c) { this.jqCouleurTexte = c; }\n\tpublic Color getForeground() { return this.jqCouleurTexte; }\n\tpublic void setFont(Font f) { this.jqPolice = f; }\n\tpublic Font getFont() { return this.jqPolice; }\n\tpublic void setVisible(boolean b) { this.jqVisible = b; }\n\tpublic boolean isVisible() { return this.jqVisible; }\n\tpublic void setEnabled(boolean b) { this.jqActif = b; }\n\tpublic boolean isEnabled() { return this.jqActif; }\n\tpublic void setName(String n) { this.jqNom = n; }\n\tpublic String getName() { return this.jqNom; }\n\n\tpublic void setPreferredSize(Dimension d)\n\t{\n\t\tif (d == null) { this.jqPrefL = -1; this.jqPrefH = -1; return; }\n\t\tthis.jqPrefL = d.width;\n\t\tthis.jqPrefH = d.height;\n\t}\n\n\tpublic Dimension getPreferredSize() { return new Dimension(Math.max(this.jqPrefL, 0), Math.max(this.jqPrefH, 0)); }\n\tpublic boolean isPreferredSizeSet() { return this.jqPrefL >= 0; }\n\tpublic void setMinimumSize(Dimension d) { }\n\tpublic void setMaximumSize(Dimension d) { }\n\n\tpublic void setSize(int l, int h) { this.jqL = l; this.jqH = h; }\n\tpublic void setSize(Dimension d) { this.setSize(d.width, d.height); }\n\tpublic Dimension getSize() { return new Dimension(this.jqL, this.jqH); }\n\tpublic int getWidth() { return this.jqL; }\n\tpublic int getHeight() { return this.jqH; }\n\tpublic void setLocation(int x, int y) { this.jqX = x; this.jqY = y; }\n\tpublic void setLocation(Point p) { this.setLocation(p.x, p.y); }\n\tpublic Point getLocation() { return new Point(this.jqX, this.jqY); }\n\tpublic int getX() { return this.jqX; }\n\tpublic int getY() { return this.jqY; }\n\n\tpublic void setBounds(int x, int y, int l, int h)\n\t{\n\t\tthis.setLocation(x, y);\n\t\tthis.setSize(l, h);\n\t}\n\n\tpublic void addMouseListener(MouseListener l) { if (l != null) { this.jqSouris.add(l); } }\n\tpublic void removeMouseListener(MouseListener l) { this.jqSouris.remove(l); }\n\tpublic void addMouseMotionListener(MouseMotionListener l) { if (l != null) { this.jqMouvement.add(l); } }\n\tpublic void removeMouseMotionListener(MouseMotionListener l) { this.jqMouvement.remove(l); }\n\tpublic void repaint() { }\n\tpublic void validate() { }\n\tpublic void invalidate() { }\n\tpublic void requestFocus() { }\n\tpublic boolean requestFocusInWindow() { return true; }\n\n\tpublic void dispatchEvent(AWTEvent e)\n\t{\n\t\tif (e instanceof MouseEvent) { this.jqDiffuser((MouseEvent) e); }\n\t}\n\n\t/* Appelé par l'interface du site : un événement souris sur ce composant. */\n\tvoid jqEvtSouris(int id, int x, int y, int bouton, int clics)\n\t{\n\t\tthis.jqDiffuser(new MouseEvent(this, id, 0, 0, x, y, clics, false, bouton));\n\t}\n\n\tprivate void jqDiffuser(MouseEvent e)\n\t{\n\t\tint id = e.getID();\n\t\tif (id == 503 || id == 506)\n\t\t{\n\t\t\tfor (MouseMotionListener l : new ArrayList<MouseMotionListener>(this.jqMouvement))\n\t\t\t{\n\t\t\t\tif (id == 503) { l.mouseMoved(e); } else { l.mouseDragged(e); }\n\t\t\t}\n\t\t\treturn;\n\t\t}\n\t\tfor (MouseListener l : new ArrayList<MouseListener>(this.jqSouris))\n\t\t{\n\t\t\tif (id == 500) { l.mouseClicked(e); }\n\t\t\tif (id == 501) { l.mousePressed(e); }\n\t\t\tif (id == 502) { l.mouseReleased(e); }\n\t\t\tif (id == 504) { l.mouseEntered(e); }\n\t\t\tif (id == 505) { l.mouseExited(e); }\n\t\t}\n\t}\n\n\tboolean jqEcouteSouris() { return this.jqSouris.size() > 0; }\n\tboolean jqEcouteMouvement() { return this.jqMouvement.size() > 0; }\n}\n\nclass Container extends Component\n{\n\tprivate ArrayList<Component> jqEnfants = new ArrayList<Component>();\n\tprivate ArrayList<Object> jqContraintes = new ArrayList<Object>();\n\tprivate LayoutManager jqLayout;\n\n\tpublic Component add(Component c)\n\t{\n\t\tthis.jqAjouter(c, null);\n\t\treturn c;\n\t}\n\n\tpublic void add(Component c, Object contrainte)\n\t{\n\t\tthis.jqAjouter(c, contrainte);\n\t}\n\n\tvoid jqAjouter(Component c, Object contrainte)\n\t{\n\t\tif (c == null) { throw new NullPointerException(\"Cannot invoke \\\"java.awt.Component.getParent()\\\" because \\\"comp\\\" is null\"); }\n\t\tif (c == this) { throw new IllegalArgumentException(\"adding container to itself\"); }\n\t\tif (c instanceof JFrame) { throw new IllegalArgumentException(\"adding a window to a container\"); }\n\t\tif (this.jqLayout instanceof BorderLayout) { ((BorderLayout) this.jqLayout).jqPoser(c, contrainte); }\n\t\tif (c.getParent() != null) { c.getParent().remove(c); }\n\t\tthis.jqEnfants.add(c);\n\t\tthis.jqContraintes.add(contrainte);\n\t\tc.jqSetParent(this);\n\t}\n\n\tpublic void remove(Component c)\n\t{\n\t\tint i = this.jqEnfants.indexOf(c);\n\t\tif (i < 0) { return; }\n\t\tthis.jqEnfants.remove(i);\n\t\tthis.jqContraintes.remove(i);\n\t\tif (this.jqLayout instanceof BorderLayout) { ((BorderLayout) this.jqLayout).jqOter(c); }\n\t\tc.jqSetParent(null);\n\t}\n\n\tpublic void remove(int i)\n\t{\n\t\tthis.remove(this.jqEnfants.get(i));\n\t}\n\n\tpublic void removeAll()\n\t{\n\t\twhile (this.jqEnfants.size() > 0) { this.remove(this.jqEnfants.get(0)); }\n\t}\n\n\tpublic int getComponentCount() { return this.jqEnfants.size(); }\n\tpublic Component getComponent(int i) { return this.jqEnfants.get(i); }\n\n\tpublic Component[] getComponents()\n\t{\n\t\tComponent[] t = new Component[this.jqEnfants.size()];\n\t\tfor (int i = 0; i < t.length; i++) { t[i] = this.jqEnfants.get(i); }\n\t\treturn t;\n\t}\n\n\tpublic void setLayout(LayoutManager l) { this.jqLayout = l; }\n\tpublic LayoutManager getLayout() { return this.jqLayout; }\n\tpublic void doLayout() { }\n\tpublic void revalidate() { }\n}\n\nclass JComponent extends Container\n{\n\tprivate boolean jqOpaque = false;\n\tprivate String jqBulle;\n\tprivate Border jqBordure;\n\n\tpublic void setOpaque(boolean b) { this.jqOpaque = b; }\n\tpublic boolean isOpaque() { return this.jqOpaque; }\n\tpublic void setToolTipText(String s) { this.jqBulle = s; }\n\tpublic String getToolTipText() { return this.jqBulle; }\n\tpublic void setBorder(Border b) { this.jqBordure = b; }\n\tpublic Border getBorder() { return this.jqBordure; }\n\tprotected void paintComponent(Graphics g) { }\n\tpublic void paint(Graphics g) { this.paintComponent(g); }\n}\n\nclass JPanel extends JComponent\n{\n\tpublic JPanel()\n\t{\n\t\tthis(new FlowLayout());\n\t}\n\n\tpublic JPanel(LayoutManager l)\n\t{\n\t\tthis.setLayout(l);\n\t\tthis.setOpaque(true);\n\t}\n}\n\nclass JFrame extends Container\n{\n\tpublic static final int DO_NOTHING_ON_CLOSE = 0;\n\tpublic static final int HIDE_ON_CLOSE = 1;\n\tpublic static final int DISPOSE_ON_CLOSE = 2;\n\tpublic static final int EXIT_ON_CLOSE = 3;\n\n\tstatic ArrayList<JFrame> jqFenetres = new ArrayList<JFrame>();\n\n\tprivate String jqTitre = \"\";\n\tprivate int jqFermeture = 1;\n\tprivate Container jqContenu;\n\tprivate boolean jqAjuste = false;\n\tprivate boolean jqRedim = true;\n\tprivate JMenuBar jqMenu;\n\n\tpublic JFrame()\n\t{\n\t\tthis(\"\");\n\t}\n\n\tpublic JFrame(String titre)\n\t{\n\t\tthis.jqTitre = titre;\n\t\tJPanel p = new JPanel(new BorderLayout());\n\t\tthis.jqContenu = p;\n\t\tsuper.setLayout(new BorderLayout());\n\t\tthis.setVisible(false);\n\t}\n\n\tpublic void setTitle(String t) { this.jqTitre = t; }\n\tpublic String getTitle() { return this.jqTitre; }\n\tpublic void setDefaultCloseOperation(int op) { this.jqFermeture = op; }\n\tpublic int getDefaultCloseOperation() { return this.jqFermeture; }\n\tpublic Container getContentPane() { return this.jqContenu; }\n\tpublic void setContentPane(Container c) { this.jqContenu = c; }\n\tpublic void setJMenuBar(JMenuBar m) { this.jqMenu = m; }\n\tpublic JMenuBar getJMenuBar() { return this.jqMenu; }\n\tpublic void setResizable(boolean b) { this.jqRedim = b; }\n\tpublic boolean isResizable() { return this.jqRedim; }\n\tpublic void setLocationRelativeTo(Component c) { }\n\n\tpublic Component add(Component c)\n\t{\n\t\tthis.jqContenu.add(c);\n\t\treturn c;\n\t}\n\n\tpublic void add(Component c, Object contrainte) { this.jqContenu.add(c, contrainte); }\n\tpublic void remove(Component c) { this.jqContenu.remove(c); }\n\tpublic void setLayout(LayoutManager l) { if (this.jqContenu != null) { this.jqContenu.setLayout(l); } }\n\tpublic void pack() { this.jqAjuste = true; }\n\n\tpublic void setSize(int l, int h)\n\t{\n\t\tsuper.setSize(l, h);\n\t\tthis.jqAjuste = false;\n\t}\n\n\tpublic void setVisible(boolean b)\n\t{\n\t\tsuper.setVisible(b);\n\t\tif (b && !JFrame.jqFenetres.contains(this)) { JFrame.jqFenetres.add(this); }\n\t}\n\n\tpublic void dispose()\n\t{\n\t\tsuper.setVisible(false);\n\t\tJFrame.jqFenetres.remove(this);\n\t}\n}\n\nclass AbstractButton extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate boolean jqChoisi;\n\tprivate String jqCommande;\n\tprivate ButtonGroup jqGroupe;\n\tprivate int jqMnemo;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\tprivate ArrayList<ItemListener> jqItems = new ArrayList<ItemListener>();\n\n\tpublic AbstractButton()\n\t{\n\t\tthis.jqTexte = \"\";\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t; }\n\tpublic String getLabel() { return this.jqTexte; }\n\tpublic void setActionCommand(String c) { this.jqCommande = c; }\n\tpublic String getActionCommand() { return this.jqCommande == null ? this.jqTexte : this.jqCommande; }\n\tpublic void setMnemonic(int c) { this.jqMnemo = c; }\n\tpublic void setMnemonic(char c) { this.jqMnemo = c; }\n\tpublic int getMnemonic() { return this.jqMnemo; }\n\tpublic void setHorizontalAlignment(int a) { }\n\tpublic void setFocusPainted(boolean b) { }\n\tpublic void setBorderPainted(boolean b) { }\n\tpublic void setContentAreaFilled(boolean b) { }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void removeActionListener(ActionListener l) { this.jqActions.remove(l); }\n\tpublic void addItemListener(ItemListener l) { if (l != null) { this.jqItems.add(l); } }\n\tpublic void removeItemListener(ItemListener l) { this.jqItems.remove(l); }\n\tpublic boolean isSelected() { return this.jqChoisi; }\n\tvoid jqSetGroupe(ButtonGroup g) { this.jqGroupe = g; }\n\tvoid jqEtat(boolean b) { this.jqChoisi = b; }\n\n\tpublic void setSelected(boolean b)\n\t{\n\t\tif (this.jqGroupe != null)\n\t\t{\n\t\t\tif (b) { this.jqGroupe.jqChoisir(this); }\n\t\t\treturn;\n\t\t}\n\t\tif (b == this.jqChoisi) { return; }\n\t\tthis.jqChoisi = b;\n\t\tthis.jqSignalerItem(b ? 1 : 2);\n\t}\n\n\tvoid jqSignalerItem(int etat)\n\t{\n\t\tItemEvent e = new ItemEvent(this, 701, this, etat);\n\t\tfor (ItemListener l : new ArrayList<ItemListener>(this.jqItems)) { l.itemStateChanged(e); }\n\t}\n\n\tvoid jqBasculer() { }\n\n\tpublic void doClick()\n\t{\n\t\tif (!this.isEnabled()) { return; }\n\t\tthis.jqBasculer();\n\t\tActionEvent e = new ActionEvent(this, 1001, this.getActionCommand());\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n}\n\nclass JButton extends AbstractButton\n{\n\tpublic JButton() { }\n\n\tpublic JButton(String texte)\n\t{\n\t\tthis.setText(texte);\n\t}\n}\n\nclass JToggleButton extends AbstractButton\n{\n\tpublic JToggleButton() { }\n\tpublic JToggleButton(String texte) { this(texte, false); }\n\n\tpublic JToggleButton(String texte, boolean choisi)\n\t{\n\t\tthis.setText(texte);\n\t\tthis.jqEtat(choisi);\n\t}\n\n\tvoid jqBasculer() { this.setSelected(!this.isSelected()); }\n}\n\nclass JCheckBox extends JToggleButton\n{\n\tpublic JCheckBox() { }\n\tpublic JCheckBox(String texte) { super(texte, false); }\n\tpublic JCheckBox(String texte, boolean choisi) { super(texte, choisi); }\n}\n\nclass JRadioButton extends JToggleButton\n{\n\tpublic JRadioButton() { }\n\tpublic JRadioButton(String texte) { super(texte, false); }\n\tpublic JRadioButton(String texte, boolean choisi) { super(texte, choisi); }\n}\n\nclass ButtonGroup\n{\n\tprivate ArrayList<AbstractButton> jqBoutons = new ArrayList<AbstractButton>();\n\tprivate AbstractButton jqChoix;\n\n\tpublic void add(AbstractButton b)\n\t{\n\t\tif (b == null) { return; }\n\t\tthis.jqBoutons.add(b);\n\t\tif (b.isSelected())\n\t\t{\n\t\t\tif (this.jqChoix == null) { this.jqChoix = b; }\n\t\t\telse { b.jqEtat(false); }\n\t\t}\n\t\tb.jqSetGroupe(this);\n\t}\n\n\tpublic void remove(AbstractButton b)\n\t{\n\t\tthis.jqBoutons.remove(b);\n\t\tb.jqSetGroupe(null);\n\t\tif (this.jqChoix == b) { this.jqChoix = null; }\n\t}\n\n\tpublic int getButtonCount() { return this.jqBoutons.size(); }\n\n\tpublic void clearSelection()\n\t{\n\t\tif (this.jqChoix != null)\n\t\t{\n\t\t\tAbstractButton a = this.jqChoix;\n\t\t\tthis.jqChoix = null;\n\t\t\ta.jqEtat(false);\n\t\t\ta.jqSignalerItem(2);\n\t\t}\n\t}\n\n\tvoid jqChoisir(AbstractButton b)\n\t{\n\t\tif (this.jqChoix == b) { return; }\n\t\tAbstractButton ancien = this.jqChoix;\n\t\tthis.jqChoix = b;\n\t\tif (ancien != null)\n\t\t{\n\t\t\tancien.jqEtat(false);\n\t\t\tancien.jqSignalerItem(2);\n\t\t}\n\t\tb.jqEtat(true);\n\t\tb.jqSignalerItem(1);\n\t}\n}\n\nclass JLabel extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate int jqAlignH = 10;\n\tprivate int jqAlignV = 0;\n\n\tpublic JLabel() { this(\"\", 10); }\n\tpublic JLabel(String texte) { this(texte, 10); }\n\n\tpublic JLabel(String texte, int alignement)\n\t{\n\t\tthis.jqTexte = texte;\n\t\tthis.jqAlignH = alignement;\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t; }\n\tpublic int getHorizontalAlignment() { return this.jqAlignH; }\n\tpublic void setHorizontalAlignment(int a) { this.jqAlignH = a; }\n\tpublic int getVerticalAlignment() { return this.jqAlignV; }\n\tpublic void setVerticalAlignment(int a) { this.jqAlignV = a; }\n}\n\nclass JTextField extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate int jqColonnes;\n\tprivate boolean jqModifiable = true;\n\tprivate int jqAlignH = 10;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\n\tpublic JTextField() { this(\"\", 0); }\n\tpublic JTextField(int colonnes) { this(\"\", colonnes); }\n\tpublic JTextField(String texte) { this(texte, 0); }\n\n\tpublic JTextField(String texte, int colonnes)\n\t{\n\t\tif (colonnes < 0) { throw new IllegalArgumentException(\"columns less than zero.\"); }\n\t\tthis.jqTexte = texte == null ? \"\" : texte;\n\t\tthis.jqColonnes = colonnes;\n\t\tthis.setOpaque(true);\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t == null ? \"\" : t; }\n\tpublic int getColumns() { return this.jqColonnes; }\n\tpublic void setColumns(int c) { this.jqColonnes = c; }\n\tpublic boolean isEditable() { return this.jqModifiable; }\n\tpublic void setEditable(boolean b) { this.jqModifiable = b; }\n\tpublic int getHorizontalAlignment() { return this.jqAlignH; }\n\tpublic void setHorizontalAlignment(int a) { this.jqAlignH = a; }\n\tpublic void selectAll() { }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void removeActionListener(ActionListener l) { this.jqActions.remove(l); }\n\n\tpublic void postActionEvent()\n\t{\n\t\tActionEvent e = new ActionEvent(this, 1001, this.jqTexte);\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n\n\t/* Appelé par l'interface du site : l'utilisateur a tapé un texte puis Entrée. */\n\tvoid jqSaisir(String t, boolean entree)\n\t{\n\t\tthis.jqTexte = t;\n\t\tif (entree) { this.postActionEvent(); }\n\t}\n}\n\nclass JScrollBar extends JComponent implements SwingConstants\n{\n\tprivate int jqOrient;\n\tprivate int jqValeur;\n\tprivate int jqEtendue;\n\tprivate int jqMin;\n\tprivate int jqMax;\n\tprivate int jqPasUnite = 1;\n\tprivate int jqPasBloc = 10;\n\tprivate ArrayList<AdjustmentListener> jqEcouteurs = new ArrayList<AdjustmentListener>();\n\n\tpublic JScrollBar() { this(1, 0, 10, 0, 100); }\n\tpublic JScrollBar(int orientation) { this(orientation, 0, 10, 0, 100); }\n\n\tpublic JScrollBar(int orientation, int valeur, int etendue, int min, int max)\n\t{\n\t\tif (orientation != 0 && orientation != 1) { throw new IllegalArgumentException(\"orientation must be one of: VERTICAL, HORIZONTAL\"); }\n\t\tthis.jqOrient = orientation;\n\t\tthis.jqRegler(valeur, etendue, min, max);\n\t}\n\n\tprivate void jqRegler(int valeur, int etendue, int min, int max)\n\t{\n\t\tif (max < min) { max = min; }\n\t\tif (etendue < 0) { etendue = 0; }\n\t\tif (etendue > max - min) { etendue = max - min; }\n\t\tif (valeur < min) { valeur = min; }\n\t\tif (valeur > max - etendue) { valeur = max - etendue; }\n\t\tthis.jqValeur = valeur;\n\t\tthis.jqEtendue = etendue;\n\t\tthis.jqMin = min;\n\t\tthis.jqMax = max;\n\t}\n\n\tpublic int getOrientation() { return this.jqOrient; }\n\tpublic int getValue() { return this.jqValeur; }\n\tpublic int getMinimum() { return this.jqMin; }\n\tpublic int getMaximum() { return this.jqMax; }\n\tpublic int getVisibleAmount() { return this.jqEtendue; }\n\tpublic int getUnitIncrement() { return this.jqPasUnite; }\n\tpublic int getBlockIncrement() { return this.jqPasBloc; }\n\tpublic void setUnitIncrement(int p) { this.jqPasUnite = p; }\n\tpublic void setBlockIncrement(int p) { this.jqPasBloc = p; }\n\tpublic void addAdjustmentListener(AdjustmentListener l) { if (l != null) { this.jqEcouteurs.add(l); } }\n\tpublic void removeAdjustmentListener(AdjustmentListener l) { this.jqEcouteurs.remove(l); }\n\n\tpublic void setValue(int v) { this.jqChanger(v, this.jqEtendue, this.jqMin, this.jqMax, 5); }\n\tpublic void setMinimum(int m) { this.jqChanger(this.jqValeur, this.jqEtendue, m, this.jqMax, 5); }\n\tpublic void setMaximum(int m) { this.jqChanger(this.jqValeur, this.jqEtendue, this.jqMin, m, 5); }\n\tpublic void setVisibleAmount(int e) { this.jqChanger(this.jqValeur, e, this.jqMin, this.jqMax, 5); }\n\tpublic void setValues(int v, int e, int min, int max) { this.jqChanger(v, e, min, max, 5); }\n\n\tprivate void jqChanger(int v, int e, int min, int max, int type)\n\t{\n\t\tint av = this.jqValeur, ae = this.jqEtendue, amin = this.jqMin, amax = this.jqMax;\n\t\tthis.jqRegler(v, e, min, max);\n\t\tif (av == this.jqValeur && ae == this.jqEtendue && amin == this.jqMin && amax == this.jqMax) { return; }\n\t\tAdjustmentEvent ev = new AdjustmentEvent(this, 601, type, this.jqValeur);\n\t\tfor (AdjustmentListener l : new ArrayList<AdjustmentListener>(this.jqEcouteurs)) { l.adjustmentValueChanged(ev); }\n\t}\n\n\t/* Appelé par l'interface du site : flèches (pas unité), clic dans la barre (pas bloc), curseur glissé. */\n\tvoid jqAjuster(int type, int v)\n\t{\n\t\tint nv = v;\n\t\tif (type == 1) { nv = this.jqValeur + this.jqPasUnite; }\n\t\tif (type == 2) { nv = this.jqValeur - this.jqPasUnite; }\n\t\tif (type == 3) { nv = this.jqValeur - this.jqPasBloc; }\n\t\tif (type == 4) { nv = this.jqValeur + this.jqPasBloc; }\n\t\tthis.jqChanger(nv, this.jqEtendue, this.jqMin, this.jqMax, type);\n\t}\n}\n\nclass JComboBox<E> extends JComponent\n{\n\tprivate ArrayList<E> jqItems = new ArrayList<E>();\n\tprivate int jqChoix = -1;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\tprivate ArrayList<ItemListener> jqItemsEcoute = new ArrayList<ItemListener>();\n\n\tpublic JComboBox() { }\n\n\tpublic JComboBox(E[] items)\n\t{\n\t\tfor (int i = 0; i < items.length; i++) { this.jqItems.add(items[i]); }\n\t\tif (items.length > 0) { this.jqChoix = 0; }\n\t}\n\n\tpublic void addItem(E item)\n\t{\n\t\tthis.jqItems.add(item);\n\t\tif (this.jqChoix < 0) { this.setSelectedIndex(0); }\n\t}\n\n\tpublic int getItemCount() { return this.jqItems.size(); }\n\tpublic E getItemAt(int i) { if (i < 0 || i >= this.jqItems.size()) { return null; } return this.jqItems.get(i); }\n\tpublic int getSelectedIndex() { return this.jqChoix; }\n\tpublic Object getSelectedItem() { return this.jqChoix < 0 ? null : this.jqItems.get(this.jqChoix); }\n\tpublic void setSelectedItem(Object o) { int i = this.jqItems.indexOf(o); if (i >= 0) { this.setSelectedIndex(i); } }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void addItemListener(ItemListener l) { if (l != null) { this.jqItemsEcoute.add(l); } }\n\tpublic void setEditable(boolean b) { }\n\n\tpublic void removeAllItems()\n\t{\n\t\tthis.jqItems.clear();\n\t\tthis.jqChoix = -1;\n\t}\n\n\tpublic void setSelectedIndex(int i)\n\t{\n\t\tif (i < -1 || i >= this.jqItems.size()) { throw new IllegalArgumentException(\"setSelectedIndex: \" + i + \" out of bounds\"); }\n\t\tint ancien = this.jqChoix;\n\t\tif (ancien != i)\n\t\t{\n\t\t\tthis.jqChoix = i;\n\t\t\tif (ancien >= 0) { this.jqSignaler(this.jqItems.get(ancien), 2); }\n\t\t\tif (i >= 0) { this.jqSignaler(this.jqItems.get(i), 1); }\n\t\t}\n\t\tActionEvent e = new ActionEvent(this, 1001, \"comboBoxChanged\");\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n\n\tprivate void jqSignaler(Object item, int etat)\n\t{\n\t\tItemEvent e = new ItemEvent(this, 701, item, etat);\n\t\tfor (ItemListener l : new ArrayList<ItemListener>(this.jqItemsEcoute)) { l.itemStateChanged(e); }\n\t}\n}\n\nclass JMenuBar extends JComponent\n{\n\tpublic JMenu add(JMenu m)\n\t{\n\t\tsuper.add(m);\n\t\treturn m;\n\t}\n}\n\nclass JMenuItem extends AbstractButton\n{\n\tpublic JMenuItem() { }\n\tpublic JMenuItem(String texte) { this.setText(texte); }\n}\n\nclass JMenu extends JMenuItem\n{\n\tpublic JMenu() { }\n\tpublic JMenu(String texte) { super(texte); }\n\n\tpublic JMenuItem add(JMenuItem i)\n\t{\n\t\tsuper.add(i);\n\t\treturn i;\n\t}\n\n\tpublic void addSeparator() { super.add(new JqSeparateur()); }\n}\n\nclass JqSeparateur extends JComponent\n{\n}\n");
 </script>
 <script>
 /* ==========================================================================
@@ -23022,6 +23336,863 @@ public class FileAttente<T>
 })();
 
 /* ==========================================================================
+   JavaQuest : Dév IHM (R2.02, semestre 2)
+   --------------------------------------------------------------------------
+   Une unité par TP, dans l'ordre du cours. Même format que les autres
+   matières. Les ids commencent par « i » : ils servent à la sauvegarde, ne
+   jamais les réutiliser.
+   Le code s'exécute au niveau 3 de l'interpréteur : le mini-Swing de
+   swing-lib.java s'affiche dans la page (swing-ui.js).
+   Les programmes de test ne créent jamais de JFrame : ils construisent le
+   panneau de l'élève, le décrivent et simulent les clics (doClick), ce qui
+   marche aussi avec le vrai Java sans écran (validate.js --javac).
+   Les exemples sont réécrits à partir des TP, jamais recopiés.
+   ========================================================================== */
+var IHM_UNITES = [];
+
+/* Méthodes de test communes : décrivent l'arbre des composants d'un panneau. */
+var IHM_DECRIRE = T(`
+    static String layout(Container c)
+    {
+        LayoutManager lm = c.getLayout();
+        if (lm instanceof GridLayout)
+        {
+            GridLayout g = (GridLayout) lm;
+            return "[GridLayout " + g.getRows() + " x " + g.getColumns() + (g.getHgap() + g.getVgap() > 0 ? ", espaces " + g.getHgap() + "/" + g.getVgap() : "") + "]";
+        }
+        if (lm instanceof BorderLayout)
+        {
+            BorderLayout b = (BorderLayout) lm;
+            return "[BorderLayout" + (b.getHgap() + b.getVgap() > 0 ? ", espaces " + b.getHgap() + "/" + b.getVgap() : "") + "]";
+        }
+        if (lm instanceof FlowLayout)
+        {
+            int a = ((FlowLayout) lm).getAlignment();
+            return "[FlowLayout" + (a == FlowLayout.LEFT ? " à gauche" : (a == FlowLayout.RIGHT ? " à droite" : "")) + "]";
+        }
+        return "[" + (lm == null ? "aucun layout" : lm.getClass().getSimpleName()) + "]";
+    }
+
+    static String nom(Component x)
+    {
+        String s = x.getClass().getSimpleName();
+        if (x instanceof AbstractButton) { s += " \\"" + ((AbstractButton) x).getText() + "\\""; }
+        if (x instanceof JLabel) { s += " \\"" + ((JLabel) x).getText() + "\\""; }
+        if (x instanceof JTextField) { s += " (" + ((JTextField) x).getColumns() + " colonnes)"; }
+        if (x instanceof JPanel) { s += " " + layout((JPanel) x); }
+        return s;
+    }
+
+    static void decrire(Container c, String marge)
+    {
+        for (Component x : c.getComponents())
+        {
+            String s = marge + nom(x);
+            if (c.getLayout() instanceof BorderLayout) { s += " -> " + ((BorderLayout) c.getLayout()).getConstraints(x); }
+            System.out.println(s);
+            if (x instanceof JPanel) { decrire((JPanel) x, marge + "    "); }
+        }
+    }`);
+function ihmTest(classe, corps)
+{
+	return "import java.awt.*;\nimport javax.swing.*;\n\npublic class " + classe + "\n{\n\tpublic static void main(String[] args)\n\t{\n" + T(corps) + "\n\t}\n\n" + IHM_DECRIRE + "\n}";
+}
+
+/* ---------------------------------------------------------------- 1 (TP1) */
+IHM_UNITES.push({
+	id: "i01", num: 1, titre: "Une fenêtre et ses boutons", badge: "Premier écran",
+	idee: [
+		"Une application graphique commence par une **fenêtre** : une classe qui hérite de `JFrame`. Son constructeur règle le titre et la taille, puis appelle `setVisible(true)` en **dernier**. Sans `setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)`, la croix cache la fenêtre mais le programme continue.",
+		"On ne pose pas les composants sur la fenêtre : on les range dans un **panneau**, une classe qui hérite de `JPanel`, et la fenêtre ajoute ce panneau. Le constructeur du panneau a trois parties : **création** des composants, **positionnement** (`add`), puis plus tard **activation**.",
+		"AWT (`Frame`, `Panel`, `Button`) est l'ancêtre de Swing (`JFrame`, `JPanel`, `JButton`) : on code en Swing sans mélanger les deux. Chaque composant a un **préfixe** : `btn` (bouton), `lbl` (label), `txt` (zone de texte), `panel`."
+	],
+	exemple: {
+		java: T(`
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+
+public class FrameAccueil extends JFrame
+{
+    public FrameAccueil()
+    {
+        this.setTitle("Accueil");
+        this.setSize(320, 120);
+        this.setLocation(50, 50);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        this.add(new PanelAccueil());
+
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameAccueil();
+    }
+}
+
+class PanelAccueil extends JPanel
+{
+    private JLabel  lblMessage;
+    private JButton btnOui;
+    private JButton btnNon;
+
+    public PanelAccueil()
+    {
+        /* Création des composants */
+        this.lblMessage = new JLabel("On commence ?");
+        this.btnOui     = new JButton("Oui");
+        this.btnNon     = new JButton("Non");
+
+        /* Positionnement des composants */
+        this.add(this.lblMessage);
+        this.add(this.btnOui);
+        this.add(this.btnNon);
+    }
+}`),
+		note: "Lance-le dans le bac à sable de Dév IHM : la fenêtre s'affiche dans la page. Les boutons ne font encore rien : l'activation viendra à l'unité 3. Comme le panneau est rangé « à la suite », réduis la fenêtre et regarde les boutons passer à la ligne."
+	},
+	exos: [
+		{ id: "i01.visible", k: "qcm", q: "Le constructeur d'une fenêtre règle le titre, la taille et ajoute le panneau, mais oublie `this.setVisible(true);`. Que se passe-t-il au lancement ?",
+			opts: ["Le programme démarre mais aucune fenêtre n'apparaît", "La fenêtre apparaît vide, sans le panneau", "Erreur de compilation", "La fenêtre apparaît en plein écran"], a: 0,
+			expl: "Une fenêtre est créée invisible. Tant que `setVisible(true)` n'est pas appelé, rien ne s'affiche. On l'appelle en dernier, une fois tous les composants ajoutés." },
+		{ id: "i01.croix", k: "qcm", q: "Sans `setDefaultCloseOperation(...)`, que fait un clic sur la croix de la fenêtre ?",
+			opts: ["Il cache la fenêtre, mais le programme continue de tourner", "Il arrête le programme", "Il ne fait rien du tout", "Il réduit la fenêtre dans la barre des tâches"], a: 0,
+			expl: "Par défaut une `JFrame` fait `HIDE_ON_CLOSE` : elle se cache. Avec `JFrame.EXIT_ON_CLOSE`, la croix arrête l'application." },
+		{ id: "i01.awt", k: "qcm", q: "Quel composant Swing correspond au `Button` d'AWT ?",
+			opts: ["`JButton`", "`SwingButton`", "`Button`, il est le même dans les deux", "`JPushButton`"], a: 0,
+			expl: "Les composants Swing reprennent le nom AWT avec un `J` devant : `Frame` → `JFrame`, `Panel` → `JPanel`, `Label` → `JLabel`, `TextField` → `JTextField`. Ils sont dans `javax.swing`." },
+		{ id: "i01.compte", k: "predict",
+			q: "Qu'affiche ce programme ? (Il ne crée pas de fenêtre : il observe juste un panneau.)",
+			code: T(`
+import javax.swing.JButton;
+import javax.swing.JPanel;
+
+public class Comptage
+{
+    public static void main(String[] args)
+    {
+        JPanel panel = new JPanel();
+        JButton btnA = new JButton("A");
+        panel.add(btnA);
+        panel.add(new JButton("B"));
+        panel.add(btnA);
+        System.out.println(panel.getComponentCount() + " " + panel.getLayout().getClass().getSimpleName());
+    }
+}`),
+			expl: "Un composant n'a qu'**un** parent et n'apparaît qu'une fois : le second `add(btnA)` le déplace à la fin au lieu de le dupliquer. Il reste 2 composants. Le layout d'un `JPanel` neuf est `FlowLayout` : les composants à la suite, centrés." },
+		{ id: "i01.import", k: "bug",
+			code: T(`
+import javax.swing.JPanel;
+import javax.swing.JButton;
+
+public class PanelChoix extends JPanel
+{
+    private JButton btnValider;
+    private JButton btnAnnuler;
+
+    public PanelChoix()
+    {
+        this.btnValider = new JButton("Valider");
+        this.btnAnnuler = new Button("Annuler");
+
+        this.add(this.btnValider);
+        this.add(this.btnAnnuler);
+    }
+}`),
+			ligne: 12, fix: ["this.btnAnnuler = new JButton(\"Annuler\");"],
+			expl: "`Button` est le bouton d'AWT : il n'est pas importé, et ce n'est pas un `JButton`. En Swing, on écrit `new JButton(\"Annuler\")`." },
+		{ id: "i01.fill", k: "fill", q: "Complète la fenêtre : elle hérite de la fenêtre Swing, s'appelle « Agenda », ferme l'application avec la croix et s'affiche à la fin.",
+			code: T(`
+import javax.swing.JFrame;
+
+public class FrameAgenda extends ___
+{
+    public FrameAgenda()
+    {
+        this.___("Agenda");
+        this.setSize(400, 300);
+        this.setDefaultCloseOperation(JFrame.___);
+        this.add(new PanelAgenda());
+        this.___(true);
+    }
+}`),
+			trous: [["JFrame"], ["setTitle"], ["EXIT_ON_CLOSE"], ["setVisible"]],
+			expl: "`extends JFrame`, `setTitle(...)`, `JFrame.EXIT_ON_CLOSE` (une constante de la classe), et `setVisible(true)` en dernier." },
+		{ id: "i01.code", k: "code", mode: "class", titre: "La fenêtre de bienvenue", lanceur: "FrameBienvenue",
+			enonce: "Écris deux classes, chacune dans son fichier.\n\n- `PanelBienvenue` hérite de `JPanel`. Il contient, **dans cet ordre**, un `JLabel` « Bienvenue ! » (attribut `lblMessage`) et deux `JButton` « Entrer » et « Quitter » (`btnEntrer`, `btnQuitter`). Garde le layout par défaut du panneau.\n- `FrameBienvenue` hérite de `JFrame` : titre « Accueil », taille 300 × 120, l'application s'arrête avec la croix. Elle ajoute un `PanelBienvenue` puis s'affiche. Son `main` crée la fenêtre.\n\n▶ Exécuter lance ta fenêtre ; Vérifier construit ton panneau et le décrit.",
+			regles: ["allman"],
+			harness: ihmTest("TestBienvenue", `
+        PanelBienvenue p = new PanelBienvenue();
+        System.out.println(nom(p));
+        decrire(p, "    ");`),
+			depart: T(`
+//// Fichier : FrameBienvenue.java
+import javax.swing.JFrame;
+
+public class FrameBienvenue extends JFrame
+{
+    public FrameBienvenue()
+    {
+
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBienvenue();
+    }
+}
+//// Fichier : PanelBienvenue.java
+import javax.swing.JPanel;
+
+public class PanelBienvenue extends JPanel
+{
+
+}`),
+			solution: T(`
+//// Fichier : FrameBienvenue.java
+import javax.swing.JFrame;
+
+public class FrameBienvenue extends JFrame
+{
+    public FrameBienvenue()
+    {
+        this.setTitle("Accueil");
+        this.setSize(300, 120);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        this.add(new PanelBienvenue());
+
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBienvenue();
+    }
+}
+//// Fichier : PanelBienvenue.java
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelBienvenue extends JPanel
+{
+    private JLabel  lblMessage;
+    private JButton btnEntrer;
+    private JButton btnQuitter;
+
+    public PanelBienvenue()
+    {
+        /* Création des composants */
+        this.lblMessage = new JLabel("Bienvenue !");
+        this.btnEntrer  = new JButton("Entrer");
+        this.btnQuitter = new JButton("Quitter");
+
+        /* Positionnement des composants */
+        this.add(this.lblMessage);
+        this.add(this.btnEntrer);
+        this.add(this.btnQuitter);
+    }
+}`),
+			indices: ["Chaque fichier a ses propres `import` : `PanelBienvenue.java` a besoin de `JPanel`, `JLabel` et `JButton`, tous dans `javax.swing`.",
+				"Dans le constructeur du panneau : d'abord les trois `new`, puis les trois `this.add(...)`, dans l'ordre de l'énoncé.",
+				"La fenêtre ajoute le panneau avec `this.add(new PanelBienvenue());` et finit par `this.setVisible(true);`."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 2 (TP2, TP3) */
+IHM_UNITES.push({
+	id: "i02", num: 2, titre: "Mettre en page : les layouts", badge: "Architecte",
+	idee: [
+		"Le **gestionnaire de mise en page** (layout) décide où va chaque composant et quelle taille il prend. Un `JPanel` neuf a un `FlowLayout` (à la suite, centrés, retour à la ligne s'il manque de place) ; le contenu d'une `JFrame` a un `BorderLayout`.",
+		"`BorderLayout` a 5 zones : `NORTH` et `SOUTH` prennent toute la largeur, `WEST` et `EAST` la hauteur restante, `CENTER` tout le reste. Une zone ne garde qu'**un** composant ; sans zone, c'est `CENTER`. `GridLayout(lignes, colonnes)` fait des cases **toutes de la même taille**, remplies ligne par ligne.",
+		"Pour une mise en page plus riche, on **imbrique** des panneaux, chacun avec son layout. Les espaces se donnent au layout : `new BorderLayout(10, 10)`, `new GridLayout(3, 2, 5, 5)`. Les couleurs : `setBackground(new Color(r, v, b))`."
+	],
+	exemple: {
+		java: T(`
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GridLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class FrameClavier extends JFrame
+{
+    public FrameClavier()
+    {
+        this.setTitle("Clavier");
+        this.setSize(260, 300);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelClavier());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameClavier();
+    }
+}
+
+class PanelClavier extends JPanel
+{
+    private JLabel    lblEcran;
+    private JButton[] tabBtn;
+
+    public PanelClavier()
+    {
+        JPanel panelTouches;
+
+        this.setLayout(new BorderLayout(5, 5));
+
+        /* Création des composants */
+        this.lblEcran = new JLabel("0", JLabel.RIGHT);
+        this.lblEcran.setOpaque(true);
+        this.lblEcran.setBackground(new Color(220, 235, 210));
+
+        panelTouches = new JPanel(new GridLayout(4, 3, 4, 4));
+        this.tabBtn = new JButton[12];
+        for (int i = 0; i < this.tabBtn.length; i++)
+        {
+            this.tabBtn[i] = new JButton("" + "123456789*0#".charAt(i));
+        }
+
+        /* Positionnement des composants */
+        for (int i = 0; i < this.tabBtn.length; i++)
+        {
+            panelTouches.add(this.tabBtn[i]);
+        }
+        this.add(this.lblEcran, BorderLayout.NORTH);
+        this.add(panelTouches, BorderLayout.CENTER);
+    }
+}`),
+		note: "Le panneau principal est en `BorderLayout` : l'écran au nord, la grille au centre. La grille est un panneau **local** (variable du constructeur) : on n'en a plus besoin après. Agrandis la fenêtre : toutes les touches grandissent ensemble."
+	},
+	exos: [
+		{ id: "i02.centre", k: "qcm", q: "Dans un panneau en `BorderLayout`, on écrit `this.add(btnValider);` sans préciser de zone. Où va le bouton ?",
+			opts: ["Au centre (`CENTER`)", "Au nord (`NORTH`)", "Nulle part : erreur de compilation", "À la suite du composant précédent"], a: 0,
+			expl: "Sans contrainte, `BorderLayout` place le composant au `CENTER`, et il occupe toute la place restante." },
+		{ id: "i02.remplace", k: "predict",
+			q: "Qu'affiche ce programme ?",
+			code: T(`
+import java.awt.BorderLayout;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+
+public class Zones
+{
+    public static void main(String[] args)
+    {
+        JPanel panel = new JPanel(new BorderLayout());
+        JButton btnUn   = new JButton("Un");
+        JButton btnDeux = new JButton("Deux");
+        panel.add(btnUn, BorderLayout.NORTH);
+        panel.add(btnDeux, BorderLayout.NORTH);
+        BorderLayout bl = (BorderLayout) panel.getLayout();
+        System.out.println(panel.getComponentCount() + " " + bl.getConstraints(btnUn) + " " + bl.getConstraints(btnDeux));
+    }
+}`),
+			expl: "Les deux boutons sont bien dans le panneau (2 composants), mais une zone n'en affiche qu'**un** : le dernier ajouté au nord remplace le premier, qui n'a plus de zone (`null`) et ne s'affiche pas." },
+		{ id: "i02.grille", k: "qcm", q: "Un panneau en `new GridLayout(2, 3)` reçoit **7** boutons. Comment sont-ils disposés ?",
+			opts: ["2 lignes de 4 colonnes (la dernière case reste vide)", "2 lignes de 3 colonnes, le 7e bouton n'apparaît pas", "3 lignes de 3 colonnes", "Erreur à l'exécution : trop de boutons"], a: 0,
+			expl: "Quand le nombre de lignes n'est pas 0, `GridLayout` le respecte et **recalcule** le nombre de colonnes : 7 boutons sur 2 lignes donnent 4 colonnes. C'est la question du TP3 avec les triplets (3, 3, 12)..." },
+		{ id: "i02.opaque", k: "qcm", q: "On écrit `lblTitre.setBackground(Color.YELLOW);` sur un `JLabel`, mais le fond reste gris. Pourquoi ?",
+			opts: ["Un `JLabel` est transparent par défaut : il faut aussi `lblTitre.setOpaque(true);`", "Il faut écrire `Color.yellow` en minuscules", "`setBackground` ne marche que sur un `JPanel`", "Il faut appeler `repaint()` juste après"], a: 0,
+			expl: "Un `JLabel` ne peint pas son fond tant qu'il n'est pas **opaque**. `setOpaque(true)` règle le problème (c'est l'astuce de la version 1 du TP5 en autonomie)." },
+		{ id: "i02.nord", k: "bug",
+			code: T(`
+import java.awt.BorderLayout;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+
+public class PanelBoussole extends JPanel
+{
+    public PanelBoussole()
+    {
+        this.setLayout(new BorderLayout());
+        this.add(new JButton("Nord"), "north");
+        this.add(new JButton("Sud"), BorderLayout.SOUTH);
+    }
+}`),
+			ligne: 10, fix: ["this.add(new JButton(\"Nord\"), BorderLayout.NORTH);"],
+			expl: "Ça compile, mais à l'exécution : `IllegalArgumentException: cannot add to layout: unknown constraint: north`. La zone s'écrit `\"North\"` avec une majuscule ; le plus sûr est la constante `BorderLayout.NORTH`." },
+		{ id: "i02.fill", k: "fill", q: "Complète le panneau : 3 lignes et 2 colonnes, avec 5 pixels d'espace entre les cases, et un fond bleu clair (173, 216, 230).",
+			code: T(`
+import java.awt.Color;
+import java.awt.GridLayout;
+import javax.swing.JPanel;
+
+public class PanelGrille extends JPanel
+{
+    public PanelGrille()
+    {
+        this.setLayout(new ___(3, 2, 5, 5));
+        this.___(new Color(173, 216, 230));
+    }
+}`),
+			trous: [["GridLayout"], ["setBackground"]],
+			expl: "`new GridLayout(lignes, colonnes, espaceH, espaceV)` et `setBackground(new Color(r, v, b))`. Un `JPanel` est opaque : la couleur se voit tout de suite." },
+		{ id: "i02.code", k: "code", mode: "class", titre: "La télécommande", lanceur: "FrameTelecommande",
+			enonce: "Écris `PanelTelecommande` (un `JPanel`) en `BorderLayout` avec 5 pixels d'espace dans les deux sens :\n\n- au nord, un `JLabel` « Télécommande » centré (`JLabel.CENTER`) ;\n- au centre, un panneau local en `GridLayout` de 3 lignes et 3 colonnes, avec 5 pixels d'espace, qui contient les boutons « 1 » à « 9 » dans l'ordre (un tableau de `JButton` et une boucle) ;\n- au sud, un bouton « OK ».\n\nAjoute les composants au panneau principal dans l'ordre nord, centre, sud. `FrameTelecommande` (déjà écrite) l'affiche.",
+			regles: ["allman"],
+			harness: ihmTest("TestTelecommande", `
+        PanelTelecommande p = new PanelTelecommande();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JLabel lbl = (JLabel) p.getComponent(0);
+        System.out.println("centré : " + (lbl.getHorizontalAlignment() == JLabel.CENTER));`),
+			depart: T(`
+//// Fichier : FrameTelecommande.java
+import javax.swing.JFrame;
+
+public class FrameTelecommande extends JFrame
+{
+    public FrameTelecommande()
+    {
+        this.setTitle("Télécommande");
+        this.setSize(240, 300);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelTelecommande());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameTelecommande();
+    }
+}
+//// Fichier : PanelTelecommande.java
+import javax.swing.JPanel;
+
+public class PanelTelecommande extends JPanel
+{
+    private JLabel    lblTitre;
+    private JButton[] tabBtn;
+    private JButton   btnOk;
+
+    public PanelTelecommande()
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameTelecommande.java
+import javax.swing.JFrame;
+
+public class FrameTelecommande extends JFrame
+{
+    public FrameTelecommande()
+    {
+        this.setTitle("Télécommande");
+        this.setSize(240, 300);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelTelecommande());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameTelecommande();
+    }
+}
+//// Fichier : PanelTelecommande.java
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelTelecommande extends JPanel
+{
+    private JLabel    lblTitre;
+    private JButton[] tabBtn;
+    private JButton   btnOk;
+
+    public PanelTelecommande()
+    {
+        JPanel panelTouches;
+
+        this.setLayout(new BorderLayout(5, 5));
+
+        /* Création des composants */
+        this.lblTitre = new JLabel("Télécommande", JLabel.CENTER);
+        panelTouches = new JPanel(new GridLayout(3, 3, 5, 5));
+        this.tabBtn = new JButton[9];
+        for (int i = 0; i < this.tabBtn.length; i++)
+        {
+            this.tabBtn[i] = new JButton("" + (i + 1));
+        }
+        this.btnOk = new JButton("OK");
+
+        /* Positionnement des composants */
+        for (int i = 0; i < this.tabBtn.length; i++)
+        {
+            panelTouches.add(this.tabBtn[i]);
+        }
+        this.add(this.lblTitre, BorderLayout.NORTH);
+        this.add(panelTouches, BorderLayout.CENTER);
+        this.add(this.btnOk, BorderLayout.SOUTH);
+    }
+}`),
+			indices: ["Il manque des `import` dans `PanelTelecommande.java` : `JLabel` et `JButton` (javax.swing), `BorderLayout` et `GridLayout` (java.awt).",
+				"Le panneau des touches est une variable locale : `JPanel panelTouches = new JPanel(new GridLayout(3, 3, 5, 5));`.",
+				"Le texte d'un bouton est une `String` : `new JButton(\"\" + (i + 1))`."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 3 (TP4) */
+IHM_UNITES.push({
+	id: "i03", num: 3, titre: "Réagir aux clics : ActionListener", badge: "À l'écoute",
+	idee: [
+		"Une IHM est **événementielle** : après l'affichage, le programme attend. Un clic sur un bouton crée un `ActionEvent`, envoyé à chaque **écouteur** inscrit avec `addActionListener(...)`. Un écouteur implémente l'interface `ActionListener` et sa méthode `actionPerformed(ActionEvent e)`.",
+		"Le plus souvent, le panneau est lui-même l'écouteur : `implements ActionListener`, puis `btn.addActionListener(this)`. Dans `actionPerformed`, `e.getSource() == this.btnPlus` dit **quel** bouton a été cliqué.",
+		"L'écouteur met l'affichage à jour : `lbl.setText(...)`, `panel.setBackground(...)`. Le constructeur garde ses trois parties : création, positionnement, puis **activation** des composants (les `addActionListener`)."
+	],
+	exemple: {
+		java: T(`
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class FrameScore extends JFrame
+{
+    public FrameScore()
+    {
+        this.setTitle("Score");
+        this.setSize(260, 140);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelScore());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameScore();
+    }
+}
+
+class PanelScore extends JPanel implements ActionListener
+{
+    private JButton btnPoint;
+    private JButton btnFaute;
+    private JLabel  lblScore;
+    private int     score;
+
+    public PanelScore()
+    {
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        this.btnPoint = new JButton("Point gagné");
+        this.btnFaute = new JButton("Faute");
+        this.lblScore = new JLabel("Score : 0", JLabel.CENTER);
+
+        /* Positionnement des composants */
+        this.add(this.btnPoint, BorderLayout.WEST);
+        this.add(this.lblScore, BorderLayout.CENTER);
+        this.add(this.btnFaute, BorderLayout.EAST);
+
+        /* Activation des composants */
+        this.btnPoint.addActionListener(this);
+        this.btnFaute.addActionListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == this.btnPoint) { this.score += 10; }
+        if (e.getSource() == this.btnFaute) { this.score -= 5; }
+
+        this.lblScore.setText("Score : " + this.score);
+        System.out.println(e.getActionCommand() + " -> " + this.score);
+    }
+}`),
+		note: "Clique dans la fenêtre : la console affiche le texte du bouton (`getActionCommand()`) et le nouveau score. Un seul `actionPerformed` gère les deux boutons grâce à `getSource()`."
+	},
+	exos: [
+		{ id: "i03.methode", k: "qcm", q: "Une classe écrit `implements ActionListener`. Quelle méthode doit-elle obligatoirement écrire ?",
+			opts: ["`public void actionPerformed(ActionEvent e)`", "`public void onClick()`", "`public void actionListener(ActionEvent e)`", "`public boolean clic(JButton b)`"], a: 0,
+			expl: "`ActionListener` déclare une seule méthode, `actionPerformed(ActionEvent e)`. Sans elle (ou avec une faute de frappe dans son nom), la classe ne compile pas." },
+		{ id: "i03.oubli", k: "qcm", q: "Le panneau implémente `ActionListener` et `actionPerformed` est juste, mais un clic sur `btnEffacer` ne fait rien. Quelle est la cause la plus probable ?",
+			opts: ["Il manque `this.btnEffacer.addActionListener(this);`", "Il manque `repaint()` dans `actionPerformed`", "Le bouton n'est pas `public`", "Il faut appeler `actionPerformed` dans le constructeur"], a: 0,
+			expl: "Un bouton ne prévient que les écouteurs **inscrits**. Sans `addActionListener`, le clic n'arrive jamais à `actionPerformed`." },
+		{ id: "i03.trace", k: "predict",
+			q: "`doClick()` simule un clic, exactement comme la souris. Qu'affiche ce programme ?",
+			code: T(`
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class Clics
+{
+    public static void main(String[] args)
+    {
+        PanelVote p = new PanelVote();
+        p.getBtnPour().doClick();
+        p.getBtnPour().doClick();
+        p.getBtnContre().doClick();
+        System.out.println(p.getResultat());
+    }
+}
+
+class PanelVote extends JPanel implements ActionListener
+{
+    private JButton btnPour;
+    private JButton btnContre;
+    private JLabel  lblResultat;
+    private int     ecart;
+
+    public PanelVote()
+    {
+        this.btnPour     = new JButton("Pour");
+        this.btnContre   = new JButton("Contre");
+        this.lblResultat = new JLabel("égalité");
+        this.add(this.btnPour);
+        this.add(this.btnContre);
+        this.add(this.lblResultat);
+        this.btnPour.addActionListener(this);
+    }
+
+    public JButton getBtnPour()   { return this.btnPour; }
+    public JButton getBtnContre() { return this.btnContre; }
+    public String  getResultat()  { return this.lblResultat.getText(); }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == this.btnPour)   { this.ecart++; }
+        if (e.getSource() == this.btnContre) { this.ecart--; }
+        System.out.println(e.getActionCommand() + " " + this.ecart);
+        this.lblResultat.setText("écart " + this.ecart);
+    }
+}`),
+			expl: "Seul `btnPour` est activé : ses deux clics donnent `Pour 1` puis `Pour 2`. `btnContre` n'a pas d'écouteur, son clic ne fait rien. Le label garde donc `écart 2`." },
+		{ id: "i03.commande", k: "qcm", q: "Dans `actionPerformed`, que renvoie `e.getActionCommand()` après un clic sur `new JButton(\"Valider\")` ?",
+			opts: ["La chaîne \"Valider\"", "L'objet bouton lui-même", "Le numéro du bouton dans le panneau", "null"], a: 0,
+			expl: "Pour un bouton, la commande d'action est son texte. Pour obtenir l'objet bouton, c'est `e.getSource()` (de type `Object`, à comparer avec `==` ou à caster en `JButton`)." },
+		{ id: "i03.faute", k: "bug",
+			code: T(`
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+
+public class PanelLampe extends JPanel implements ActionListener
+{
+    private JButton btnAllumer;
+
+    public PanelLampe()
+    {
+        this.btnAllumer = new JButton("Allumer");
+        this.add(this.btnAllumer);
+        this.btnAllumer.addActionListener(this);
+    }
+
+    public void actionPerfomed(ActionEvent e)
+    {
+        System.out.println("Lumière !");
+    }
+}`),
+			ligne: 17, fix: ["public void actionPerformed(ActionEvent e)"],
+			expl: "`actionPerfomed` a perdu son « r » : ce n'est pas la méthode de l'interface. javac refuse la classe : « PanelLampe n'est pas abstraite et ne redéfinit pas actionPerformed(ActionEvent) »." },
+		{ id: "i03.fill", k: "fill", q: "Complète le panneau qui compte les clics sur `btnPlus`.",
+			code: T(`
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCompteur extends JPanel implements ___
+{
+    private JButton btnPlus;
+    private JLabel  lblTotal;
+    private int     total;
+
+    public PanelCompteur()
+    {
+        this.btnPlus  = new JButton("+1");
+        this.lblTotal = new JLabel("0");
+        this.add(this.btnPlus);
+        this.add(this.lblTotal);
+        this.btnPlus.___(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.___() == this.btnPlus)
+        {
+            this.total++;
+            this.lblTotal.___("" + this.total);
+        }
+    }
+}`),
+			trous: [["ActionListener"], ["addActionListener"], ["getSource"], ["setText"]],
+			expl: "Le panneau **implémente** `ActionListener`, s'inscrit comme écouteur du bouton avec `addActionListener(this)`, reconnaît le bouton avec `getSource()` et met le label à jour avec `setText`." },
+		{ id: "i03.code", k: "code", mode: "class", titre: "Le nuancier", lanceur: "FrameNuancier",
+			enonce: "Écris `PanelNuancier` (un `JPanel` en `BorderLayout`) qui implémente `ActionListener`. Ajoute dans cet ordre :\n\n- au nord, un panneau local (layout par défaut) avec trois boutons « Rouge », « Vert », « Bleu » ;\n- au centre, un `JPanel` attribut `panelZone`, blanc au départ (`Color.WHITE`) ;\n- au sud, un `JLabel` attribut `lblCouleur` : « Aucune couleur ».\n\nUn clic sur un bouton colore la zone (`Color.RED`, `Color.GREEN` ou `Color.BLUE`), écrit « Couleur : Rouge » (le texte du bouton) dans le label et l'affiche aussi dans la console. Utilise **un seul** `actionPerformed` pour les trois boutons.",
+			regles: ["allman"],
+			harness: ihmTest("TestNuancier", `
+        PanelNuancier p = new PanelNuancier();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JPanel boutons = (JPanel) p.getComponent(0);
+        JPanel zone = (JPanel) p.getComponent(1);
+        JLabel lbl = (JLabel) p.getComponent(2);
+        System.out.println(zone.getBackground().equals(Color.WHITE) + " " + lbl.getText());
+        int[] ordre = { 2, 0, 1, 0 };
+        for (int i : ordre)
+        {
+            ((JButton) boutons.getComponent(i)).doClick();
+            System.out.println("  zone " + zone.getBackground() + " / " + lbl.getText());
+        }`),
+			depart: T(`
+//// Fichier : FrameNuancier.java
+import javax.swing.JFrame;
+
+public class FrameNuancier extends JFrame
+{
+    public FrameNuancier()
+    {
+        this.setTitle("Nuancier");
+        this.setSize(300, 220);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelNuancier());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameNuancier();
+    }
+}
+//// Fichier : PanelNuancier.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelNuancier extends JPanel implements ActionListener
+{
+    private JButton btnRouge;
+    private JButton btnVert;
+    private JButton btnBleu;
+    private JPanel  panelZone;
+    private JLabel  lblCouleur;
+
+    public PanelNuancier()
+    {
+
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameNuancier.java
+import javax.swing.JFrame;
+
+public class FrameNuancier extends JFrame
+{
+    public FrameNuancier()
+    {
+        this.setTitle("Nuancier");
+        this.setSize(300, 220);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelNuancier());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameNuancier();
+    }
+}
+//// Fichier : PanelNuancier.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelNuancier extends JPanel implements ActionListener
+{
+    private JButton btnRouge;
+    private JButton btnVert;
+    private JButton btnBleu;
+    private JPanel  panelZone;
+    private JLabel  lblCouleur;
+
+    public PanelNuancier()
+    {
+        JPanel panelBoutons;
+
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        panelBoutons    = new JPanel();
+        this.btnRouge   = new JButton("Rouge");
+        this.btnVert    = new JButton("Vert");
+        this.btnBleu    = new JButton("Bleu");
+        this.panelZone  = new JPanel();
+        this.panelZone.setBackground(Color.WHITE);
+        this.lblCouleur = new JLabel("Aucune couleur");
+
+        /* Positionnement des composants */
+        panelBoutons.add(this.btnRouge);
+        panelBoutons.add(this.btnVert);
+        panelBoutons.add(this.btnBleu);
+        this.add(panelBoutons, BorderLayout.NORTH);
+        this.add(this.panelZone, BorderLayout.CENTER);
+        this.add(this.lblCouleur, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.btnRouge.addActionListener(this);
+        this.btnVert.addActionListener(this);
+        this.btnBleu.addActionListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == this.btnRouge)
+        {
+            this.panelZone.setBackground(Color.RED);
+        }
+        if (e.getSource() == this.btnVert)
+        {
+            this.panelZone.setBackground(Color.GREEN);
+        }
+        if (e.getSource() == this.btnBleu)
+        {
+            this.panelZone.setBackground(Color.BLUE);
+        }
+
+        this.lblCouleur.setText("Couleur : " + e.getActionCommand());
+        System.out.println("Couleur : " + e.getActionCommand());
+    }
+}`),
+			indices: ["Trois parties dans le constructeur : création (les `new` et la couleur de départ), positionnement (les `add`, dans l'ordre nord, centre, sud), activation (les trois `addActionListener(this)`).",
+				"Dans `actionPerformed`, compare `e.getSource()` à chaque bouton pour choisir la couleur.",
+				"Le texte du bouton cliqué est `e.getActionCommand()` : il évite d'écrire trois fois le message."] }
+	]
+});
+
+/* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
    format que CHAPITRES), puis l'ajouter ici.
@@ -23033,7 +24204,7 @@ public class FileAttente<T>
 var LANGUES = [
 	{ id: "java", nom: "Algo & Java", groupe: "Semestre 1", icone: "☕", mode: "java", runner: "java", desc: "Bases de l'algorithmique en Java (R1.01)", unites: CHAPITRES, controles: CONTROLES, bonus: EVALS },
 	{ id: "objets", nom: "Dév Objets", groupe: "Semestre 2", icone: "🧩", mode: "java", runner: "java", niveau: 2, desc: "Classes, collections, interfaces, héritage, exceptions, enum (R2.01)", unites: OBJETS_UNITES, controles: OBJETS_CONTROLES, bonus: OBJETS_EVALS },
-	{ id: "ihm", nom: "Dév IHM", groupe: "Semestre 2", icone: "🪟", mode: "java", runner: "swing", desc: "Fenêtres Swing, layouts, événements (R2.02)", bientot: true },
+	{ id: "ihm", nom: "Dév IHM", groupe: "Semestre 2", icone: "🪟", mode: "java", runner: "swing", niveau: 3, desc: "Fenêtres Swing, layouts, événements (R2.02)", unites: IHM_UNITES },
 	{ id: "html", nom: "HTML & CSS", groupe: "Web et autres langages", icone: "🌐", mode: "html", runner: "web", desc: "Construire des pages web", unites: HTML_UNITES, bientot: true }, // prêt, masqué pour l'instant : retirer bientot pour l'ouvrir
 	{ id: "sql", nom: "SQL", groupe: "Web et autres langages", icone: "🗄️", bientot: true },
 	{ id: "php", nom: "PHP", groupe: "Web et autres langages", icone: "🐘", bientot: true }
@@ -23435,6 +24606,588 @@ function updateTabs(hsh)
 }
 
 /* ==========================================================================
+   SwingUI : affiche dans la page les fenêtres ouvertes par un programme Swing
+   exécuté par l'interpréteur (niveau 3), et renvoie les clics, saisies et
+   mouvements de souris au programme Java (méthodes jq... de swing-lib.java).
+   SwingUI.mount(conteneur, gui, { onOutput, onError, onEnd }) -> { refresh, destroy }
+   ========================================================================== */
+var SwingUI = (function ()
+{
+	var KINDS = ["JFrame", "JMenuBar", "JMenu", "JMenuItem", "JqSeparateur", "JButton", "JCheckBox", "JRadioButton", "JToggleButton", "JLabel", "JTextField", "JScrollBar", "JComboBox", "JPanel", "JComponent", "Container"];
+	var DEF_FOND = "rgb(238,238,238)";
+
+	function mount(root, gui, opts)
+	{
+		opts = opts || {};
+		var cache = Object.create(null);   // id de l'objet Java -> élément
+		var openMenu = null, ended = false, pending = null;
+		var host = document.createElement("div");
+		host.className = "jq-host";
+		root.appendChild(host);
+
+		function G(o, f) { return gui.get(o, f); }
+		function kindOf(o)
+		{
+			var ch = gui.chain(o);
+			for (var i = 0; i < ch.length; i++) { if (KINDS.indexOf(ch[i]) >= 0) { return ch[i]; } }
+			return "JComponent";
+		}
+		function rgb(c) { return c ? "rgb(" + G(c, "jqR") + "," + G(c, "jqG") + "," + G(c, "jqB") + ")" : null; }
+		function font(o, gras)
+		{
+			var f = G(o, "jqPolice");
+			if (!f) { return (gras ? "bold " : "") + "12px Arial, Helvetica, sans-serif"; }
+			var st = G(f, "jqStyle"), nom = G(f, "jqNom") || "Dialog";
+			var fam = /mono/i.test(nom) ? "Consolas, Menlo, monospace" : (/serif/i.test(nom) && !/sans/i.test(nom) ? "Georgia, 'Times New Roman', serif" : "Arial, Helvetica, sans-serif");
+			return (st % 2 === 1 ? "bold " : "") + (Math.floor(st / 2) % 2 === 1 ? "italic " : "") + G(f, "jqTaille") + "px " + fam;
+		}
+
+		/* Un appel au programme Java, puis on redessine. */
+		function act(o, name, args)
+		{
+			if (ended) { return; }
+			var r = gui.call(o, name, args || []);
+			if (r.out && opts.onOutput) { opts.onOutput(r.out); }
+			if (r.error && opts.onError) { opts.onError(r.error); }
+			if (r.exited || gui.closed) { end("Application terminée (System.exit)."); return; }
+			refresh();
+		}
+		function end(msg)
+		{
+			ended = true;
+			host.innerHTML = "";
+			var p = document.createElement("p");
+			p.className = "jq-fin";
+			p.textContent = msg;
+			host.appendChild(p);
+			if (opts.onEnd) { opts.onEnd(msg); }
+		}
+
+		function el(o, tag, cls)
+		{
+			var e = cache[o.id];
+			if (e && e.tagName === tag.toUpperCase() && e.__cls === cls) { return e; }
+			e = document.createElement(tag);
+			e.className = cls;
+			e.__cls = cls;
+			e.__obj = o;
+			cache[o.id] = e;
+			return e;
+		}
+		function setKids(e, kids)
+		{
+			var cur = [].filter.call(e.childNodes, function (n) { return !n.__deco; });
+			var same = cur.length === kids.length && kids.every(function (k, i) { return cur[i] === k; });
+			if (same) { return; }
+			cur.forEach(function (n) { if (kids.indexOf(n) < 0) { e.removeChild(n); } });
+			kids.forEach(function (k) { e.appendChild(k); });
+		}
+
+		/* ---------- composants ---------- */
+		function comp(o)
+		{
+			var k = kindOf(o), e;
+			switch (k)
+			{
+				case "JButton": case "JToggleButton": case "JMenuItem":
+					e = el(o, "button", "jq-btn");
+					e.type = "button";
+					e.textContent = G(o, "jqTexte") || "";
+					e.disabled = !G(o, "jqActif");
+					e.classList.toggle("on", k === "JToggleButton" && !!G(o, "jqChoisi"));
+					if (!e.__on) { e.__on = 1; e.addEventListener("click", function () { act(o, "doClick"); }); }
+					e.style.font = font(o, true);
+					break;
+				case "JCheckBox": case "JRadioButton":
+					e = el(o, "div", "jq-check " + (k === "JRadioButton" ? "radio" : "box"));
+					e.setAttribute("role", k === "JRadioButton" ? "radio" : "checkbox");
+					e.setAttribute("aria-checked", G(o, "jqChoisi") ? "true" : "false");
+					e.tabIndex = 0;
+					e.innerHTML = "";
+					var mk = document.createElement("span");
+					mk.className = "mk";
+					e.appendChild(mk);
+					e.appendChild(document.createTextNode(G(o, "jqTexte") || ""));
+					e.classList.toggle("on", !!G(o, "jqChoisi"));
+					e.classList.toggle("off", !G(o, "jqActif"));
+					if (!e.__on)
+					{
+						e.__on = 1;
+						e.addEventListener("click", function () { if (G(o, "jqActif")) { act(o, "doClick"); } });
+						e.addEventListener("keydown", function (ev) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); act(o, "doClick"); } });
+					}
+					e.style.font = font(o, true);
+					break;
+				case "JLabel":
+					e = el(o, "div", "jq-label");
+					e.textContent = G(o, "jqTexte") || "";
+					var a = G(o, "jqAlignH");
+					e.style.justifyContent = a === 0 ? "center" : (a === 4 || a === 11 ? "flex-end" : "flex-start");
+					var av = G(o, "jqAlignV");
+					e.style.alignItems = av === 1 ? "flex-start" : (av === 3 ? "flex-end" : "center");
+					e.style.font = font(o, true);
+					break;
+				case "JTextField":
+					e = el(o, "input", "jq-txt");
+					e.type = "text";
+					if (document.activeElement !== e) { e.value = G(o, "jqTexte") || ""; }
+					e.readOnly = !G(o, "jqModifiable");
+					e.disabled = !G(o, "jqActif");
+					var cols = G(o, "jqColonnes");
+					e.style.width = (cols > 0 ? cols * 10 + 8 : Math.max(8, (e.value.length || 0) * 7 + 8)) + "px";
+					var ta = G(o, "jqAlignH");
+					e.style.textAlign = ta === 0 ? "center" : (ta === 4 || ta === 11 ? "right" : "left");
+					e.style.font = font(o, false);
+					if (!e.__on)
+					{
+						e.__on = 1;
+						e.addEventListener("input", function () { gui.call(o, "jqSaisir", [e.value, false]); });
+						e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); act(o, "jqSaisir", [e.value, true]); } });
+					}
+					break;
+				case "JScrollBar":
+					e = scrollbar(o);
+					break;
+				case "JComboBox":
+					e = el(o, "select", "jq-combo");
+					var items = G(o, "jqItems") || [];
+					var sig = items.map(function (x) { return gui.text(x); }).join("\u0001");
+					if (e.__sig !== sig)
+					{
+						e.__sig = sig;
+						e.innerHTML = "";
+						items.forEach(function (x, i) { var op = document.createElement("option"); op.value = String(i); op.textContent = gui.text(x); e.appendChild(op); });
+					}
+					e.selectedIndex = G(o, "jqChoix");
+					e.disabled = !G(o, "jqActif");
+					e.style.font = font(o, true);
+					if (!e.__on) { e.__on = 1; e.addEventListener("change", function () { act(o, "setSelectedIndex", [e.selectedIndex]); }); }
+					break;
+				case "JqSeparateur":
+					e = el(o, "hr", "jq-sep");
+					break;
+				default:
+					e = panel(o, k);
+			}
+			common(o, e, k);
+			return e;
+		}
+
+		function common(o, e, k)
+		{
+			var fond = G(o, "jqFond");
+			var opaque = k === "JTextField" || k === "JButton" || k === "JComboBox" || k === "JScrollBar" || k === "JToggleButton" || k === "JMenuItem" || G(o, "jqOpaque");
+			if (k === "JTextField") { e.style.background = fond ? rgb(fond) : (G(o, "jqModifiable") ? "#fff" : DEF_FOND); }
+			else if (k === "JButton" || k === "JToggleButton" || k === "JMenuItem") { e.style.background = fond ? rgb(fond) : ""; }
+			else { e.style.background = opaque ? (fond ? rgb(fond) : (k === "JPanel" ? DEF_FOND : "")) : ""; }
+			var fg = G(o, "jqCouleurTexte");
+			e.style.color = G(o, "jqActif") === false ? "#8a8a8a" : (fg ? rgb(fg) : "");
+			var b = G(o, "jqBordure");
+			border(e, b);
+			var tip = G(o, "jqBulle");
+			if (tip) { e.title = tip; } else { e.removeAttribute("title"); }
+			if (!G(o, "jqVisible")) { e.style.display = "none"; e.__hid = true; }
+			else if (e.__hid) { e.__hid = false; if (e.style.display === "none") { e.style.display = ""; } }
+			mouse(o, e);
+		}
+
+		function border(e, b)
+		{
+			e.style.border = "";
+			e.style.padding = "";
+			var old = e.__titre;
+			if (old && (!b || G(b, "jqGenre") !== "titre")) { old.remove(); e.__titre = null; }
+			if (!b) { return; }
+			var g = G(b, "jqGenre");
+			if (g === "ligne") { e.style.border = G(b, "jqEpaisseur") + "px solid " + rgb(G(b, "jqCouleur")); }
+			else if (g === "vide") { e.style.padding = G(b, "jqHaut") + "px " + G(b, "jqDroite") + "px " + G(b, "jqBas") + "px " + G(b, "jqGauche") + "px"; }
+			else if (g === "grave") { e.style.border = "2px groove #fff"; }
+			else if (g === "relief") { e.style.border = "2px outset #ddd"; }
+			else if (g === "creux") { e.style.border = "2px inset #ddd"; }
+			else if (g === "titre")
+			{
+				e.style.border = "1px solid #b8cfe5";
+				e.style.padding = "14px 4px 4px";
+				var t = e.__titre;
+				if (!t) { t = document.createElement("span"); t.className = "jq-btitre"; t.__deco = true; e.__titre = t; e.appendChild(t); }
+				t.textContent = G(b, "jqTitre") || "";
+			}
+		}
+
+		function panel(o, k)
+		{
+			var e = el(o, "div", "jq-panel");
+			var kids = (G(o, "jqEnfants") || []).filter(function (x) { return x && x.f; });
+			var lay = G(o, "jqLayout");
+			var lk = lay ? kindLayout(lay) : null;
+			var st = e.style;
+			["display", "gridTemplateColumns", "gridTemplateRows", "gridTemplateAreas", "gridAutoRows", "columnGap", "rowGap", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "padding", "position"].forEach(function (p) { st[p] = ""; });
+			var els = kids.map(function (c) { var ce = comp(c); ce.__zone = null; return ce; });
+			var grille = lk === "BorderLayout" || lk === "GridLayout";
+			els.forEach(function (x) { if (lk) { x.style.position = ""; x.style.left = ""; x.style.top = ""; } x.style.justifySelf = x.style.alignSelf = grille ? "stretch" : ""; });
+			if (lk === "BorderLayout")
+			{
+				var z = { n: G(lay, "jqNorth"), s: G(lay, "jqSouth"), w: G(lay, "jqWest"), e: G(lay, "jqEast"), c: G(lay, "jqCenter") };
+				var vis = function (x) { return x && G(x, "jqVisible"); };
+				var hasW = vis(z.w), hasE = vis(z.e), hasN = vis(z.n), hasS = vis(z.s);
+				var cols = (hasW ? "w " : "") + "c" + (hasE ? " e" : "");
+				var nc = cols.split(" ").length;
+				var row = function (x) { var r = []; for (var i = 0; i < nc; i++) { r.push(x); } return '"' + r.join(" ") + '"'; };
+				st.display = "grid";
+				st.gridTemplateColumns = (hasW ? "auto " : "") + "minmax(0,1fr)" + (hasE ? " auto" : "");
+				st.gridTemplateRows = (hasN ? "auto " : "") + "minmax(0,1fr)" + (hasS ? " auto" : "");
+				st.gridTemplateAreas = (hasN ? row("n") + " " : "") + '"' + cols + '"' + (hasS ? " " + row("s") : "");
+				st.columnGap = G(lay, "jqHgap") + "px";
+				st.rowGap = G(lay, "jqVgap") + "px";
+				kids.forEach(function (c, i)
+				{
+					var area = c === z.n ? "n" : c === z.s ? "s" : c === z.w ? "w" : c === z.e ? "e" : c === z.c ? "c" : null;
+					els[i].__zone = area;
+					els[i].style.gridArea = area || "";
+					if (!area) { els[i].style.display = "none"; }
+					size(c, els[i], area === "n" || area === "s" ? "h" : (area === "w" || area === "e" ? "w" : "min"));
+				});
+			}
+			else if (lk === "GridLayout")
+			{
+				var nr = G(lay, "jqRows"), ncol = G(lay, "jqCols"), n = kids.length;
+				if (nr > 0) { ncol = Math.max(1, Math.ceil(n / nr)); } else { nr = Math.max(1, Math.ceil(n / ncol)); }
+				st.display = "grid";
+				st.gridTemplateColumns = "repeat(" + ncol + ", minmax(0,1fr))";
+				st.gridTemplateRows = "repeat(" + nr + ", minmax(0,1fr))";
+				st.columnGap = G(lay, "jqHgap") + "px";
+				st.rowGap = G(lay, "jqVgap") + "px";
+				kids.forEach(function (c, i) { els[i].style.gridArea = ""; size(c, els[i], "min"); });
+			}
+			else if (lk === "FlowLayout")
+			{
+				var al = G(lay, "jqAlign");
+				st.display = "flex";
+				st.flexWrap = "wrap";
+				st.justifyContent = al === 0 || al === 3 ? "flex-start" : (al === 2 || al === 4 ? "flex-end" : "center");
+				st.alignItems = "center";
+				st.alignContent = "flex-start";
+				st.gap = G(lay, "jqVgap") + "px " + G(lay, "jqHgap") + "px";
+				st.padding = G(lay, "jqVgap") + "px " + G(lay, "jqHgap") + "px";
+				kids.forEach(function (c, i) { els[i].style.gridArea = ""; size(c, els[i], "both"); });
+			}
+			else
+			{
+				st.position = "relative";
+				kids.forEach(function (c, i)
+				{
+					var s2 = els[i].style;
+					s2.position = "absolute";
+					s2.left = G(c, "jqX") + "px";
+					s2.top = G(c, "jqY") + "px";
+					s2.width = G(c, "jqL") + "px";
+					s2.height = G(c, "jqH") + "px";
+				});
+			}
+			var pw = G(o, "jqPrefL"), ph = G(o, "jqPrefH");
+			if (!lk && pw >= 0) { st.width = pw + "px"; st.height = ph + "px"; }
+			setKids(e, els);
+			e.__paint = gui.userMethod(o, "paintComponent") ? o : null;
+			return e;
+		}
+		function kindLayout(l)
+		{
+			var ch = gui.chain(l);
+			for (var i = 0; i < ch.length; i++) { if (/^(BorderLayout|GridLayout|FlowLayout)$/.test(ch[i])) { return ch[i]; } }
+			return "FlowLayout";
+		}
+		/* Taille préférée (setPreferredSize) selon ce que le layout en fait. */
+		function size(c, e, mode)
+		{
+			var w = G(c, "jqPrefL"), h = G(c, "jqPrefH"), s = e.style;
+			s.width = s.height = s.minWidth = s.minHeight = "";
+			if (kindOf(c) === "JTextField" && mode !== "both") { s.width = ""; }
+			if (kindOf(c) === "JTextField" && mode === "both") { var cols = G(c, "jqColonnes"); s.width = (cols > 0 ? cols * 10 + 8 : Math.max(8, (e.value || "").length * 7 + 8)) + "px"; }
+			if (w < 0) { return; }
+			if (mode === "both") { s.width = w + "px"; s.height = h + "px"; }
+			else if (mode === "h") { s.height = h + "px"; }
+			else if (mode === "w") { s.width = w + "px"; }
+			else { s.minWidth = w + "px"; s.minHeight = h + "px"; }
+		}
+
+		function scrollbar(o)
+		{
+			var e = el(o, "div", "jq-sb");
+			var vert = G(o, "jqOrient") === 1;
+			e.classList.toggle("vert", vert);
+			if (!e.__built)
+			{
+				e.__built = 1;
+				var moins = document.createElement("button"), plus = document.createElement("button"), r = document.createElement("input");
+				moins.type = plus.type = "button";
+				moins.className = plus.className = "jq-sbtn";
+				moins.textContent = vert ? "▲" : "◀";
+				plus.textContent = vert ? "▼" : "▶";
+				moins.setAttribute("aria-label", "Diminuer");
+				plus.setAttribute("aria-label", "Augmenter");
+				r.type = "range";
+				r.className = "jq-range";
+				moins.addEventListener("click", function () { act(o, "jqAjuster", [2, 0]); });
+				plus.addEventListener("click", function () { act(o, "jqAjuster", [1, 0]); });
+				r.addEventListener("input", function () { act(o, "jqAjuster", [5, +r.value]); });
+				e.appendChild(moins); e.appendChild(r); e.appendChild(plus);
+				e.__r = r;
+			}
+			var rg = e.__r;
+			rg.min = G(o, "jqMin");
+			rg.max = G(o, "jqMax") - G(o, "jqEtendue");
+			rg.step = 1;
+			if (+rg.value !== G(o, "jqValeur")) { rg.value = G(o, "jqValeur"); }
+			rg.disabled = !G(o, "jqActif");
+			return e;
+		}
+
+		/* ---------- souris ---------- */
+		function mouse(o, e)
+		{
+			var l1 = (G(o, "jqSouris") || []).length, l2 = (G(o, "jqMouvement") || []).length;
+			if (!l1 && !l2) { return; }
+			e.classList.add("jq-mouse");
+			if (e.__ms) { return; }
+			e.__ms = 1;
+			var drag = false;
+			function pos(ev)
+			{
+				var r = e.getBoundingClientRect(), sc = e.__scale || scaleOf(e);
+				return [Math.round((ev.clientX - r.left) / sc), Math.round((ev.clientY - r.top) / sc)];
+			}
+			function btn(ev) { return ev.button === 2 ? 3 : (ev.button === 1 ? 2 : 1); }
+			function send(id, ev, b, clics)
+			{
+				var p = pos(ev);
+				if (id === 503 || id === 506)
+				{
+					pending = [o, id, p, b];
+					if (!pending.raf) { requestAnimationFrame(function () { var q = pending; pending = null; if (q) { act(q[0], "jqEvtSouris", [q[1], q[2][0], q[2][1], q[3], 0]); } }); }
+					return;
+				}
+				act(o, "jqEvtSouris", [id, p[0], p[1], b, clics || 0]);
+			}
+			e.addEventListener("pointerdown", function (ev) { if (ev.target.closest("button,input,select,.jq-check") && ev.target.closest(".jq-mouse") !== e) { return; } drag = true; try { e.setPointerCapture(ev.pointerId); } catch (x) { } send(501, ev, btn(ev), 1); });
+			e.addEventListener("pointerup", function (ev) { if (!drag) { return; } drag = false; send(502, ev, btn(ev), 1); });
+			e.addEventListener("click", function (ev) { if (ev.target.closest(".jq-mouse") !== e) { return; } send(500, ev, 1, ev.detail || 1); });
+			e.addEventListener("pointermove", function (ev) { if (drag) { send(506, ev, 0); } else if ((G(o, "jqMouvement") || []).length) { send(503, ev, 0); } });
+			e.addEventListener("pointerenter", function (ev) { send(504, ev, 0); });
+			e.addEventListener("pointerleave", function (ev) { if (!drag) { send(505, ev, 0); } });
+			e.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+		}
+		function scaleOf(e)
+		{
+			var w = e.closest(".jq-win");
+			return w && w.__scale ? w.__scale : 1;
+		}
+
+		/* ---------- fenêtre ---------- */
+		function frame(f)
+		{
+			var w = el(f, "div", "jq-win");
+			if (!w.__built)
+			{
+				w.__built = 1;
+				var bar = document.createElement("div");
+				bar.className = "jq-bar";
+				var ic = document.createElement("span"); ic.className = "jq-ico"; ic.setAttribute("aria-hidden", "true");
+				var tt = document.createElement("span"); tt.className = "jq-title";
+				var x = document.createElement("button"); x.type = "button"; x.className = "jq-close"; x.textContent = "✕"; x.setAttribute("aria-label", "Fermer la fenêtre");
+				x.addEventListener("click", function () { closeFrame(f); });
+				bar.appendChild(ic); bar.appendChild(tt); bar.appendChild(x);
+				var mb = document.createElement("div"); mb.className = "jq-menubar";
+				var body = document.createElement("div"); body.className = "jq-body";
+				w.appendChild(bar); w.appendChild(mb); w.appendChild(body);
+				w.__tt = tt; w.__mb = mb; w.__body = body;
+			}
+			w.__tt.textContent = G(f, "jqTitre") || "";
+			menubar(w.__mb, G(f, "jqMenu"));
+			var content = G(f, "jqContenu");
+			var ce = content ? comp(content) : document.createElement("div");
+			ce.classList.add("jq-content");
+			setKids(w.__body, [ce]);
+			var packed = G(f, "jqAjuste"), W = G(f, "jqL"), H = G(f, "jqH");
+			w.__packed = packed || !(W > 0 && H > 0);
+			w.__body.style.width = w.__packed ? "" : Math.max(40, W - 16) + "px";
+			w.__body.style.height = w.__packed ? "" : Math.max(20, H - 39) + "px";
+			w.style.font = font(f, false);
+			return w;
+		}
+		function closeFrame(f)
+		{
+			var op = G(f, "jqFermeture");
+			if (op === 3) { end("Application terminée : la fenêtre a été fermée (EXIT_ON_CLOSE)."); return; }
+			if (op === 0) { return; }
+			act(f, op === 2 ? "dispose" : "setVisible", op === 2 ? [] : [false]);
+		}
+		function menubar(mb, bar)
+		{
+			mb.innerHTML = "";
+			mb.style.display = bar ? "" : "none";
+			if (!bar) { return; }
+			(G(bar, "jqEnfants") || []).forEach(function (m)
+			{
+				var wrap = document.createElement("div"); wrap.className = "jq-menu";
+				var b = document.createElement("button"); b.type = "button"; b.className = "jq-mtitle"; b.textContent = G(m, "jqTexte") || "";
+				b.addEventListener("click", function () { openMenu = openMenu === m.id ? null : m.id; refresh(); });
+				wrap.appendChild(b);
+				if (openMenu === m.id)
+				{
+					var dd = document.createElement("div"); dd.className = "jq-drop";
+					(G(m, "jqEnfants") || []).forEach(function (it)
+					{
+						if (kindOf(it) === "JqSeparateur") { var hr = document.createElement("hr"); hr.className = "jq-sep"; dd.appendChild(hr); return; }
+						var ib = document.createElement("button"); ib.type = "button"; ib.className = "jq-mitem"; ib.textContent = G(it, "jqTexte") || "";
+						ib.disabled = !G(it, "jqActif");
+						ib.addEventListener("click", function () { openMenu = null; act(it, "doClick"); });
+						dd.appendChild(ib);
+					});
+					wrap.appendChild(dd);
+				}
+				mb.appendChild(wrap);
+			});
+		}
+
+		/* ---------- après la mise en page : tailles, dessin, mise à l'échelle ---------- */
+		function fit(w)
+		{
+			w.style.transform = "";
+			w.__scale = 1;
+			var wrap = w.parentNode;
+			wrap.style.height = "";
+			var avail = host.clientWidth || 320, nat = w.offsetWidth;
+			if (nat > avail)
+			{
+				var s = avail / nat;
+				w.__scale = s;
+				w.style.transform = "scale(" + s + ")";
+				wrap.style.height = Math.ceil(w.offsetHeight * s) + "px";
+			}
+		}
+		function syncSizes(e, parentRect, sc)
+		{
+			var o = e.__obj;
+			var r = e.getBoundingClientRect();
+			if (o && o.f && o.f.jqL !== undefined && kindOf(o) !== "JFrame")
+			{
+				gui.set(o, "jqL", Math.round(r.width / sc));
+				gui.set(o, "jqH", Math.round(r.height / sc));
+				if (parentRect && G(o, "jqParent") && G(G(o, "jqParent"), "jqLayout")) { gui.set(o, "jqX", Math.round((r.left - parentRect.left) / sc)); gui.set(o, "jqY", Math.round((r.top - parentRect.top) / sc)); }
+			}
+			[].forEach.call(e.children, function (c) { if (!c.__deco) { syncSizes(c, o && o.f ? r : parentRect, sc); } });
+		}
+		function paintAll(e)
+		{
+			if (e.__paint) { paint(e); }
+			[].forEach.call(e.children, function (c) { if (!c.__deco) { paintAll(c); } });
+		}
+		function paint(e)
+		{
+			var o = e.__paint;
+			var cv = e.__cv;
+			if (!cv) { cv = document.createElement("canvas"); cv.className = "jq-canvas"; cv.__deco = true; e.__cv = cv; e.insertBefore(cv, e.firstChild); }
+			var W = e.clientWidth, H = e.clientHeight, dpr = window.devicePixelRatio || 1;
+			cv.width = Math.max(1, W * dpr);
+			cv.height = Math.max(1, H * dpr);
+			cv.style.width = W + "px";
+			cv.style.height = H + "px";
+			var g = gui.create("Graphics");
+			var r = gui.call(o, "paintComponent", [g]);
+			if (r.out && opts.onOutput) { opts.onOutput(r.out); }
+			if (r.error && opts.onError) { opts.onError(r.error); }
+			var ctx = cv.getContext("2d");
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			ctx.clearRect(0, 0, W, H);
+			ctx.fillStyle = ctx.strokeStyle = "#000";
+			ctx.font = "12px Arial, Helvetica, sans-serif";
+			ctx.lineWidth = 1;
+			(gui.get(g, "jqOps") || []).forEach(function (op) { draw(ctx, op); });
+		}
+		function draw(ctx, op)
+		{
+			var k = op.charAt(0), a = op.slice(2).split(" "), n = a.map(Number);
+			switch (k)
+			{
+				case "c": ctx.fillStyle = ctx.strokeStyle = "rgb(" + n[0] + "," + n[1] + "," + n[2] + ")"; break;
+				case "f":
+					var nom = a.slice(2).join(" "), st = n[1];
+					ctx.font = (st % 2 === 1 ? "bold " : "") + (Math.floor(st / 2) % 2 === 1 ? "italic " : "") + n[0] + "px " + (/mono/i.test(nom) ? "monospace" : (/serif/i.test(nom) && !/sans/i.test(nom) ? "serif" : "Arial, Helvetica, sans-serif"));
+					break;
+				case "l": ctx.beginPath(); ctx.moveTo(n[0] + 0.5, n[1] + 0.5); ctx.lineTo(n[2] + 0.5, n[3] + 0.5); ctx.stroke(); break;
+				case "r": ctx.strokeRect(n[0] + 0.5, n[1] + 0.5, n[2], n[3]); break;
+				case "R": ctx.fillRect(n[0], n[1], n[2], n[3]); break;
+				case "C": ctx.clearRect(n[0], n[1], n[2], n[3]); break;
+				case "o": case "O":
+					ctx.beginPath(); ctx.ellipse(n[0] + n[2] / 2, n[1] + n[3] / 2, Math.abs(n[2] / 2), Math.abs(n[3] / 2), 0, 0, Math.PI * 2);
+					if (k === "O") { ctx.fill(); } else { ctx.stroke(); }
+					break;
+				case "q": case "Q":
+					ctx.beginPath();
+					if (ctx.roundRect) { ctx.roundRect(n[0] + (k === "q" ? 0.5 : 0), n[1] + (k === "q" ? 0.5 : 0), n[2], n[3], Math.min(n[4], n[5]) / 2); } else { ctx.rect(n[0], n[1], n[2], n[3]); }
+					if (k === "Q") { ctx.fill(); } else { ctx.stroke(); }
+					break;
+				case "a": case "A":
+					ctx.beginPath();
+					var cx = n[0] + n[2] / 2, cy = n[1] + n[3] / 2;
+					if (k === "A") { ctx.moveTo(cx, cy); }
+					ctx.ellipse(cx, cy, Math.abs(n[2] / 2), Math.abs(n[3] / 2), 0, -n[4] * Math.PI / 180, -(n[4] + n[5]) * Math.PI / 180, n[5] > 0);
+					if (k === "A") { ctx.closePath(); ctx.fill(); } else { ctx.stroke(); }
+					break;
+				case "s": ctx.fillText(a.slice(2).join(" "), n[0], n[1]); break;
+				case "p": case "P": case "L":
+					var cnt = n[0];
+					if (cnt < 1) { break; }
+					ctx.beginPath();
+					ctx.moveTo(n[1] + 0.5, n[2] + 0.5);
+					for (var i = 1; i < cnt; i++) { ctx.lineTo(n[1 + 2 * i] + 0.5, n[2 + 2 * i] + 0.5); }
+					if (k !== "L") { ctx.closePath(); }
+					if (k === "P") { ctx.fill(); } else { ctx.stroke(); }
+					break;
+			}
+		}
+
+		function refresh()
+		{
+			if (ended) { return; }
+			var frames = gui.frames();
+			var wins = frames.map(function (f)
+			{
+				var w = frame(f);
+				var wrap = w.parentNode && w.parentNode.__wrap ? w.parentNode : null;
+				if (!wrap) { wrap = document.createElement("div"); wrap.className = "jq-wrap"; wrap.__wrap = true; wrap.appendChild(w); }
+				return wrap;
+			});
+			setKids(host, wins);
+			if (!frames.length)
+			{
+				if (!host.__vide) { host.__vide = document.createElement("p"); host.__vide.className = "jq-fin"; host.__vide.__deco = true; }
+				host.__vide.textContent = "Aucune fenêtre affichée (setVisible(true) n'a pas été appelé, ou la fenêtre a été fermée).";
+				if (!host.__vide.parentNode) { host.appendChild(host.__vide); }
+			}
+			else if (host.__vide && host.__vide.parentNode) { host.removeChild(host.__vide); }
+			wins.forEach(function (wrap)
+			{
+				var w = wrap.firstChild;
+				fit(w);
+				syncSizes(w.__body, null, w.__scale || 1);
+				paintAll(w.__body);
+			});
+		}
+
+		refresh();
+		var onResize = function () { if (!ended) { host.querySelectorAll(".jq-win").forEach(function (w) { fit(w); }); } };
+		window.addEventListener("resize", onResize);
+		return {
+			refresh: refresh,
+			destroy: function () { ended = true; window.removeEventListener("resize", onResize); host.remove(); }
+		};
+	}
+
+	return { mount: mount };
+})();
+
+/* ==========================================================================
    JavaQuest : les types d'exercices (QCM, prédire, trouver l'erreur, compléter,
    coder en Java, coder en HTML, schéma mémoire), les projets et les contrôles.
    ========================================================================== */
@@ -23811,6 +25564,28 @@ function updateTabs(hsh)
 		if (mode === "class") { return { src: code + "\n" + e.harness, offset: 0, lines: code.split("\n").length, ruleSrc: code }; }
 		return { src: code + (e.given ? "\n" + e.given : ""), offset: 0, lines: code.split("\n").length, ruleSrc: code };
 	}
+	/* Programme Swing (Dév IHM) : la fenêtre s'affiche dans la page et la console se remplit à chaque événement. */
+	var guiCur = null;
+	function guiView(out, r, b)
+	{
+		if (guiCur) { guiCur.destroy(); guiCur = null; }
+		var frames = r && r.gui && !r.error ? r.gui.frames() : [];
+		if (!frames.length) { return false; }
+		out.appendChild(h("p", { "class": "small", style: "margin:10px 0 4px" }, h("strong", { text: "Fenêtre" }), " : clique, tape, essaie, c'est ton programme qui répond."));
+		var zone = h("div", { "class": "jq-zone" });
+		out.appendChild(zone);
+		out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Console" }), " (System.out)"));
+		var con = outputBlock(r.out, "Console du programme");
+		var vide = !r.out;
+		out.appendChild(con);
+		var errs = h("div");
+		out.appendChild(errs);
+		guiCur = SwingUI.mount(zone, r.gui, {
+			onOutput: function (t) { if (vide) { clear(con); vide = false; } con.appendChild(document.createTextNode(t)); con.scrollTop = con.scrollHeight; },
+			onError: function (err) { clear(errs); errs.appendChild(errorView(err, b)); }
+		});
+		return true;
+	}
 	function isMultiEx(e) { return !!(e.solution && JavaMini.isMulti(e.solution)); }
 	function harnessName(hs) { var m = String(hs).match(/\bclass\s+(\w+)/); return m ? m[1] : "Test"; }
 	function runOpts(e, b, extra)
@@ -23966,8 +25741,14 @@ function updateTabs(hsh)
 		{
 			var b = buildSource(e, curCode());
 			var ins = inBox.value === "" ? [] : inBox.value.split("\n");
-			var r = JavaMini.run(b.src, runOpts(e, b, { inputs: ins, fileName: undefined }));
+			if (e.lanceur)
+			{
+				/* Exercice Swing : ▶ Exécuter lance l'application de l'élève (sa classe qui a le main), sans le programme de test. */
+				b = { src: curCode(), offset: 0, lines: curCode().split("\n").length, ruleSrc: curCode(), multi: b.multi, mainClass: e.lanceur };
+			}
+			var r = JavaMini.run(b.src, runOpts(e, b, { inputs: ins, fileName: undefined, gui: !!e.lanceur }));
 			clear(out);
+			if (e.lanceur && guiView(out, r, b)) { return; }
 			out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Sortie de ton programme" })));
 			out.appendChild(outputBlock(r.out));
 			if (r.error) { out.appendChild(errorView(r.error, b)); }
@@ -25199,6 +26980,7 @@ var SANDBOX = {
 		{ nom: "Boucle", code: "public class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tint i = 1;\n\t\twhile (i <= 5)\n\t\t{\n\t\t\tSystem.out.println(i + \" x 7 = \" + i * 7);\n\t\t\ti++;\n\t\t}\n\t}\n}" },
 		{ nom: "Tableau", code: "public class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tint[] notes = {12, 8, 15, 17};\n\t\tint somme = 0;\n\t\tfor (int i = 0; i < notes.length; i++)\n\t\t{\n\t\t\tsomme = somme + notes[i];\n\t\t}\n\t\tSystem.out.println(\"Moyenne : \" + (double) somme / notes.length);\n\t}\n}" },
 		{ nom: "Véhicules (4 fichiers)", niveau: 2, code: "//// Fichier : Vehicule.java\npublic abstract class Vehicule\n{\n\tprotected String immat;\n\n\tpublic Vehicule(String immat)\n\t{\n\t\tthis.immat = immat;\n\t}\n\n\tpublic abstract int getNbRoues();\n\n\tpublic String toString()\n\t{\n\t\treturn this.getClass().getSimpleName() + \" \" + this.immat + \" (\" + this.getNbRoues() + \" roues)\";\n\t}\n}\n//// Fichier : Voiture.java\npublic class Voiture extends Vehicule\n{\n\tpublic Voiture(String immat)\n\t{\n\t\tsuper(immat);\n\t}\n\n\tpublic int getNbRoues()\n\t{\n\t\treturn 4;\n\t}\n}\n//// Fichier : Moto.java\npublic class Moto extends Vehicule\n{\n\tpublic Moto(String immat)\n\t{\n\t\tsuper(immat);\n\t}\n\n\tpublic int getNbRoues()\n\t{\n\t\treturn 2;\n\t}\n}\n//// Fichier : Garage.java\nimport java.util.ArrayList;\n\npublic class Garage\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tArrayList<Vehicule> parc = new ArrayList<Vehicule>();\n\t\tparc.add(new Voiture(\"AB-123-CD\"));\n\t\tparc.add(new Moto(\"EF-456-GH\"));\n\t\tfor (Vehicule v : parc)\n\t\t{\n\t\t\tSystem.out.println(v);\n\t\t}\n\t}\n}" },
+		{ nom: "Fenêtre Swing (2 fichiers)", niveau: 3, code: "//// Fichier : FrameCompteur.java\nimport javax.swing.JFrame;\n\npublic class FrameCompteur extends JFrame\n{\n\tpublic FrameCompteur()\n\t{\n\t\tthis.setTitle(\"Compteur\");\n\t\tthis.setSize(300, 160);\n\t\tthis.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);\n\t\tthis.add(new PanelCompteur());\n\t\tthis.setVisible(true);\n\t}\n\n\tpublic static void main(String[] args)\n\t{\n\t\tnew FrameCompteur();\n\t}\n}\n//// Fichier : PanelCompteur.java\nimport java.awt.BorderLayout;\nimport java.awt.Color;\nimport java.awt.event.ActionEvent;\nimport java.awt.event.ActionListener;\nimport javax.swing.JButton;\nimport javax.swing.JLabel;\nimport javax.swing.JPanel;\n\npublic class PanelCompteur extends JPanel implements ActionListener\n{\n\tprivate JButton btnPlus;\n\tprivate JButton btnZero;\n\tprivate JLabel  lblTotal;\n\tprivate int     total;\n\n\tpublic PanelCompteur()\n\t{\n\t\tthis.setLayout(new BorderLayout(5, 5));\n\n\t\t/* Création des composants */\n\t\tthis.btnPlus  = new JButton(\"+1\");\n\t\tthis.btnZero  = new JButton(\"Remise à zéro\");\n\t\tthis.lblTotal = new JLabel(\"0\", JLabel.CENTER);\n\t\tthis.lblTotal.setOpaque(true);\n\t\tthis.lblTotal.setBackground(new Color(255, 236, 200));\n\n\t\t/* Positionnement des composants */\n\t\tthis.add(this.btnPlus, BorderLayout.NORTH);\n\t\tthis.add(this.lblTotal, BorderLayout.CENTER);\n\t\tthis.add(this.btnZero, BorderLayout.SOUTH);\n\n\t\t/* Activation des composants */\n\t\tthis.btnPlus.addActionListener(this);\n\t\tthis.btnZero.addActionListener(this);\n\t}\n\n\tpublic void actionPerformed(ActionEvent e)\n\t{\n\t\tif (e.getSource() == this.btnPlus) { this.total++; }\n\t\tif (e.getSource() == this.btnZero) { this.total = 0; }\n\t\tthis.lblTotal.setText(\"\" + this.total);\n\t\tSystem.out.println(\"Total : \" + this.total);\n\t}\n}" },
 		{ nom: "Classe", code: "public class Essai\n{\n\tpublic static void main(String[] args)\n\t{\n\t\tChat c = new Chat(\"Moka\", 3);\n\t\tSystem.out.println(c);\n\t}\n}\n\nclass Chat\n{\n\tprivate String nom;\n\tprivate int age;\n\n\tpublic Chat(String nom, int age)\n\t{\n\t\tthis.nom = nom;\n\t\tthis.age = age;\n\t}\n\n\tpublic String toString()\n\t{\n\t\treturn this.nom + \" a \" + this.age + \" ans\";\n\t}\n}" }
 	],
 	web: [
@@ -25240,7 +27022,7 @@ function renderSandbox()
 		feSlot.hidden = !multiMode;
 		if (addBtn) { addBtn.hidden = multiMode; }
 	}
-	setCode(state.code[key] !== undefined ? state.code[key] : ex[0].code);
+	setCode(state.code[key] !== undefined ? state.code[key] : (ex.filter(function (x) { return x.niveau && x.niveau === L.niveau; })[0] || ex[0]).code);
 	var inBox = h("textarea", { "class": "answer", id: "sbIn", rows: "2", spellcheck: "false", style: "min-height:0" });
 	var out = h("div");
 	var escaped = false;
@@ -25277,8 +27059,9 @@ function renderSandbox()
 	function run()
 	{
 		var src = curCode();
-		var r = JavaMini.run(src, { niveau: lang().niveau || 1, inputs: inBox.value === "" ? [] : inBox.value.split("\n"), markInput: true, seed: Date.now() % 100000 });
+		var r = JavaMini.run(src, { niveau: lang().niveau || 1, inputs: inBox.value === "" ? [] : inBox.value.split("\n"), markInput: true, seed: Date.now() % 100000, gui: (lang().niveau || 1) >= 3 });
 		clear(out);
+		if (guiView(out, r, { offset: 0, lines: src.split("\n").length, src: src })) { return; }
 		out.appendChild(h("p", { "class": "small", style: "margin:10px 0 0" }, h("strong", { text: "Sortie" })));
 		out.appendChild(outputBlock(r.out));
 		if (r.error) { out.appendChild(errorView(r.error, { offset: 0, lines: src.split("\n").length, src: src })); }
