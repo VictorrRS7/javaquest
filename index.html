@@ -4357,7 +4357,7 @@ var JavaMini = (function ()
 
 if (typeof module !== "undefined") { module.exports = JavaMini; }
 
-JavaMini.setLib("// Mini-Swing de JavaQuest : une version simplifiée de java.awt et javax.swing,\n// écrite en Java et exécutée par l'interpréteur (niveau 3, Dév IHM).\n// Les noms internes commencent par jq pour ne jamais gêner le code des élèves.\n// Le rendu (fenêtres, mise en page, dessin) est fait en JavaScript par swing-ui.js,\n// qui lit les attributs jq... de ces objets et rappelle les méthodes jq... sur un clic.\n\nclass Color\n{\n\tpublic static final Color WHITE = new Color(255, 255, 255);\n\tpublic static final Color LIGHT_GRAY = new Color(192, 192, 192);\n\tpublic static final Color GRAY = new Color(128, 128, 128);\n\tpublic static final Color DARK_GRAY = new Color(64, 64, 64);\n\tpublic static final Color BLACK = new Color(0, 0, 0);\n\tpublic static final Color RED = new Color(255, 0, 0);\n\tpublic static final Color PINK = new Color(255, 175, 175);\n\tpublic static final Color ORANGE = new Color(255, 200, 0);\n\tpublic static final Color YELLOW = new Color(255, 255, 0);\n\tpublic static final Color GREEN = new Color(0, 255, 0);\n\tpublic static final Color MAGENTA = new Color(255, 0, 255);\n\tpublic static final Color CYAN = new Color(0, 255, 255);\n\tpublic static final Color BLUE = new Color(0, 0, 255);\n\tpublic static final Color white = WHITE;\n\tpublic static final Color lightGray = LIGHT_GRAY;\n\tpublic static final Color gray = GRAY;\n\tpublic static final Color darkGray = DARK_GRAY;\n\tpublic static final Color black = BLACK;\n\tpublic static final Color red = RED;\n\tpublic static final Color pink = PINK;\n\tpublic static final Color orange = ORANGE;\n\tpublic static final Color yellow = YELLOW;\n\tpublic static final Color green = GREEN;\n\tpublic static final Color magenta = MAGENTA;\n\tpublic static final Color cyan = CYAN;\n\tpublic static final Color blue = BLUE;\n\n\tprivate int jqR;\n\tprivate int jqG;\n\tprivate int jqB;\n\n\tpublic Color(int r, int g, int b)\n\t{\n\t\tif (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)\n\t\t{\n\t\t\tString bad = \"\";\n\t\t\tif (r < 0 || r > 255) { bad += \" Red\"; }\n\t\t\tif (g < 0 || g > 255) { bad += \" Green\"; }\n\t\t\tif (b < 0 || b > 255) { bad += \" Blue\"; }\n\t\t\tthrow new IllegalArgumentException(\"Color parameter outside of expected range:\" + bad);\n\t\t}\n\t\tthis.jqR = r;\n\t\tthis.jqG = g;\n\t\tthis.jqB = b;\n\t}\n\n\tpublic Color(int rgb)\n\t{\n\t\tthis.jqR = Color.jqOctet(rgb, 65536);\n\t\tthis.jqG = Color.jqOctet(rgb, 256);\n\t\tthis.jqB = Color.jqOctet(rgb, 1);\n\t}\n\n\tpublic int getRed() { return this.jqR; }\n\tpublic int getGreen() { return this.jqG; }\n\tpublic int getBlue() { return this.jqB; }\n\tpublic int getAlpha() { return 255; }\n\tpublic int getRGB() { return -16777216 + this.jqR * 65536 + this.jqG * 256 + this.jqB; }\n\n\tprivate static int jqOctet(int v, int div)\n\t{\n\t\tint q = v / div;\n\t\tif (v < 0 && v % div != 0) { q--; }\n\t\treturn ((q % 256) + 256) % 256;\n\t}\n\n\tpublic Color darker()\n\t{\n\t\treturn new Color(Math.max((int) (this.jqR * 0.7), 0), Math.max((int) (this.jqG * 0.7), 0), Math.max((int) (this.jqB * 0.7), 0));\n\t}\n\n\tpublic Color brighter()\n\t{\n\t\tint r = this.jqR;\n\t\tint g = this.jqG;\n\t\tint b = this.jqB;\n\t\tint i = 3;\n\t\tif (r == 0 && g == 0 && b == 0) { return new Color(i, i, i); }\n\t\tif (r > 0 && r < i) { r = i; }\n\t\tif (g > 0 && g < i) { g = i; }\n\t\tif (b > 0 && b < i) { b = i; }\n\t\treturn new Color(Math.min((int) (r / 0.7), 255), Math.min((int) (g / 0.7), 255), Math.min((int) (b / 0.7), 255));\n\t}\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Color)) { return false; }\n\t\tColor c = (Color) o;\n\t\treturn c.jqR == this.jqR && c.jqG == this.jqG && c.jqB == this.jqB;\n\t}\n\n\tpublic int hashCode() { return this.getRGB(); }\n\n\tpublic String toString()\n\t{\n\t\treturn \"java.awt.Color[r=\" + this.jqR + \",g=\" + this.jqG + \",b=\" + this.jqB + \"]\";\n\t}\n}\n\nclass Font\n{\n\tpublic static final int PLAIN = 0;\n\tpublic static final int BOLD = 1;\n\tpublic static final int ITALIC = 2;\n\tpublic static final String SERIF = \"Serif\";\n\tpublic static final String SANS_SERIF = \"SansSerif\";\n\tpublic static final String MONOSPACED = \"Monospaced\";\n\tpublic static final String DIALOG = \"Dialog\";\n\n\tprivate String jqNom;\n\tprivate int jqStyle;\n\tprivate int jqTaille;\n\n\tpublic Font(String nom, int style, int taille)\n\t{\n\t\tthis.jqNom = nom;\n\t\tthis.jqStyle = style;\n\t\tthis.jqTaille = taille;\n\t}\n\n\tpublic String getName() { return this.jqNom; }\n\tpublic String getFamily() { return this.jqNom; }\n\tpublic int getStyle() { return this.jqStyle; }\n\tpublic int getSize() { return this.jqTaille; }\n\tpublic boolean isBold() { return this.jqStyle % 2 == 1; }\n\tpublic boolean isItalic() { return (this.jqStyle / 2) % 2 == 1; }\n\tpublic Font deriveFont(int style) { return new Font(this.jqNom, style, this.jqTaille); }\n}\n\nclass Dimension\n{\n\tpublic int width;\n\tpublic int height;\n\n\tpublic Dimension() { }\n\n\tpublic Dimension(int width, int height)\n\t{\n\t\tthis.width = width;\n\t\tthis.height = height;\n\t}\n\n\tpublic double getWidth() { return this.width; }\n\tpublic double getHeight() { return this.height; }\n\tpublic void setSize(int width, int height) { this.width = width; this.height = height; }\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Dimension)) { return false; }\n\t\tDimension d = (Dimension) o;\n\t\treturn d.width == this.width && d.height == this.height;\n\t}\n\n\tpublic String toString() { return \"java.awt.Dimension[width=\" + this.width + \",height=\" + this.height + \"]\"; }\n}\n\nclass Point\n{\n\tpublic int x;\n\tpublic int y;\n\n\tpublic Point() { }\n\n\tpublic Point(int x, int y)\n\t{\n\t\tthis.x = x;\n\t\tthis.y = y;\n\t}\n\n\tpublic double getX() { return this.x; }\n\tpublic double getY() { return this.y; }\n\tpublic void setLocation(int x, int y) { this.x = x; this.y = y; }\n\tpublic void translate(int dx, int dy) { this.x += dx; this.y += dy; }\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Point)) { return false; }\n\t\tPoint p = (Point) o;\n\t\treturn p.x == this.x && p.y == this.y;\n\t}\n\n\tpublic String toString() { return \"java.awt.Point[x=\" + this.x + \",y=\" + this.y + \"]\"; }\n}\n\ninterface SwingConstants\n{\n\tint CENTER = 0;\n\tint TOP = 1;\n\tint LEFT = 2;\n\tint BOTTOM = 3;\n\tint RIGHT = 4;\n\tint HORIZONTAL = 0;\n\tint VERTICAL = 1;\n\tint LEADING = 10;\n\tint TRAILING = 11;\n}\n\ninterface LayoutManager\n{\n}\n\nclass FlowLayout implements LayoutManager\n{\n\tpublic static final int LEFT = 0;\n\tpublic static final int CENTER = 1;\n\tpublic static final int RIGHT = 2;\n\tpublic static final int LEADING = 3;\n\tpublic static final int TRAILING = 4;\n\n\tprivate int jqAlign;\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\n\tpublic FlowLayout() { this(1, 5, 5); }\n\tpublic FlowLayout(int align) { this(align, 5, 5); }\n\n\tpublic FlowLayout(int align, int hgap, int vgap)\n\t{\n\t\tthis.jqAlign = align;\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getAlignment() { return this.jqAlign; }\n\tpublic void setAlignment(int align) { this.jqAlign = align; }\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n}\n\nclass GridLayout implements LayoutManager\n{\n\tprivate int jqRows;\n\tprivate int jqCols;\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\n\tpublic GridLayout() { this(1, 0, 0, 0); }\n\tpublic GridLayout(int rows, int cols) { this(rows, cols, 0, 0); }\n\n\tpublic GridLayout(int rows, int cols, int hgap, int vgap)\n\t{\n\t\tif (rows == 0 && cols == 0) { throw new IllegalArgumentException(\"rows and cols cannot both be zero\"); }\n\t\tthis.jqRows = rows;\n\t\tthis.jqCols = cols;\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getRows() { return this.jqRows; }\n\tpublic int getColumns() { return this.jqCols; }\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setRows(int r) { this.jqRows = r; }\n\tpublic void setColumns(int c) { this.jqCols = c; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n}\n\nclass BorderLayout implements LayoutManager\n{\n\tpublic static final String NORTH = \"North\";\n\tpublic static final String SOUTH = \"South\";\n\tpublic static final String EAST = \"East\";\n\tpublic static final String WEST = \"West\";\n\tpublic static final String CENTER = \"Center\";\n\tpublic static final String PAGE_START = \"First\";\n\tpublic static final String PAGE_END = \"Last\";\n\tpublic static final String LINE_START = \"Before\";\n\tpublic static final String LINE_END = \"After\";\n\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\tprivate Component jqNorth;\n\tprivate Component jqSouth;\n\tprivate Component jqEast;\n\tprivate Component jqWest;\n\tprivate Component jqCenter;\n\n\tpublic BorderLayout() { this(0, 0); }\n\n\tpublic BorderLayout(int hgap, int vgap)\n\t{\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n\n\tvoid jqPoser(Component c, Object cons)\n\t{\n\t\tif (cons != null && !(cons instanceof String)) { throw new IllegalArgumentException(\"cannot add to layout: constraint must be a string (or null)\"); }\n\t\tString z = (String) cons;\n\t\tif (z == null || z.equals(\"Center\")) { this.jqCenter = c; }\n\t\telse if (z.equals(\"North\") || z.equals(\"First\")) { this.jqNorth = c; }\n\t\telse if (z.equals(\"South\") || z.equals(\"Last\")) { this.jqSouth = c; }\n\t\telse if (z.equals(\"East\") || z.equals(\"After\")) { this.jqEast = c; }\n\t\telse if (z.equals(\"West\") || z.equals(\"Before\")) { this.jqWest = c; }\n\t\telse { throw new IllegalArgumentException(\"cannot add to layout: unknown constraint: \" + z); }\n\t}\n\n\tvoid jqOter(Component c)\n\t{\n\t\tif (this.jqCenter == c) { this.jqCenter = null; }\n\t\tif (this.jqNorth == c) { this.jqNorth = null; }\n\t\tif (this.jqSouth == c) { this.jqSouth = null; }\n\t\tif (this.jqEast == c) { this.jqEast = null; }\n\t\tif (this.jqWest == c) { this.jqWest = null; }\n\t}\n\n\tpublic Object getConstraints(Component c)\n\t{\n\t\tif (c == null) { return null; }\n\t\tif (c == this.jqCenter) { return \"Center\"; }\n\t\tif (c == this.jqNorth) { return \"North\"; }\n\t\tif (c == this.jqSouth) { return \"South\"; }\n\t\tif (c == this.jqEast) { return \"East\"; }\n\t\tif (c == this.jqWest) { return \"West\"; }\n\t\treturn null;\n\t}\n\n\tpublic Component getLayoutComponent(Object cons)\n\t{\n\t\tif (\"Center\".equals(cons)) { return this.jqCenter; }\n\t\tif (\"North\".equals(cons)) { return this.jqNorth; }\n\t\tif (\"South\".equals(cons)) { return this.jqSouth; }\n\t\tif (\"East\".equals(cons)) { return this.jqEast; }\n\t\tif (\"West\".equals(cons)) { return this.jqWest; }\n\t\tthrow new IllegalArgumentException(\"cannot get component: unknown constraint: \" + cons);\n\t}\n}\n\nclass AWTEvent\n{\n\tprivate Object jqSource;\n\tprivate int jqId;\n\n\tpublic AWTEvent(Object source, int id)\n\t{\n\t\tthis.jqSource = source;\n\t\tthis.jqId = id;\n\t}\n\n\tpublic Object getSource() { return this.jqSource; }\n\tpublic int getID() { return this.jqId; }\n}\n\nclass ActionEvent extends AWTEvent\n{\n\tpublic static final int ACTION_PERFORMED = 1001;\n\tprivate String jqCmd;\n\n\tpublic ActionEvent(Object source, int id, String command)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqCmd = command;\n\t}\n\n\tpublic String getActionCommand() { return this.jqCmd; }\n\tpublic int getModifiers() { return 0; }\n\tpublic String paramString() { return \"ACTION_PERFORMED,cmd=\" + this.jqCmd + \",modifiers=\"; }\n}\n\nclass ItemEvent extends AWTEvent\n{\n\tpublic static final int ITEM_STATE_CHANGED = 701;\n\tpublic static final int SELECTED = 1;\n\tpublic static final int DESELECTED = 2;\n\tprivate Object jqItem;\n\tprivate int jqEtat;\n\n\tpublic ItemEvent(Object source, int id, Object item, int stateChange)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqItem = item;\n\t\tthis.jqEtat = stateChange;\n\t}\n\n\tpublic Object getItem() { return this.jqItem; }\n\tpublic int getStateChange() { return this.jqEtat; }\n\tpublic Object getItemSelectable() { return this.getSource(); }\n}\n\nclass AdjustmentEvent extends AWTEvent\n{\n\tpublic static final int ADJUSTMENT_VALUE_CHANGED = 601;\n\tpublic static final int UNIT_INCREMENT = 1;\n\tpublic static final int UNIT_DECREMENT = 2;\n\tpublic static final int BLOCK_DECREMENT = 3;\n\tpublic static final int BLOCK_INCREMENT = 4;\n\tpublic static final int TRACK = 5;\n\tprivate int jqType;\n\tprivate int jqValeur;\n\n\tpublic AdjustmentEvent(Object source, int id, int type, int value)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqType = type;\n\t\tthis.jqValeur = value;\n\t}\n\n\tpublic int getValue() { return this.jqValeur; }\n\tpublic int getAdjustmentType() { return this.jqType; }\n\tpublic Object getAdjustable() { return this.getSource(); }\n}\n\nclass MouseEvent extends AWTEvent\n{\n\tpublic static final int MOUSE_CLICKED = 500;\n\tpublic static final int MOUSE_PRESSED = 501;\n\tpublic static final int MOUSE_RELEASED = 502;\n\tpublic static final int MOUSE_MOVED = 503;\n\tpublic static final int MOUSE_ENTERED = 504;\n\tpublic static final int MOUSE_EXITED = 505;\n\tpublic static final int MOUSE_DRAGGED = 506;\n\tpublic static final int NOBUTTON = 0;\n\tpublic static final int BUTTON1 = 1;\n\tpublic static final int BUTTON2 = 2;\n\tpublic static final int BUTTON3 = 3;\n\tprivate int jqX;\n\tprivate int jqY;\n\tprivate int jqClics;\n\tprivate int jqBouton;\n\n\tpublic MouseEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger)\n\t{\n\t\tthis(source, id, when, modifiers, x, y, clickCount, popupTrigger, 0);\n\t}\n\n\tpublic MouseEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger, int button)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqX = x;\n\t\tthis.jqY = y;\n\t\tthis.jqClics = clickCount;\n\t\tthis.jqBouton = button;\n\t}\n\n\tpublic int getX() { return this.jqX; }\n\tpublic int getY() { return this.jqY; }\n\tpublic Point getPoint() { return new Point(this.jqX, this.jqY); }\n\tpublic int getClickCount() { return this.jqClics; }\n\tpublic int getButton() { return this.jqBouton; }\n\tpublic Component getComponent() { return (Component) this.getSource(); }\n\tpublic boolean isPopupTrigger() { return false; }\n}\n\ninterface ActionListener\n{\n\tvoid actionPerformed(ActionEvent e);\n}\n\ninterface ItemListener\n{\n\tvoid itemStateChanged(ItemEvent e);\n}\n\ninterface AdjustmentListener\n{\n\tvoid adjustmentValueChanged(AdjustmentEvent e);\n}\n\ninterface MouseListener\n{\n\tvoid mouseClicked(MouseEvent e);\n\tvoid mousePressed(MouseEvent e);\n\tvoid mouseReleased(MouseEvent e);\n\tvoid mouseEntered(MouseEvent e);\n\tvoid mouseExited(MouseEvent e);\n}\n\ninterface MouseMotionListener\n{\n\tvoid mouseDragged(MouseEvent e);\n\tvoid mouseMoved(MouseEvent e);\n}\n\nabstract class MouseAdapter implements MouseListener, MouseMotionListener\n{\n\tpublic void mouseClicked(MouseEvent e) { }\n\tpublic void mousePressed(MouseEvent e) { }\n\tpublic void mouseReleased(MouseEvent e) { }\n\tpublic void mouseEntered(MouseEvent e) { }\n\tpublic void mouseExited(MouseEvent e) { }\n\tpublic void mouseDragged(MouseEvent e) { }\n\tpublic void mouseMoved(MouseEvent e) { }\n}\n\nabstract class MouseMotionAdapter implements MouseMotionListener\n{\n\tpublic void mouseDragged(MouseEvent e) { }\n\tpublic void mouseMoved(MouseEvent e) { }\n}\n\nclass Graphics\n{\n\tprivate ArrayList<String> jqOps = new ArrayList<String>();\n\tprivate Color jqCouleur = Color.BLACK;\n\tprivate Font jqPolice = new Font(\"Dialog\", 0, 12);\n\n\tpublic void setColor(Color c)\n\t{\n\t\tif (c == null) { return; }\n\t\tthis.jqCouleur = c;\n\t\tthis.jqOps.add(\"c \" + c.getRed() + \" \" + c.getGreen() + \" \" + c.getBlue());\n\t}\n\n\tpublic Color getColor() { return this.jqCouleur; }\n\n\tpublic void setFont(Font f)\n\t{\n\t\tif (f == null) { return; }\n\t\tthis.jqPolice = f;\n\t\tthis.jqOps.add(\"f \" + f.getSize() + \" \" + f.getStyle() + \" \" + f.getName());\n\t}\n\n\tpublic Font getFont() { return this.jqPolice; }\n\tpublic void drawLine(int x1, int y1, int x2, int y2) { this.jqOps.add(\"l \" + x1 + \" \" + y1 + \" \" + x2 + \" \" + y2); }\n\tpublic void drawRect(int x, int y, int w, int h) { this.jqOps.add(\"r \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void fillRect(int x, int y, int w, int h) { this.jqOps.add(\"R \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void clearRect(int x, int y, int w, int h) { this.jqOps.add(\"C \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void drawOval(int x, int y, int w, int h) { this.jqOps.add(\"o \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void fillOval(int x, int y, int w, int h) { this.jqOps.add(\"O \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void drawRoundRect(int x, int y, int w, int h, int aw, int ah) { this.jqOps.add(\"q \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + aw + \" \" + ah); }\n\tpublic void fillRoundRect(int x, int y, int w, int h, int aw, int ah) { this.jqOps.add(\"Q \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + aw + \" \" + ah); }\n\tpublic void drawArc(int x, int y, int w, int h, int start, int arc) { this.jqOps.add(\"a \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + start + \" \" + arc); }\n\tpublic void fillArc(int x, int y, int w, int h, int start, int arc) { this.jqOps.add(\"A \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + start + \" \" + arc); }\n\tpublic void drawString(String s, int x, int y) { this.jqOps.add(\"s \" + x + \" \" + y + \" \" + s); }\n\n\tpublic void drawPolygon(int[] xs, int[] ys, int n) { this.jqPoly(\"p\", xs, ys, n); }\n\tpublic void fillPolygon(int[] xs, int[] ys, int n) { this.jqPoly(\"P\", xs, ys, n); }\n\tpublic void drawPolyline(int[] xs, int[] ys, int n) { this.jqPoly(\"L\", xs, ys, n); }\n\n\tprivate void jqPoly(String k, int[] xs, int[] ys, int n)\n\t{\n\t\tString s = k + \" \" + n;\n\t\tfor (int i = 0; i < n; i++)\n\t\t{\n\t\t\ts += \" \" + xs[i] + \" \" + ys[i];\n\t\t}\n\t\tthis.jqOps.add(s);\n\t}\n}\n\ninterface Border\n{\n}\n\nclass JqBordure implements Border\n{\n\tString jqGenre;\n\tColor jqCouleur;\n\tint jqEpaisseur;\n\tint jqHaut;\n\tint jqGauche;\n\tint jqBas;\n\tint jqDroite;\n\tString jqTitre;\n\n\tJqBordure(String genre)\n\t{\n\t\tthis.jqGenre = genre;\n\t}\n}\n\nclass BorderFactory\n{\n\tpublic static Border createLineBorder(Color c) { return createLineBorder(c, 1); }\n\n\tpublic static Border createLineBorder(Color c, int epaisseur)\n\t{\n\t\tJqBordure b = new JqBordure(\"ligne\");\n\t\tb.jqCouleur = c;\n\t\tb.jqEpaisseur = epaisseur;\n\t\treturn b;\n\t}\n\n\tpublic static Border createEmptyBorder(int haut, int gauche, int bas, int droite)\n\t{\n\t\tJqBordure b = new JqBordure(\"vide\");\n\t\tb.jqHaut = haut;\n\t\tb.jqGauche = gauche;\n\t\tb.jqBas = bas;\n\t\tb.jqDroite = droite;\n\t\treturn b;\n\t}\n\n\tpublic static Border createTitledBorder(String titre)\n\t{\n\t\tJqBordure b = new JqBordure(\"titre\");\n\t\tb.jqTitre = titre;\n\t\treturn b;\n\t}\n\n\tpublic static Border createEtchedBorder() { return new JqBordure(\"grave\"); }\n\tpublic static Border createRaisedBevelBorder() { return new JqBordure(\"relief\"); }\n\tpublic static Border createLoweredBevelBorder() { return new JqBordure(\"creux\"); }\n}\n\nabstract class Component\n{\n\tprivate Container jqParent;\n\tprivate Color jqFond;\n\tprivate Color jqCouleurTexte;\n\tprivate Font jqPolice;\n\tprivate boolean jqVisible = true;\n\tprivate boolean jqActif = true;\n\tprivate int jqPrefL = -1;\n\tprivate int jqPrefH = -1;\n\tprivate int jqX;\n\tprivate int jqY;\n\tprivate int jqL;\n\tprivate int jqH;\n\tprivate String jqNom;\n\tprivate ArrayList<MouseListener> jqSouris = new ArrayList<MouseListener>();\n\tprivate ArrayList<MouseMotionListener> jqMouvement = new ArrayList<MouseMotionListener>();\n\n\tpublic Container getParent() { return this.jqParent; }\n\tvoid jqSetParent(Container c) { this.jqParent = c; }\n\n\tpublic void setBackground(Color c) { this.jqFond = c; }\n\tpublic Color getBackground() { return this.jqFond; }\n\tpublic void setForeground(Color c) { this.jqCouleurTexte = c; }\n\tpublic Color getForeground() { return this.jqCouleurTexte; }\n\tpublic void setFont(Font f) { this.jqPolice = f; }\n\tpublic Font getFont() { return this.jqPolice; }\n\tpublic void setVisible(boolean b) { this.jqVisible = b; }\n\tpublic boolean isVisible() { return this.jqVisible; }\n\tpublic void setEnabled(boolean b) { this.jqActif = b; }\n\tpublic boolean isEnabled() { return this.jqActif; }\n\tpublic void setName(String n) { this.jqNom = n; }\n\tpublic String getName() { return this.jqNom; }\n\n\tpublic void setPreferredSize(Dimension d)\n\t{\n\t\tif (d == null) { this.jqPrefL = -1; this.jqPrefH = -1; return; }\n\t\tthis.jqPrefL = d.width;\n\t\tthis.jqPrefH = d.height;\n\t}\n\n\tpublic Dimension getPreferredSize() { return new Dimension(Math.max(this.jqPrefL, 0), Math.max(this.jqPrefH, 0)); }\n\tpublic boolean isPreferredSizeSet() { return this.jqPrefL >= 0; }\n\tpublic void setMinimumSize(Dimension d) { }\n\tpublic void setMaximumSize(Dimension d) { }\n\n\tpublic void setSize(int l, int h) { this.jqL = l; this.jqH = h; }\n\tpublic void setSize(Dimension d) { this.setSize(d.width, d.height); }\n\tpublic Dimension getSize() { return new Dimension(this.jqL, this.jqH); }\n\tpublic int getWidth() { return this.jqL; }\n\tpublic int getHeight() { return this.jqH; }\n\tpublic void setLocation(int x, int y) { this.jqX = x; this.jqY = y; }\n\tpublic void setLocation(Point p) { this.setLocation(p.x, p.y); }\n\tpublic Point getLocation() { return new Point(this.jqX, this.jqY); }\n\tpublic int getX() { return this.jqX; }\n\tpublic int getY() { return this.jqY; }\n\n\tpublic void setBounds(int x, int y, int l, int h)\n\t{\n\t\tthis.setLocation(x, y);\n\t\tthis.setSize(l, h);\n\t}\n\n\tpublic void addMouseListener(MouseListener l) { if (l != null) { this.jqSouris.add(l); } }\n\tpublic void removeMouseListener(MouseListener l) { this.jqSouris.remove(l); }\n\tpublic void addMouseMotionListener(MouseMotionListener l) { if (l != null) { this.jqMouvement.add(l); } }\n\tpublic void removeMouseMotionListener(MouseMotionListener l) { this.jqMouvement.remove(l); }\n\tpublic void repaint() { }\n\tpublic void validate() { }\n\tpublic void invalidate() { }\n\tpublic void requestFocus() { }\n\tpublic boolean requestFocusInWindow() { return true; }\n\n\tpublic void dispatchEvent(AWTEvent e)\n\t{\n\t\tif (e instanceof MouseEvent) { this.jqDiffuser((MouseEvent) e); }\n\t}\n\n\t/* Appelé par l'interface du site : un événement souris sur ce composant. */\n\tvoid jqEvtSouris(int id, int x, int y, int bouton, int clics)\n\t{\n\t\tthis.jqDiffuser(new MouseEvent(this, id, 0, 0, x, y, clics, false, bouton));\n\t}\n\n\tprivate void jqDiffuser(MouseEvent e)\n\t{\n\t\tint id = e.getID();\n\t\tif (id == 503 || id == 506)\n\t\t{\n\t\t\tfor (MouseMotionListener l : new ArrayList<MouseMotionListener>(this.jqMouvement))\n\t\t\t{\n\t\t\t\tif (id == 503) { l.mouseMoved(e); } else { l.mouseDragged(e); }\n\t\t\t}\n\t\t\treturn;\n\t\t}\n\t\tfor (MouseListener l : new ArrayList<MouseListener>(this.jqSouris))\n\t\t{\n\t\t\tif (id == 500) { l.mouseClicked(e); }\n\t\t\tif (id == 501) { l.mousePressed(e); }\n\t\t\tif (id == 502) { l.mouseReleased(e); }\n\t\t\tif (id == 504) { l.mouseEntered(e); }\n\t\t\tif (id == 505) { l.mouseExited(e); }\n\t\t}\n\t}\n\n\tboolean jqEcouteSouris() { return this.jqSouris.size() > 0; }\n\tboolean jqEcouteMouvement() { return this.jqMouvement.size() > 0; }\n}\n\nclass Container extends Component\n{\n\tprivate ArrayList<Component> jqEnfants = new ArrayList<Component>();\n\tprivate ArrayList<Object> jqContraintes = new ArrayList<Object>();\n\tprivate LayoutManager jqLayout;\n\n\tpublic Component add(Component c)\n\t{\n\t\tthis.jqAjouter(c, null);\n\t\treturn c;\n\t}\n\n\tpublic void add(Component c, Object contrainte)\n\t{\n\t\tthis.jqAjouter(c, contrainte);\n\t}\n\n\tvoid jqAjouter(Component c, Object contrainte)\n\t{\n\t\tif (c == null) { throw new NullPointerException(\"Cannot invoke \\\"java.awt.Component.getParent()\\\" because \\\"comp\\\" is null\"); }\n\t\tif (c == this) { throw new IllegalArgumentException(\"adding container to itself\"); }\n\t\tif (c instanceof JFrame) { throw new IllegalArgumentException(\"adding a window to a container\"); }\n\t\tif (this.jqLayout instanceof BorderLayout) { ((BorderLayout) this.jqLayout).jqPoser(c, contrainte); }\n\t\tif (c.getParent() != null) { c.getParent().remove(c); }\n\t\tthis.jqEnfants.add(c);\n\t\tthis.jqContraintes.add(contrainte);\n\t\tc.jqSetParent(this);\n\t}\n\n\tpublic void remove(Component c)\n\t{\n\t\tint i = this.jqEnfants.indexOf(c);\n\t\tif (i < 0) { return; }\n\t\tthis.jqEnfants.remove(i);\n\t\tthis.jqContraintes.remove(i);\n\t\tif (this.jqLayout instanceof BorderLayout) { ((BorderLayout) this.jqLayout).jqOter(c); }\n\t\tc.jqSetParent(null);\n\t}\n\n\tpublic void remove(int i)\n\t{\n\t\tthis.remove(this.jqEnfants.get(i));\n\t}\n\n\tpublic void removeAll()\n\t{\n\t\twhile (this.jqEnfants.size() > 0) { this.remove(this.jqEnfants.get(0)); }\n\t}\n\n\tpublic int getComponentCount() { return this.jqEnfants.size(); }\n\tpublic Component getComponent(int i) { return this.jqEnfants.get(i); }\n\n\tpublic Component[] getComponents()\n\t{\n\t\tComponent[] t = new Component[this.jqEnfants.size()];\n\t\tfor (int i = 0; i < t.length; i++) { t[i] = this.jqEnfants.get(i); }\n\t\treturn t;\n\t}\n\n\tpublic void setLayout(LayoutManager l) { this.jqLayout = l; }\n\tpublic LayoutManager getLayout() { return this.jqLayout; }\n\tpublic void doLayout() { }\n\tpublic void revalidate() { }\n}\n\nclass JComponent extends Container\n{\n\tprivate boolean jqOpaque = false;\n\tprivate String jqBulle;\n\tprivate Border jqBordure;\n\n\tpublic void setOpaque(boolean b) { this.jqOpaque = b; }\n\tpublic boolean isOpaque() { return this.jqOpaque; }\n\tpublic void setToolTipText(String s) { this.jqBulle = s; }\n\tpublic String getToolTipText() { return this.jqBulle; }\n\tpublic void setBorder(Border b) { this.jqBordure = b; }\n\tpublic Border getBorder() { return this.jqBordure; }\n\tprotected void paintComponent(Graphics g) { }\n\tpublic void paint(Graphics g) { this.paintComponent(g); }\n}\n\nclass JPanel extends JComponent\n{\n\tpublic JPanel()\n\t{\n\t\tthis(new FlowLayout());\n\t}\n\n\tpublic JPanel(LayoutManager l)\n\t{\n\t\tthis.setLayout(l);\n\t\tthis.setOpaque(true);\n\t}\n}\n\nclass JFrame extends Container\n{\n\tpublic static final int DO_NOTHING_ON_CLOSE = 0;\n\tpublic static final int HIDE_ON_CLOSE = 1;\n\tpublic static final int DISPOSE_ON_CLOSE = 2;\n\tpublic static final int EXIT_ON_CLOSE = 3;\n\n\tstatic ArrayList<JFrame> jqFenetres = new ArrayList<JFrame>();\n\n\tprivate String jqTitre = \"\";\n\tprivate int jqFermeture = 1;\n\tprivate Container jqContenu;\n\tprivate boolean jqAjuste = false;\n\tprivate boolean jqRedim = true;\n\tprivate JMenuBar jqMenu;\n\n\tpublic JFrame()\n\t{\n\t\tthis(\"\");\n\t}\n\n\tpublic JFrame(String titre)\n\t{\n\t\tthis.jqTitre = titre;\n\t\tJPanel p = new JPanel(new BorderLayout());\n\t\tthis.jqContenu = p;\n\t\tsuper.setLayout(new BorderLayout());\n\t\tthis.setVisible(false);\n\t}\n\n\tpublic void setTitle(String t) { this.jqTitre = t; }\n\tpublic String getTitle() { return this.jqTitre; }\n\tpublic void setDefaultCloseOperation(int op) { this.jqFermeture = op; }\n\tpublic int getDefaultCloseOperation() { return this.jqFermeture; }\n\tpublic Container getContentPane() { return this.jqContenu; }\n\tpublic void setContentPane(Container c) { this.jqContenu = c; }\n\tpublic void setJMenuBar(JMenuBar m) { this.jqMenu = m; }\n\tpublic JMenuBar getJMenuBar() { return this.jqMenu; }\n\tpublic void setResizable(boolean b) { this.jqRedim = b; }\n\tpublic boolean isResizable() { return this.jqRedim; }\n\tpublic void setLocationRelativeTo(Component c) { }\n\n\tpublic Component add(Component c)\n\t{\n\t\tthis.jqContenu.add(c);\n\t\treturn c;\n\t}\n\n\tpublic void add(Component c, Object contrainte) { this.jqContenu.add(c, contrainte); }\n\tpublic void remove(Component c) { this.jqContenu.remove(c); }\n\tpublic void setLayout(LayoutManager l) { if (this.jqContenu != null) { this.jqContenu.setLayout(l); } }\n\tpublic void pack() { this.jqAjuste = true; }\n\n\tpublic void setSize(int l, int h)\n\t{\n\t\tsuper.setSize(l, h);\n\t\tthis.jqAjuste = false;\n\t}\n\n\tpublic void setVisible(boolean b)\n\t{\n\t\tsuper.setVisible(b);\n\t\tif (b && !JFrame.jqFenetres.contains(this)) { JFrame.jqFenetres.add(this); }\n\t}\n\n\tpublic void dispose()\n\t{\n\t\tsuper.setVisible(false);\n\t\tJFrame.jqFenetres.remove(this);\n\t}\n}\n\nclass AbstractButton extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate boolean jqChoisi;\n\tprivate String jqCommande;\n\tprivate ButtonGroup jqGroupe;\n\tprivate int jqMnemo;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\tprivate ArrayList<ItemListener> jqItems = new ArrayList<ItemListener>();\n\n\tpublic AbstractButton()\n\t{\n\t\tthis.jqTexte = \"\";\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t; }\n\tpublic String getLabel() { return this.jqTexte; }\n\tpublic void setActionCommand(String c) { this.jqCommande = c; }\n\tpublic String getActionCommand() { return this.jqCommande == null ? this.jqTexte : this.jqCommande; }\n\tpublic void setMnemonic(int c) { this.jqMnemo = c; }\n\tpublic void setMnemonic(char c) { this.jqMnemo = c; }\n\tpublic int getMnemonic() { return this.jqMnemo; }\n\tpublic void setHorizontalAlignment(int a) { }\n\tpublic void setFocusPainted(boolean b) { }\n\tpublic void setBorderPainted(boolean b) { }\n\tpublic void setContentAreaFilled(boolean b) { }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void removeActionListener(ActionListener l) { this.jqActions.remove(l); }\n\tpublic void addItemListener(ItemListener l) { if (l != null) { this.jqItems.add(l); } }\n\tpublic void removeItemListener(ItemListener l) { this.jqItems.remove(l); }\n\tpublic boolean isSelected() { return this.jqChoisi; }\n\tvoid jqSetGroupe(ButtonGroup g) { this.jqGroupe = g; }\n\tvoid jqEtat(boolean b) { this.jqChoisi = b; }\n\n\tpublic void setSelected(boolean b)\n\t{\n\t\tif (this.jqGroupe != null)\n\t\t{\n\t\t\tif (b) { this.jqGroupe.jqChoisir(this); }\n\t\t\treturn;\n\t\t}\n\t\tif (b == this.jqChoisi) { return; }\n\t\tthis.jqChoisi = b;\n\t\tthis.jqSignalerItem(b ? 1 : 2);\n\t}\n\n\tvoid jqSignalerItem(int etat)\n\t{\n\t\tItemEvent e = new ItemEvent(this, 701, this, etat);\n\t\tfor (ItemListener l : new ArrayList<ItemListener>(this.jqItems)) { l.itemStateChanged(e); }\n\t}\n\n\tvoid jqBasculer() { }\n\n\tpublic void doClick()\n\t{\n\t\tif (!this.isEnabled()) { return; }\n\t\tthis.jqBasculer();\n\t\tActionEvent e = new ActionEvent(this, 1001, this.getActionCommand());\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n}\n\nclass JButton extends AbstractButton\n{\n\tpublic JButton() { }\n\n\tpublic JButton(String texte)\n\t{\n\t\tthis.setText(texte);\n\t}\n}\n\nclass JToggleButton extends AbstractButton\n{\n\tpublic JToggleButton() { }\n\tpublic JToggleButton(String texte) { this(texte, false); }\n\n\tpublic JToggleButton(String texte, boolean choisi)\n\t{\n\t\tthis.setText(texte);\n\t\tthis.jqEtat(choisi);\n\t}\n\n\tvoid jqBasculer() { this.setSelected(!this.isSelected()); }\n}\n\nclass JCheckBox extends JToggleButton\n{\n\tpublic JCheckBox() { }\n\tpublic JCheckBox(String texte) { super(texte, false); }\n\tpublic JCheckBox(String texte, boolean choisi) { super(texte, choisi); }\n}\n\nclass JRadioButton extends JToggleButton\n{\n\tpublic JRadioButton() { }\n\tpublic JRadioButton(String texte) { super(texte, false); }\n\tpublic JRadioButton(String texte, boolean choisi) { super(texte, choisi); }\n}\n\nclass ButtonGroup\n{\n\tprivate ArrayList<AbstractButton> jqBoutons = new ArrayList<AbstractButton>();\n\tprivate AbstractButton jqChoix;\n\n\tpublic void add(AbstractButton b)\n\t{\n\t\tif (b == null) { return; }\n\t\tthis.jqBoutons.add(b);\n\t\tif (b.isSelected())\n\t\t{\n\t\t\tif (this.jqChoix == null) { this.jqChoix = b; }\n\t\t\telse { b.jqEtat(false); }\n\t\t}\n\t\tb.jqSetGroupe(this);\n\t}\n\n\tpublic void remove(AbstractButton b)\n\t{\n\t\tthis.jqBoutons.remove(b);\n\t\tb.jqSetGroupe(null);\n\t\tif (this.jqChoix == b) { this.jqChoix = null; }\n\t}\n\n\tpublic int getButtonCount() { return this.jqBoutons.size(); }\n\n\tpublic void clearSelection()\n\t{\n\t\tif (this.jqChoix != null)\n\t\t{\n\t\t\tAbstractButton a = this.jqChoix;\n\t\t\tthis.jqChoix = null;\n\t\t\ta.jqEtat(false);\n\t\t\ta.jqSignalerItem(2);\n\t\t}\n\t}\n\n\tvoid jqChoisir(AbstractButton b)\n\t{\n\t\tif (this.jqChoix == b) { return; }\n\t\tAbstractButton ancien = this.jqChoix;\n\t\tthis.jqChoix = b;\n\t\tif (ancien != null)\n\t\t{\n\t\t\tancien.jqEtat(false);\n\t\t\tancien.jqSignalerItem(2);\n\t\t}\n\t\tb.jqEtat(true);\n\t\tb.jqSignalerItem(1);\n\t}\n}\n\nclass JLabel extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate int jqAlignH = 10;\n\tprivate int jqAlignV = 0;\n\n\tpublic JLabel() { this(\"\", 10); }\n\tpublic JLabel(String texte) { this(texte, 10); }\n\n\tpublic JLabel(String texte, int alignement)\n\t{\n\t\tthis.jqTexte = texte;\n\t\tthis.jqAlignH = alignement;\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t; }\n\tpublic int getHorizontalAlignment() { return this.jqAlignH; }\n\tpublic void setHorizontalAlignment(int a) { this.jqAlignH = a; }\n\tpublic int getVerticalAlignment() { return this.jqAlignV; }\n\tpublic void setVerticalAlignment(int a) { this.jqAlignV = a; }\n}\n\nclass JTextField extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate int jqColonnes;\n\tprivate boolean jqModifiable = true;\n\tprivate int jqAlignH = 10;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\n\tpublic JTextField() { this(\"\", 0); }\n\tpublic JTextField(int colonnes) { this(\"\", colonnes); }\n\tpublic JTextField(String texte) { this(texte, 0); }\n\n\tpublic JTextField(String texte, int colonnes)\n\t{\n\t\tif (colonnes < 0) { throw new IllegalArgumentException(\"columns less than zero.\"); }\n\t\tthis.jqTexte = texte == null ? \"\" : texte;\n\t\tthis.jqColonnes = colonnes;\n\t\tthis.setOpaque(true);\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t == null ? \"\" : t; }\n\tpublic int getColumns() { return this.jqColonnes; }\n\tpublic void setColumns(int c) { this.jqColonnes = c; }\n\tpublic boolean isEditable() { return this.jqModifiable; }\n\tpublic void setEditable(boolean b) { this.jqModifiable = b; }\n\tpublic int getHorizontalAlignment() { return this.jqAlignH; }\n\tpublic void setHorizontalAlignment(int a) { this.jqAlignH = a; }\n\tpublic void selectAll() { }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void removeActionListener(ActionListener l) { this.jqActions.remove(l); }\n\n\tpublic void postActionEvent()\n\t{\n\t\tActionEvent e = new ActionEvent(this, 1001, this.jqTexte);\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n\n\t/* Appelé par l'interface du site : l'utilisateur a tapé un texte puis Entrée. */\n\tvoid jqSaisir(String t, boolean entree)\n\t{\n\t\tthis.jqTexte = t;\n\t\tif (entree) { this.postActionEvent(); }\n\t}\n}\n\nclass JScrollBar extends JComponent implements SwingConstants\n{\n\tprivate int jqOrient;\n\tprivate int jqValeur;\n\tprivate int jqEtendue;\n\tprivate int jqMin;\n\tprivate int jqMax;\n\tprivate int jqPasUnite = 1;\n\tprivate int jqPasBloc = 10;\n\tprivate ArrayList<AdjustmentListener> jqEcouteurs = new ArrayList<AdjustmentListener>();\n\n\tpublic JScrollBar() { this(1, 0, 10, 0, 100); }\n\tpublic JScrollBar(int orientation) { this(orientation, 0, 10, 0, 100); }\n\n\tpublic JScrollBar(int orientation, int valeur, int etendue, int min, int max)\n\t{\n\t\tif (orientation != 0 && orientation != 1) { throw new IllegalArgumentException(\"orientation must be one of: VERTICAL, HORIZONTAL\"); }\n\t\tthis.jqOrient = orientation;\n\t\tthis.jqRegler(valeur, etendue, min, max);\n\t}\n\n\tprivate void jqRegler(int valeur, int etendue, int min, int max)\n\t{\n\t\tif (max < min) { max = min; }\n\t\tif (etendue < 0) { etendue = 0; }\n\t\tif (etendue > max - min) { etendue = max - min; }\n\t\tif (valeur < min) { valeur = min; }\n\t\tif (valeur > max - etendue) { valeur = max - etendue; }\n\t\tthis.jqValeur = valeur;\n\t\tthis.jqEtendue = etendue;\n\t\tthis.jqMin = min;\n\t\tthis.jqMax = max;\n\t}\n\n\tpublic int getOrientation() { return this.jqOrient; }\n\tpublic int getValue() { return this.jqValeur; }\n\tpublic int getMinimum() { return this.jqMin; }\n\tpublic int getMaximum() { return this.jqMax; }\n\tpublic int getVisibleAmount() { return this.jqEtendue; }\n\tpublic int getUnitIncrement() { return this.jqPasUnite; }\n\tpublic int getBlockIncrement() { return this.jqPasBloc; }\n\tpublic void setUnitIncrement(int p) { this.jqPasUnite = p; }\n\tpublic void setBlockIncrement(int p) { this.jqPasBloc = p; }\n\tpublic void addAdjustmentListener(AdjustmentListener l) { if (l != null) { this.jqEcouteurs.add(l); } }\n\tpublic void removeAdjustmentListener(AdjustmentListener l) { this.jqEcouteurs.remove(l); }\n\n\tpublic void setValue(int v) { this.jqChanger(v, this.jqEtendue, this.jqMin, this.jqMax, 5); }\n\tpublic void setMinimum(int m) { this.jqChanger(this.jqValeur, this.jqEtendue, m, this.jqMax, 5); }\n\tpublic void setMaximum(int m) { this.jqChanger(this.jqValeur, this.jqEtendue, this.jqMin, m, 5); }\n\tpublic void setVisibleAmount(int e) { this.jqChanger(this.jqValeur, e, this.jqMin, this.jqMax, 5); }\n\tpublic void setValues(int v, int e, int min, int max) { this.jqChanger(v, e, min, max, 5); }\n\n\tprivate void jqChanger(int v, int e, int min, int max, int type)\n\t{\n\t\tint av = this.jqValeur, ae = this.jqEtendue, amin = this.jqMin, amax = this.jqMax;\n\t\tthis.jqRegler(v, e, min, max);\n\t\tif (av == this.jqValeur && ae == this.jqEtendue && amin == this.jqMin && amax == this.jqMax) { return; }\n\t\tAdjustmentEvent ev = new AdjustmentEvent(this, 601, type, this.jqValeur);\n\t\tfor (AdjustmentListener l : new ArrayList<AdjustmentListener>(this.jqEcouteurs)) { l.adjustmentValueChanged(ev); }\n\t}\n\n\t/* Appelé par l'interface du site : flèches (pas unité), clic dans la barre (pas bloc), curseur glissé. */\n\tvoid jqAjuster(int type, int v)\n\t{\n\t\tint nv = v;\n\t\tif (type == 1) { nv = this.jqValeur + this.jqPasUnite; }\n\t\tif (type == 2) { nv = this.jqValeur - this.jqPasUnite; }\n\t\tif (type == 3) { nv = this.jqValeur - this.jqPasBloc; }\n\t\tif (type == 4) { nv = this.jqValeur + this.jqPasBloc; }\n\t\tthis.jqChanger(nv, this.jqEtendue, this.jqMin, this.jqMax, type);\n\t}\n}\n\nclass JComboBox<E> extends JComponent\n{\n\tprivate ArrayList<E> jqItems = new ArrayList<E>();\n\tprivate int jqChoix = -1;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\tprivate ArrayList<ItemListener> jqItemsEcoute = new ArrayList<ItemListener>();\n\n\tpublic JComboBox() { }\n\n\tpublic JComboBox(E[] items)\n\t{\n\t\tfor (int i = 0; i < items.length; i++) { this.jqItems.add(items[i]); }\n\t\tif (items.length > 0) { this.jqChoix = 0; }\n\t}\n\n\tpublic void addItem(E item)\n\t{\n\t\tthis.jqItems.add(item);\n\t\tif (this.jqChoix < 0) { this.setSelectedIndex(0); }\n\t}\n\n\tpublic int getItemCount() { return this.jqItems.size(); }\n\tpublic E getItemAt(int i) { if (i < 0 || i >= this.jqItems.size()) { return null; } return this.jqItems.get(i); }\n\tpublic int getSelectedIndex() { return this.jqChoix; }\n\tpublic Object getSelectedItem() { return this.jqChoix < 0 ? null : this.jqItems.get(this.jqChoix); }\n\tpublic void setSelectedItem(Object o) { int i = this.jqItems.indexOf(o); if (i >= 0) { this.setSelectedIndex(i); } }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void addItemListener(ItemListener l) { if (l != null) { this.jqItemsEcoute.add(l); } }\n\tpublic void setEditable(boolean b) { }\n\n\tpublic void removeAllItems()\n\t{\n\t\tthis.jqItems.clear();\n\t\tthis.jqChoix = -1;\n\t}\n\n\tpublic void setSelectedIndex(int i)\n\t{\n\t\tif (i < -1 || i >= this.jqItems.size()) { throw new IllegalArgumentException(\"setSelectedIndex: \" + i + \" out of bounds\"); }\n\t\tint ancien = this.jqChoix;\n\t\tif (ancien != i)\n\t\t{\n\t\t\tthis.jqChoix = i;\n\t\t\tif (ancien >= 0) { this.jqSignaler(this.jqItems.get(ancien), 2); }\n\t\t\tif (i >= 0) { this.jqSignaler(this.jqItems.get(i), 1); }\n\t\t}\n\t\tActionEvent e = new ActionEvent(this, 1001, \"comboBoxChanged\");\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n\n\tprivate void jqSignaler(Object item, int etat)\n\t{\n\t\tItemEvent e = new ItemEvent(this, 701, item, etat);\n\t\tfor (ItemListener l : new ArrayList<ItemListener>(this.jqItemsEcoute)) { l.itemStateChanged(e); }\n\t}\n}\n\nclass JMenuBar extends JComponent\n{\n\tpublic JMenu add(JMenu m)\n\t{\n\t\tsuper.add(m);\n\t\treturn m;\n\t}\n}\n\nclass JMenuItem extends AbstractButton\n{\n\tpublic JMenuItem() { }\n\tpublic JMenuItem(String texte) { this.setText(texte); }\n}\n\nclass JMenu extends JMenuItem\n{\n\tpublic JMenu() { }\n\tpublic JMenu(String texte) { super(texte); }\n\n\tpublic JMenuItem add(JMenuItem i)\n\t{\n\t\tsuper.add(i);\n\t\treturn i;\n\t}\n\n\tpublic void addSeparator() { super.add(new JqSeparateur()); }\n}\n\nclass JqSeparateur extends JComponent\n{\n}\n");
+JavaMini.setLib("// Mini-Swing de JavaQuest : une version simplifiée de java.awt et javax.swing,\n// écrite en Java et exécutée par l'interpréteur (niveau 3, Dév IHM).\n// Les noms internes commencent par jq pour ne jamais gêner le code des élèves.\n// Le rendu (fenêtres, mise en page, dessin) est fait en JavaScript par swing-ui.js,\n// qui lit les attributs jq... de ces objets et rappelle les méthodes jq... sur un clic.\n\nclass Color\n{\n\tpublic static final Color WHITE = new Color(255, 255, 255);\n\tpublic static final Color LIGHT_GRAY = new Color(192, 192, 192);\n\tpublic static final Color GRAY = new Color(128, 128, 128);\n\tpublic static final Color DARK_GRAY = new Color(64, 64, 64);\n\tpublic static final Color BLACK = new Color(0, 0, 0);\n\tpublic static final Color RED = new Color(255, 0, 0);\n\tpublic static final Color PINK = new Color(255, 175, 175);\n\tpublic static final Color ORANGE = new Color(255, 200, 0);\n\tpublic static final Color YELLOW = new Color(255, 255, 0);\n\tpublic static final Color GREEN = new Color(0, 255, 0);\n\tpublic static final Color MAGENTA = new Color(255, 0, 255);\n\tpublic static final Color CYAN = new Color(0, 255, 255);\n\tpublic static final Color BLUE = new Color(0, 0, 255);\n\tpublic static final Color white = WHITE;\n\tpublic static final Color lightGray = LIGHT_GRAY;\n\tpublic static final Color gray = GRAY;\n\tpublic static final Color darkGray = DARK_GRAY;\n\tpublic static final Color black = BLACK;\n\tpublic static final Color red = RED;\n\tpublic static final Color pink = PINK;\n\tpublic static final Color orange = ORANGE;\n\tpublic static final Color yellow = YELLOW;\n\tpublic static final Color green = GREEN;\n\tpublic static final Color magenta = MAGENTA;\n\tpublic static final Color cyan = CYAN;\n\tpublic static final Color blue = BLUE;\n\n\tprivate int jqR;\n\tprivate int jqG;\n\tprivate int jqB;\n\n\tpublic Color(int r, int g, int b)\n\t{\n\t\tif (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)\n\t\t{\n\t\t\tString bad = \"\";\n\t\t\tif (r < 0 || r > 255) { bad += \" Red\"; }\n\t\t\tif (g < 0 || g > 255) { bad += \" Green\"; }\n\t\t\tif (b < 0 || b > 255) { bad += \" Blue\"; }\n\t\t\tthrow new IllegalArgumentException(\"Color parameter outside of expected range:\" + bad);\n\t\t}\n\t\tthis.jqR = r;\n\t\tthis.jqG = g;\n\t\tthis.jqB = b;\n\t}\n\n\tpublic Color(int rgb)\n\t{\n\t\tthis.jqR = Color.jqOctet(rgb, 65536);\n\t\tthis.jqG = Color.jqOctet(rgb, 256);\n\t\tthis.jqB = Color.jqOctet(rgb, 1);\n\t}\n\n\tpublic int getRed() { return this.jqR; }\n\tpublic int getGreen() { return this.jqG; }\n\tpublic int getBlue() { return this.jqB; }\n\tpublic int getAlpha() { return 255; }\n\tpublic int getRGB() { return -16777216 + this.jqR * 65536 + this.jqG * 256 + this.jqB; }\n\n\tprivate static int jqOctet(int v, int div)\n\t{\n\t\tint q = v / div;\n\t\tif (v < 0 && v % div != 0) { q--; }\n\t\treturn ((q % 256) + 256) % 256;\n\t}\n\n\tpublic Color darker()\n\t{\n\t\treturn new Color(Math.max((int) (this.jqR * 0.7), 0), Math.max((int) (this.jqG * 0.7), 0), Math.max((int) (this.jqB * 0.7), 0));\n\t}\n\n\tpublic Color brighter()\n\t{\n\t\tint r = this.jqR;\n\t\tint g = this.jqG;\n\t\tint b = this.jqB;\n\t\tint i = 3;\n\t\tif (r == 0 && g == 0 && b == 0) { return new Color(i, i, i); }\n\t\tif (r > 0 && r < i) { r = i; }\n\t\tif (g > 0 && g < i) { g = i; }\n\t\tif (b > 0 && b < i) { b = i; }\n\t\treturn new Color(Math.min((int) (r / 0.7), 255), Math.min((int) (g / 0.7), 255), Math.min((int) (b / 0.7), 255));\n\t}\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Color)) { return false; }\n\t\tColor c = (Color) o;\n\t\treturn c.jqR == this.jqR && c.jqG == this.jqG && c.jqB == this.jqB;\n\t}\n\n\tpublic int hashCode() { return this.getRGB(); }\n\n\tpublic String toString()\n\t{\n\t\treturn \"java.awt.Color[r=\" + this.jqR + \",g=\" + this.jqG + \",b=\" + this.jqB + \"]\";\n\t}\n}\n\nclass Font\n{\n\tpublic static final int PLAIN = 0;\n\tpublic static final int BOLD = 1;\n\tpublic static final int ITALIC = 2;\n\tpublic static final String SERIF = \"Serif\";\n\tpublic static final String SANS_SERIF = \"SansSerif\";\n\tpublic static final String MONOSPACED = \"Monospaced\";\n\tpublic static final String DIALOG = \"Dialog\";\n\n\tprivate String jqNom;\n\tprivate int jqStyle;\n\tprivate int jqTaille;\n\n\tpublic Font(String nom, int style, int taille)\n\t{\n\t\tthis.jqNom = nom;\n\t\tthis.jqStyle = style;\n\t\tthis.jqTaille = taille;\n\t}\n\n\tpublic String getName() { return this.jqNom; }\n\tpublic String getFamily() { return this.jqNom; }\n\tpublic int getStyle() { return this.jqStyle; }\n\tpublic int getSize() { return this.jqTaille; }\n\tpublic boolean isBold() { return this.jqStyle % 2 == 1; }\n\tpublic boolean isItalic() { return (this.jqStyle / 2) % 2 == 1; }\n\tpublic Font deriveFont(int style) { return new Font(this.jqNom, style, this.jqTaille); }\n}\n\nclass Dimension\n{\n\tpublic int width;\n\tpublic int height;\n\n\tpublic Dimension() { }\n\n\tpublic Dimension(int width, int height)\n\t{\n\t\tthis.width = width;\n\t\tthis.height = height;\n\t}\n\n\tpublic double getWidth() { return this.width; }\n\tpublic double getHeight() { return this.height; }\n\tpublic void setSize(int width, int height) { this.width = width; this.height = height; }\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Dimension)) { return false; }\n\t\tDimension d = (Dimension) o;\n\t\treturn d.width == this.width && d.height == this.height;\n\t}\n\n\tpublic String toString() { return \"java.awt.Dimension[width=\" + this.width + \",height=\" + this.height + \"]\"; }\n}\n\nclass Point\n{\n\tpublic int x;\n\tpublic int y;\n\n\tpublic Point() { }\n\n\tpublic Point(int x, int y)\n\t{\n\t\tthis.x = x;\n\t\tthis.y = y;\n\t}\n\n\tpublic double getX() { return this.x; }\n\tpublic double getY() { return this.y; }\n\tpublic void setLocation(int x, int y) { this.x = x; this.y = y; }\n\tpublic void translate(int dx, int dy) { this.x += dx; this.y += dy; }\n\n\tpublic boolean equals(Object o)\n\t{\n\t\tif (!(o instanceof Point)) { return false; }\n\t\tPoint p = (Point) o;\n\t\treturn p.x == this.x && p.y == this.y;\n\t}\n\n\tpublic String toString() { return \"java.awt.Point[x=\" + this.x + \",y=\" + this.y + \"]\"; }\n}\n\ninterface SwingConstants\n{\n\tint CENTER = 0;\n\tint TOP = 1;\n\tint LEFT = 2;\n\tint BOTTOM = 3;\n\tint RIGHT = 4;\n\tint HORIZONTAL = 0;\n\tint VERTICAL = 1;\n\tint LEADING = 10;\n\tint TRAILING = 11;\n}\n\ninterface LayoutManager\n{\n}\n\nclass FlowLayout implements LayoutManager\n{\n\tpublic static final int LEFT = 0;\n\tpublic static final int CENTER = 1;\n\tpublic static final int RIGHT = 2;\n\tpublic static final int LEADING = 3;\n\tpublic static final int TRAILING = 4;\n\n\tprivate int jqAlign;\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\n\tpublic FlowLayout() { this(1, 5, 5); }\n\tpublic FlowLayout(int align) { this(align, 5, 5); }\n\n\tpublic FlowLayout(int align, int hgap, int vgap)\n\t{\n\t\tthis.jqAlign = align;\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getAlignment() { return this.jqAlign; }\n\tpublic void setAlignment(int align) { this.jqAlign = align; }\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n}\n\nclass GridLayout implements LayoutManager\n{\n\tprivate int jqRows;\n\tprivate int jqCols;\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\n\tpublic GridLayout() { this(1, 0, 0, 0); }\n\tpublic GridLayout(int rows, int cols) { this(rows, cols, 0, 0); }\n\n\tpublic GridLayout(int rows, int cols, int hgap, int vgap)\n\t{\n\t\tif (rows == 0 && cols == 0) { throw new IllegalArgumentException(\"rows and cols cannot both be zero\"); }\n\t\tthis.jqRows = rows;\n\t\tthis.jqCols = cols;\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getRows() { return this.jqRows; }\n\tpublic int getColumns() { return this.jqCols; }\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setRows(int r) { this.jqRows = r; }\n\tpublic void setColumns(int c) { this.jqCols = c; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n}\n\nclass BorderLayout implements LayoutManager\n{\n\tpublic static final String NORTH = \"North\";\n\tpublic static final String SOUTH = \"South\";\n\tpublic static final String EAST = \"East\";\n\tpublic static final String WEST = \"West\";\n\tpublic static final String CENTER = \"Center\";\n\tpublic static final String PAGE_START = \"First\";\n\tpublic static final String PAGE_END = \"Last\";\n\tpublic static final String LINE_START = \"Before\";\n\tpublic static final String LINE_END = \"After\";\n\n\tprivate int jqHgap;\n\tprivate int jqVgap;\n\tprivate Component jqNorth;\n\tprivate Component jqSouth;\n\tprivate Component jqEast;\n\tprivate Component jqWest;\n\tprivate Component jqCenter;\n\n\tpublic BorderLayout() { this(0, 0); }\n\n\tpublic BorderLayout(int hgap, int vgap)\n\t{\n\t\tthis.jqHgap = hgap;\n\t\tthis.jqVgap = vgap;\n\t}\n\n\tpublic int getHgap() { return this.jqHgap; }\n\tpublic int getVgap() { return this.jqVgap; }\n\tpublic void setHgap(int g) { this.jqHgap = g; }\n\tpublic void setVgap(int g) { this.jqVgap = g; }\n\n\tvoid jqPoser(Component c, Object cons)\n\t{\n\t\tif (cons != null && !(cons instanceof String)) { throw new IllegalArgumentException(\"cannot add to layout: constraint must be a string (or null)\"); }\n\t\tString z = (String) cons;\n\t\tif (z == null || z.equals(\"Center\")) { this.jqCenter = c; }\n\t\telse if (z.equals(\"North\") || z.equals(\"First\")) { this.jqNorth = c; }\n\t\telse if (z.equals(\"South\") || z.equals(\"Last\")) { this.jqSouth = c; }\n\t\telse if (z.equals(\"East\") || z.equals(\"After\")) { this.jqEast = c; }\n\t\telse if (z.equals(\"West\") || z.equals(\"Before\")) { this.jqWest = c; }\n\t\telse { throw new IllegalArgumentException(\"cannot add to layout: unknown constraint: \" + z); }\n\t}\n\n\tvoid jqOter(Component c)\n\t{\n\t\tif (this.jqCenter == c) { this.jqCenter = null; }\n\t\tif (this.jqNorth == c) { this.jqNorth = null; }\n\t\tif (this.jqSouth == c) { this.jqSouth = null; }\n\t\tif (this.jqEast == c) { this.jqEast = null; }\n\t\tif (this.jqWest == c) { this.jqWest = null; }\n\t}\n\n\tpublic Object getConstraints(Component c)\n\t{\n\t\tif (c == null) { return null; }\n\t\tif (c == this.jqCenter) { return \"Center\"; }\n\t\tif (c == this.jqNorth) { return \"North\"; }\n\t\tif (c == this.jqSouth) { return \"South\"; }\n\t\tif (c == this.jqEast) { return \"East\"; }\n\t\tif (c == this.jqWest) { return \"West\"; }\n\t\treturn null;\n\t}\n\n\tpublic Component getLayoutComponent(Object cons)\n\t{\n\t\tif (\"Center\".equals(cons)) { return this.jqCenter; }\n\t\tif (\"North\".equals(cons)) { return this.jqNorth; }\n\t\tif (\"South\".equals(cons)) { return this.jqSouth; }\n\t\tif (\"East\".equals(cons)) { return this.jqEast; }\n\t\tif (\"West\".equals(cons)) { return this.jqWest; }\n\t\tthrow new IllegalArgumentException(\"cannot get component: unknown constraint: \" + cons);\n\t}\n}\n\nclass AWTEvent\n{\n\tprivate Object jqSource;\n\tprivate int jqId;\n\n\tpublic AWTEvent(Object source, int id)\n\t{\n\t\tthis.jqSource = source;\n\t\tthis.jqId = id;\n\t}\n\n\tpublic Object getSource() { return this.jqSource; }\n\tpublic int getID() { return this.jqId; }\n}\n\nclass ActionEvent extends AWTEvent\n{\n\tpublic static final int ACTION_PERFORMED = 1001;\n\tprivate String jqCmd;\n\n\tpublic ActionEvent(Object source, int id, String command)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqCmd = command;\n\t}\n\n\tpublic String getActionCommand() { return this.jqCmd; }\n\tpublic int getModifiers() { return 0; }\n\tpublic String paramString() { return \"ACTION_PERFORMED,cmd=\" + this.jqCmd + \",modifiers=\"; }\n}\n\nclass ItemEvent extends AWTEvent\n{\n\tpublic static final int ITEM_STATE_CHANGED = 701;\n\tpublic static final int SELECTED = 1;\n\tpublic static final int DESELECTED = 2;\n\tprivate Object jqItem;\n\tprivate int jqEtat;\n\n\tpublic ItemEvent(Object source, int id, Object item, int stateChange)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqItem = item;\n\t\tthis.jqEtat = stateChange;\n\t}\n\n\tpublic Object getItem() { return this.jqItem; }\n\tpublic int getStateChange() { return this.jqEtat; }\n\tpublic Object getItemSelectable() { return this.getSource(); }\n}\n\nclass AdjustmentEvent extends AWTEvent\n{\n\tpublic static final int ADJUSTMENT_VALUE_CHANGED = 601;\n\tpublic static final int UNIT_INCREMENT = 1;\n\tpublic static final int UNIT_DECREMENT = 2;\n\tpublic static final int BLOCK_DECREMENT = 3;\n\tpublic static final int BLOCK_INCREMENT = 4;\n\tpublic static final int TRACK = 5;\n\tprivate int jqType;\n\tprivate int jqValeur;\n\n\tpublic AdjustmentEvent(Object source, int id, int type, int value)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqType = type;\n\t\tthis.jqValeur = value;\n\t}\n\n\tpublic int getValue() { return this.jqValeur; }\n\tpublic int getAdjustmentType() { return this.jqType; }\n\tpublic Object getAdjustable() { return this.getSource(); }\n}\n\nclass MouseEvent extends AWTEvent\n{\n\tpublic static final int MOUSE_CLICKED = 500;\n\tpublic static final int MOUSE_PRESSED = 501;\n\tpublic static final int MOUSE_RELEASED = 502;\n\tpublic static final int MOUSE_MOVED = 503;\n\tpublic static final int MOUSE_ENTERED = 504;\n\tpublic static final int MOUSE_EXITED = 505;\n\tpublic static final int MOUSE_DRAGGED = 506;\n\tpublic static final int NOBUTTON = 0;\n\tpublic static final int BUTTON1 = 1;\n\tpublic static final int BUTTON2 = 2;\n\tpublic static final int BUTTON3 = 3;\n\tprivate int jqX;\n\tprivate int jqY;\n\tprivate int jqClics;\n\tprivate int jqBouton;\n\n\tpublic MouseEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger)\n\t{\n\t\tthis(source, id, when, modifiers, x, y, clickCount, popupTrigger, 0);\n\t}\n\n\tpublic MouseEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger, int button)\n\t{\n\t\tsuper(source, id);\n\t\tthis.jqX = x;\n\t\tthis.jqY = y;\n\t\tthis.jqClics = clickCount;\n\t\tthis.jqBouton = button;\n\t}\n\n\tpublic int getX() { return this.jqX; }\n\tpublic int getY() { return this.jqY; }\n\tpublic Point getPoint() { return new Point(this.jqX, this.jqY); }\n\tpublic int getClickCount() { return this.jqClics; }\n\tpublic int getButton() { return this.jqBouton; }\n\tpublic Component getComponent() { return (Component) this.getSource(); }\n\tpublic boolean isPopupTrigger() { return false; }\n}\n\ninterface ActionListener\n{\n\tvoid actionPerformed(ActionEvent e);\n}\n\ninterface ItemListener\n{\n\tvoid itemStateChanged(ItemEvent e);\n}\n\ninterface AdjustmentListener\n{\n\tvoid adjustmentValueChanged(AdjustmentEvent e);\n}\n\ninterface MouseListener\n{\n\tvoid mouseClicked(MouseEvent e);\n\tvoid mousePressed(MouseEvent e);\n\tvoid mouseReleased(MouseEvent e);\n\tvoid mouseEntered(MouseEvent e);\n\tvoid mouseExited(MouseEvent e);\n}\n\ninterface MouseMotionListener\n{\n\tvoid mouseDragged(MouseEvent e);\n\tvoid mouseMoved(MouseEvent e);\n}\n\nabstract class MouseAdapter implements MouseListener, MouseMotionListener\n{\n\tpublic void mouseClicked(MouseEvent e) { }\n\tpublic void mousePressed(MouseEvent e) { }\n\tpublic void mouseReleased(MouseEvent e) { }\n\tpublic void mouseEntered(MouseEvent e) { }\n\tpublic void mouseExited(MouseEvent e) { }\n\tpublic void mouseDragged(MouseEvent e) { }\n\tpublic void mouseMoved(MouseEvent e) { }\n}\n\nabstract class MouseMotionAdapter implements MouseMotionListener\n{\n\tpublic void mouseDragged(MouseEvent e) { }\n\tpublic void mouseMoved(MouseEvent e) { }\n}\n\nclass Graphics\n{\n\tprivate ArrayList<String> jqOps = new ArrayList<String>();\n\tprivate Color jqCouleur = Color.BLACK;\n\tprivate Font jqPolice = new Font(\"Dialog\", 0, 12);\n\n\tpublic void setColor(Color c)\n\t{\n\t\tif (c == null) { return; }\n\t\tthis.jqCouleur = c;\n\t\tthis.jqOps.add(\"c \" + c.getRed() + \" \" + c.getGreen() + \" \" + c.getBlue());\n\t}\n\n\tpublic Color getColor() { return this.jqCouleur; }\n\n\tpublic void setFont(Font f)\n\t{\n\t\tif (f == null) { return; }\n\t\tthis.jqPolice = f;\n\t\tthis.jqOps.add(\"f \" + f.getSize() + \" \" + f.getStyle() + \" \" + f.getName());\n\t}\n\n\tpublic Font getFont() { return this.jqPolice; }\n\tpublic void drawLine(int x1, int y1, int x2, int y2) { this.jqOps.add(\"l \" + x1 + \" \" + y1 + \" \" + x2 + \" \" + y2); }\n\tpublic void drawRect(int x, int y, int w, int h) { this.jqOps.add(\"r \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void fillRect(int x, int y, int w, int h) { this.jqOps.add(\"R \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void clearRect(int x, int y, int w, int h) { this.jqOps.add(\"C \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void drawOval(int x, int y, int w, int h) { this.jqOps.add(\"o \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void fillOval(int x, int y, int w, int h) { this.jqOps.add(\"O \" + x + \" \" + y + \" \" + w + \" \" + h); }\n\tpublic void drawRoundRect(int x, int y, int w, int h, int aw, int ah) { this.jqOps.add(\"q \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + aw + \" \" + ah); }\n\tpublic void fillRoundRect(int x, int y, int w, int h, int aw, int ah) { this.jqOps.add(\"Q \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + aw + \" \" + ah); }\n\tpublic void drawArc(int x, int y, int w, int h, int start, int arc) { this.jqOps.add(\"a \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + start + \" \" + arc); }\n\tpublic void fillArc(int x, int y, int w, int h, int start, int arc) { this.jqOps.add(\"A \" + x + \" \" + y + \" \" + w + \" \" + h + \" \" + start + \" \" + arc); }\n\tpublic void drawString(String s, int x, int y) { this.jqOps.add(\"s \" + x + \" \" + y + \" \" + s); }\n\n\tpublic void drawPolygon(int[] xs, int[] ys, int n) { this.jqPoly(\"p\", xs, ys, n); }\n\tpublic void fillPolygon(int[] xs, int[] ys, int n) { this.jqPoly(\"P\", xs, ys, n); }\n\tpublic void drawPolyline(int[] xs, int[] ys, int n) { this.jqPoly(\"L\", xs, ys, n); }\n\n\tprivate void jqPoly(String k, int[] xs, int[] ys, int n)\n\t{\n\t\tString s = k + \" \" + n;\n\t\tfor (int i = 0; i < n; i++)\n\t\t{\n\t\t\ts += \" \" + xs[i] + \" \" + ys[i];\n\t\t}\n\t\tthis.jqOps.add(s);\n\t}\n}\n\ninterface Border\n{\n}\n\nclass JqBordure implements Border\n{\n\tString jqGenre;\n\tColor jqCouleur;\n\tint jqEpaisseur;\n\tint jqHaut;\n\tint jqGauche;\n\tint jqBas;\n\tint jqDroite;\n\tString jqTitre;\n\n\tJqBordure(String genre)\n\t{\n\t\tthis.jqGenre = genre;\n\t}\n}\n\nclass BorderFactory\n{\n\tpublic static Border createLineBorder(Color c) { return createLineBorder(c, 1); }\n\n\tpublic static Border createLineBorder(Color c, int epaisseur)\n\t{\n\t\tJqBordure b = new JqBordure(\"ligne\");\n\t\tb.jqCouleur = c;\n\t\tb.jqEpaisseur = epaisseur;\n\t\treturn b;\n\t}\n\n\tpublic static Border createEmptyBorder(int haut, int gauche, int bas, int droite)\n\t{\n\t\tJqBordure b = new JqBordure(\"vide\");\n\t\tb.jqHaut = haut;\n\t\tb.jqGauche = gauche;\n\t\tb.jqBas = bas;\n\t\tb.jqDroite = droite;\n\t\treturn b;\n\t}\n\n\tpublic static Border createTitledBorder(String titre)\n\t{\n\t\tJqBordure b = new JqBordure(\"titre\");\n\t\tb.jqTitre = titre;\n\t\treturn b;\n\t}\n\n\tpublic static Border createEtchedBorder() { return new JqBordure(\"grave\"); }\n\tpublic static Border createRaisedBevelBorder() { return new JqBordure(\"relief\"); }\n\tpublic static Border createLoweredBevelBorder() { return new JqBordure(\"creux\"); }\n}\n\nabstract class Component\n{\n\tprivate Container jqParent;\n\tprivate Color jqFond;\n\tprivate Color jqCouleurTexte;\n\tprivate Font jqPolice;\n\tprivate boolean jqVisible = true;\n\tprivate boolean jqActif = true;\n\tprivate int jqPrefL = -1;\n\tprivate int jqPrefH = -1;\n\tprivate int jqX;\n\tprivate int jqY;\n\tprivate int jqL;\n\tprivate int jqH;\n\tprivate String jqNom;\n\tprivate ArrayList<MouseListener> jqSouris = new ArrayList<MouseListener>();\n\tprivate ArrayList<MouseMotionListener> jqMouvement = new ArrayList<MouseMotionListener>();\n\n\tpublic Container getParent() { return this.jqParent; }\n\tvoid jqSetParent(Container c) { this.jqParent = c; }\n\n\tpublic void setBackground(Color c) { this.jqFond = c; }\n\tpublic Color getBackground() { return this.jqFond; }\n\tpublic void setForeground(Color c) { this.jqCouleurTexte = c; }\n\tpublic Color getForeground() { return this.jqCouleurTexte; }\n\tpublic void setFont(Font f) { this.jqPolice = f; }\n\tpublic Font getFont() { return this.jqPolice; }\n\tpublic void setVisible(boolean b) { this.jqVisible = b; }\n\tpublic boolean isVisible() { return this.jqVisible; }\n\tpublic void setEnabled(boolean b) { this.jqActif = b; }\n\tpublic boolean isEnabled() { return this.jqActif; }\n\tpublic void setName(String n) { this.jqNom = n; }\n\tpublic String getName() { return this.jqNom; }\n\n\tpublic void setPreferredSize(Dimension d)\n\t{\n\t\tif (d == null) { this.jqPrefL = -1; this.jqPrefH = -1; return; }\n\t\tthis.jqPrefL = d.width;\n\t\tthis.jqPrefH = d.height;\n\t}\n\n\tpublic Dimension getPreferredSize() { return new Dimension(Math.max(this.jqPrefL, 0), Math.max(this.jqPrefH, 0)); }\n\tpublic boolean isPreferredSizeSet() { return this.jqPrefL >= 0; }\n\tpublic void setMinimumSize(Dimension d) { }\n\tpublic void setMaximumSize(Dimension d) { }\n\n\tpublic void setSize(int l, int h) { this.jqL = l; this.jqH = h; }\n\tpublic void setSize(Dimension d) { this.setSize(d.width, d.height); }\n\tpublic Dimension getSize() { return new Dimension(this.jqL, this.jqH); }\n\tpublic int getWidth() { return this.jqL; }\n\tpublic int getHeight() { return this.jqH; }\n\tpublic void setLocation(int x, int y) { this.jqX = x; this.jqY = y; }\n\tpublic void setLocation(Point p) { this.setLocation(p.x, p.y); }\n\tpublic Point getLocation() { return new Point(this.jqX, this.jqY); }\n\tpublic int getX() { return this.jqX; }\n\tpublic int getY() { return this.jqY; }\n\n\tpublic void setBounds(int x, int y, int l, int h)\n\t{\n\t\tthis.setLocation(x, y);\n\t\tthis.setSize(l, h);\n\t}\n\n\tpublic void addMouseListener(MouseListener l) { if (l != null) { this.jqSouris.add(l); } }\n\tpublic void removeMouseListener(MouseListener l) { this.jqSouris.remove(l); }\n\tpublic void addMouseMotionListener(MouseMotionListener l) { if (l != null) { this.jqMouvement.add(l); } }\n\tpublic void removeMouseMotionListener(MouseMotionListener l) { this.jqMouvement.remove(l); }\n\tpublic void repaint() { }\n\tpublic void validate() { }\n\tpublic void invalidate() { }\n\tpublic void requestFocus() { }\n\tpublic boolean requestFocusInWindow() { return true; }\n\n\tpublic void dispatchEvent(AWTEvent e)\n\t{\n\t\tif (e instanceof MouseEvent) { this.jqDiffuser((MouseEvent) e); }\n\t}\n\n\t/* Appelé par l'interface du site : un événement souris sur ce composant. */\n\tvoid jqEvtSouris(int id, int x, int y, int bouton, int clics)\n\t{\n\t\tthis.jqDiffuser(new MouseEvent(this, id, 0, 0, x, y, clics, false, bouton));\n\t}\n\n\tprivate void jqDiffuser(MouseEvent e)\n\t{\n\t\tint id = e.getID();\n\t\tif (id == 503 || id == 506)\n\t\t{\n\t\t\tfor (MouseMotionListener l : new ArrayList<MouseMotionListener>(this.jqMouvement))\n\t\t\t{\n\t\t\t\tif (id == 503) { l.mouseMoved(e); } else { l.mouseDragged(e); }\n\t\t\t}\n\t\t\treturn;\n\t\t}\n\t\tfor (MouseListener l : new ArrayList<MouseListener>(this.jqSouris))\n\t\t{\n\t\t\tif (id == 500) { l.mouseClicked(e); }\n\t\t\tif (id == 501) { l.mousePressed(e); }\n\t\t\tif (id == 502) { l.mouseReleased(e); }\n\t\t\tif (id == 504) { l.mouseEntered(e); }\n\t\t\tif (id == 505) { l.mouseExited(e); }\n\t\t}\n\t}\n\n\tboolean jqEcouteSouris() { return this.jqSouris.size() > 0; }\n\tboolean jqEcouteMouvement() { return this.jqMouvement.size() > 0; }\n}\n\nclass Container extends Component\n{\n\tprivate ArrayList<Component> jqEnfants = new ArrayList<Component>();\n\tprivate ArrayList<Object> jqContraintes = new ArrayList<Object>();\n\tprivate LayoutManager jqLayout;\n\n\tpublic Component add(Component c)\n\t{\n\t\tthis.jqAjouter(c, null);\n\t\treturn c;\n\t}\n\n\tpublic void add(Component c, Object contrainte)\n\t{\n\t\tthis.jqAjouter(c, contrainte);\n\t}\n\n\tvoid jqAjouter(Component c, Object contrainte)\n\t{\n\t\tif (c == null) { throw new NullPointerException(\"Cannot invoke \\\"java.awt.Component.getParent()\\\" because \\\"comp\\\" is null\"); }\n\t\tif (c == this) { throw new IllegalArgumentException(\"adding container to itself\"); }\n\t\tif (c instanceof JFrame) { throw new IllegalArgumentException(\"adding a window to a container\"); }\n\t\tif (this.jqLayout instanceof BorderLayout) { ((BorderLayout) this.jqLayout).jqPoser(c, contrainte); }\n\t\tif (c.getParent() != null) { c.getParent().remove(c); }\n\t\tthis.jqEnfants.add(c);\n\t\tthis.jqContraintes.add(contrainte);\n\t\tc.jqSetParent(this);\n\t}\n\n\tpublic void remove(Component c)\n\t{\n\t\tint i = this.jqEnfants.indexOf(c);\n\t\tif (i < 0) { return; }\n\t\tthis.jqEnfants.remove(i);\n\t\tthis.jqContraintes.remove(i);\n\t\tif (this.jqLayout instanceof BorderLayout) { ((BorderLayout) this.jqLayout).jqOter(c); }\n\t\tc.jqSetParent(null);\n\t}\n\n\tpublic void remove(int i)\n\t{\n\t\tthis.remove(this.jqEnfants.get(i));\n\t}\n\n\tpublic void removeAll()\n\t{\n\t\twhile (this.jqEnfants.size() > 0) { this.remove(this.jqEnfants.get(0)); }\n\t}\n\n\tpublic int getComponentCount() { return this.jqEnfants.size(); }\n\tpublic Component getComponent(int i) { return this.jqEnfants.get(i); }\n\n\tpublic Component[] getComponents()\n\t{\n\t\tComponent[] t = new Component[this.jqEnfants.size()];\n\t\tfor (int i = 0; i < t.length; i++) { t[i] = this.jqEnfants.get(i); }\n\t\treturn t;\n\t}\n\n\tpublic void setLayout(LayoutManager l) { this.jqLayout = l; }\n\tpublic LayoutManager getLayout() { return this.jqLayout; }\n\tpublic void doLayout() { }\n\tpublic void revalidate() { }\n}\n\nclass JComponent extends Container\n{\n\tprivate boolean jqOpaque = false;\n\tprivate String jqBulle;\n\tprivate Border jqBordure;\n\n\tpublic void setOpaque(boolean b) { this.jqOpaque = b; }\n\tpublic boolean isOpaque() { return this.jqOpaque; }\n\tpublic void setToolTipText(String s) { this.jqBulle = s; }\n\tpublic String getToolTipText() { return this.jqBulle; }\n\tpublic void setBorder(Border b) { this.jqBordure = b; }\n\tpublic Border getBorder() { return this.jqBordure; }\n\tprotected void paintComponent(Graphics g) { }\n\tpublic void paint(Graphics g) { this.paintComponent(g); }\n}\n\nclass JPanel extends JComponent\n{\n\tpublic JPanel()\n\t{\n\t\tthis(new FlowLayout());\n\t}\n\n\tpublic JPanel(LayoutManager l)\n\t{\n\t\tthis.setLayout(l);\n\t\tthis.setOpaque(true);\n\t}\n}\n\nclass JFrame extends Container\n{\n\tpublic static final int DO_NOTHING_ON_CLOSE = 0;\n\tpublic static final int HIDE_ON_CLOSE = 1;\n\tpublic static final int DISPOSE_ON_CLOSE = 2;\n\tpublic static final int EXIT_ON_CLOSE = 3;\n\n\tstatic ArrayList<JFrame> jqFenetres = new ArrayList<JFrame>();\n\n\tprivate String jqTitre = \"\";\n\tprivate int jqFermeture = 1;\n\tprivate Container jqContenu;\n\tprivate boolean jqAjuste = false;\n\tprivate boolean jqRedim = true;\n\tprivate JMenuBar jqMenu;\n\n\tpublic JFrame()\n\t{\n\t\tthis(\"\");\n\t}\n\n\tpublic JFrame(String titre)\n\t{\n\t\tthis.jqTitre = titre;\n\t\tJPanel p = new JPanel(new BorderLayout());\n\t\tthis.jqContenu = p;\n\t\tsuper.setLayout(new BorderLayout());\n\t\tthis.setVisible(false);\n\t}\n\n\tpublic void setTitle(String t) { this.jqTitre = t; }\n\tpublic String getTitle() { return this.jqTitre; }\n\tpublic void setDefaultCloseOperation(int op) { this.jqFermeture = op; }\n\tpublic int getDefaultCloseOperation() { return this.jqFermeture; }\n\tpublic Container getContentPane() { return this.jqContenu; }\n\tpublic void setContentPane(Container c) { this.jqContenu = c; }\n\tpublic void setJMenuBar(JMenuBar m) { this.jqMenu = m; }\n\tpublic JMenuBar getJMenuBar() { return this.jqMenu; }\n\tpublic void setResizable(boolean b) { this.jqRedim = b; }\n\tpublic boolean isResizable() { return this.jqRedim; }\n\tpublic void setLocationRelativeTo(Component c) { }\n\n\tpublic Component add(Component c)\n\t{\n\t\tthis.jqContenu.add(c);\n\t\treturn c;\n\t}\n\n\tpublic void add(Component c, Object contrainte) { this.jqContenu.add(c, contrainte); }\n\tpublic void remove(Component c) { this.jqContenu.remove(c); }\n\tpublic void setLayout(LayoutManager l) { if (this.jqContenu != null) { this.jqContenu.setLayout(l); } }\n\tpublic void pack() { this.jqAjuste = true; }\n\n\tpublic void setSize(int l, int h)\n\t{\n\t\tsuper.setSize(l, h);\n\t\tthis.jqAjuste = false;\n\t}\n\n\tpublic void setVisible(boolean b)\n\t{\n\t\tsuper.setVisible(b);\n\t\tif (b && !JFrame.jqFenetres.contains(this)) { JFrame.jqFenetres.add(this); }\n\t}\n\n\tpublic void dispose()\n\t{\n\t\tsuper.setVisible(false);\n\t\tJFrame.jqFenetres.remove(this);\n\t}\n}\n\nclass AbstractButton extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate boolean jqChoisi;\n\tprivate String jqCommande;\n\tprivate ButtonGroup jqGroupe;\n\tprivate int jqMnemo;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\tprivate ArrayList<ItemListener> jqItems = new ArrayList<ItemListener>();\n\n\tpublic AbstractButton()\n\t{\n\t\tthis.jqTexte = \"\";\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t; }\n\tpublic String getLabel() { return this.jqTexte; }\n\tpublic void setActionCommand(String c) { this.jqCommande = c; }\n\tpublic String getActionCommand() { return this.jqCommande == null ? this.jqTexte : this.jqCommande; }\n\tpublic void setMnemonic(int c) { this.jqMnemo = c; }\n\tpublic void setMnemonic(char c) { this.jqMnemo = c; }\n\tpublic int getMnemonic() { return this.jqMnemo; }\n\tpublic void setHorizontalAlignment(int a) { }\n\tpublic void setFocusPainted(boolean b) { }\n\tpublic void setBorderPainted(boolean b) { }\n\tpublic void setContentAreaFilled(boolean b) { }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void removeActionListener(ActionListener l) { this.jqActions.remove(l); }\n\tpublic void addItemListener(ItemListener l) { if (l != null) { this.jqItems.add(l); } }\n\tpublic void removeItemListener(ItemListener l) { this.jqItems.remove(l); }\n\tpublic boolean isSelected() { return this.jqChoisi; }\n\tvoid jqSetGroupe(ButtonGroup g) { this.jqGroupe = g; }\n\tvoid jqEtat(boolean b) { this.jqChoisi = b; }\n\n\tpublic void setSelected(boolean b)\n\t{\n\t\tif (this.jqGroupe != null)\n\t\t{\n\t\t\tif (b) { this.jqGroupe.jqChoisir(this); }\n\t\t\treturn;\n\t\t}\n\t\tif (b == this.jqChoisi) { return; }\n\t\tthis.jqChoisi = b;\n\t\tthis.jqSignalerItem(b ? 1 : 2);\n\t}\n\n\tvoid jqSignalerItem(int etat)\n\t{\n\t\tItemEvent e = new ItemEvent(this, 701, this, etat);\n\t\tfor (ItemListener l : new ArrayList<ItemListener>(this.jqItems)) { l.itemStateChanged(e); }\n\t}\n\n\tvoid jqBasculer() { }\n\n\tpublic void doClick()\n\t{\n\t\tif (!this.isEnabled()) { return; }\n\t\tthis.jqBasculer();\n\t\tActionEvent e = new ActionEvent(this, 1001, this.getActionCommand());\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n}\n\nclass JButton extends AbstractButton\n{\n\tpublic JButton() { }\n\n\tpublic JButton(String texte)\n\t{\n\t\tthis.setText(texte);\n\t}\n}\n\nclass JToggleButton extends AbstractButton\n{\n\tpublic JToggleButton() { }\n\tpublic JToggleButton(String texte) { this(texte, false); }\n\n\tpublic JToggleButton(String texte, boolean choisi)\n\t{\n\t\tthis.setText(texte);\n\t\tthis.jqEtat(choisi);\n\t}\n\n\tvoid jqBasculer() { this.setSelected(!this.isSelected()); }\n}\n\nclass JCheckBox extends JToggleButton\n{\n\tpublic JCheckBox() { }\n\tpublic JCheckBox(String texte) { super(texte, false); }\n\tpublic JCheckBox(String texte, boolean choisi) { super(texte, choisi); }\n}\n\nclass JRadioButton extends JToggleButton\n{\n\tpublic JRadioButton() { }\n\tpublic JRadioButton(String texte) { super(texte, false); }\n\tpublic JRadioButton(String texte, boolean choisi) { super(texte, choisi); }\n}\n\nclass ButtonGroup\n{\n\tprivate ArrayList<AbstractButton> jqBoutons = new ArrayList<AbstractButton>();\n\tprivate AbstractButton jqChoix;\n\n\tpublic void add(AbstractButton b)\n\t{\n\t\tif (b == null) { return; }\n\t\tthis.jqBoutons.add(b);\n\t\tif (b.isSelected())\n\t\t{\n\t\t\tif (this.jqChoix == null) { this.jqChoix = b; }\n\t\t\telse { b.jqEtat(false); }\n\t\t}\n\t\tb.jqSetGroupe(this);\n\t}\n\n\tpublic void remove(AbstractButton b)\n\t{\n\t\tthis.jqBoutons.remove(b);\n\t\tb.jqSetGroupe(null);\n\t\tif (this.jqChoix == b) { this.jqChoix = null; }\n\t}\n\n\tpublic int getButtonCount() { return this.jqBoutons.size(); }\n\n\tpublic void clearSelection()\n\t{\n\t\tif (this.jqChoix != null)\n\t\t{\n\t\t\tAbstractButton a = this.jqChoix;\n\t\t\tthis.jqChoix = null;\n\t\t\ta.jqEtat(false);\n\t\t\ta.jqSignalerItem(2);\n\t\t}\n\t}\n\n\tvoid jqChoisir(AbstractButton b)\n\t{\n\t\tif (this.jqChoix == b) { return; }\n\t\tAbstractButton ancien = this.jqChoix;\n\t\tthis.jqChoix = b;\n\t\tif (ancien != null)\n\t\t{\n\t\t\tancien.jqEtat(false);\n\t\t\tancien.jqSignalerItem(2);\n\t\t}\n\t\tb.jqEtat(true);\n\t\tb.jqSignalerItem(1);\n\t}\n}\n\nclass JLabel extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate int jqAlignH = 10;\n\tprivate int jqAlignV = 0;\n\n\tpublic JLabel() { this(\"\", 10); }\n\tpublic JLabel(String texte) { this(texte, 10); }\n\n\tpublic JLabel(String texte, int alignement)\n\t{\n\t\tthis.jqTexte = texte;\n\t\tthis.jqAlignH = alignement;\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t; }\n\tpublic int getHorizontalAlignment() { return this.jqAlignH; }\n\tpublic void setHorizontalAlignment(int a) { this.jqAlignH = a; }\n\tpublic int getVerticalAlignment() { return this.jqAlignV; }\n\tpublic void setVerticalAlignment(int a) { this.jqAlignV = a; }\n}\n\nclass JTextField extends JComponent implements SwingConstants\n{\n\tprivate String jqTexte;\n\tprivate int jqColonnes;\n\tprivate boolean jqModifiable = true;\n\tprivate int jqAlignH = 10;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\n\tpublic JTextField() { this(\"\", 0); }\n\tpublic JTextField(int colonnes) { this(\"\", colonnes); }\n\tpublic JTextField(String texte) { this(texte, 0); }\n\n\tpublic JTextField(String texte, int colonnes)\n\t{\n\t\tif (colonnes < 0) { throw new IllegalArgumentException(\"columns less than zero.\"); }\n\t\tthis.jqTexte = texte == null ? \"\" : texte;\n\t\tthis.jqColonnes = colonnes;\n\t\tthis.setOpaque(true);\n\t}\n\n\tpublic String getText() { return this.jqTexte; }\n\tpublic void setText(String t) { this.jqTexte = t == null ? \"\" : t; }\n\tpublic int getColumns() { return this.jqColonnes; }\n\tpublic void setColumns(int c) { this.jqColonnes = c; }\n\tpublic boolean isEditable() { return this.jqModifiable; }\n\tpublic void setEditable(boolean b) { this.jqModifiable = b; }\n\tpublic int getHorizontalAlignment() { return this.jqAlignH; }\n\tpublic void setHorizontalAlignment(int a) { this.jqAlignH = a; }\n\tpublic void selectAll() { }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void removeActionListener(ActionListener l) { this.jqActions.remove(l); }\n\n\tpublic void postActionEvent()\n\t{\n\t\tActionEvent e = new ActionEvent(this, 1001, this.jqTexte);\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n\n\t/* Appelé par l'interface du site : l'utilisateur a tapé un texte puis Entrée. */\n\tvoid jqSaisir(String t, boolean entree)\n\t{\n\t\tthis.jqTexte = t;\n\t\tif (entree) { this.postActionEvent(); }\n\t}\n}\n\nclass JScrollBar extends JComponent implements SwingConstants\n{\n\tprivate int jqOrient;\n\tprivate int jqValeur;\n\tprivate int jqEtendue;\n\tprivate int jqMin;\n\tprivate int jqMax;\n\tprivate int jqPasUnite = 1;\n\tprivate int jqPasBloc = 10;\n\tprivate ArrayList<AdjustmentListener> jqEcouteurs = new ArrayList<AdjustmentListener>();\n\n\tpublic JScrollBar() { this(1, 0, 10, 0, 100); }\n\tpublic JScrollBar(int orientation) { this(orientation, 0, 10, 0, 100); }\n\n\tpublic JScrollBar(int orientation, int valeur, int etendue, int min, int max)\n\t{\n\t\tif (orientation != 0 && orientation != 1) { throw new IllegalArgumentException(\"orientation must be one of: VERTICAL, HORIZONTAL\"); }\n\t\t/* Comme DefaultBoundedRangeModel : une plage incohérente est refusée (l'AWT, lui, corrigeait). */\n\t\tif (!(max >= min && valeur >= min && valeur + etendue >= valeur && valeur + etendue <= max)) { throw new IllegalArgumentException(\"invalid range properties\"); }\n\t\tthis.jqOrient = orientation;\n\t\tthis.jqValeur = valeur;\n\t\tthis.jqEtendue = etendue;\n\t\tthis.jqMin = min;\n\t\tthis.jqMax = max;\n\t\tthis.jqPasBloc = etendue == 0 ? 1 : etendue;\n\t}\n\n\tpublic int getOrientation() { return this.jqOrient; }\n\tpublic int getValue() { return this.jqValeur; }\n\tpublic int getMinimum() { return this.jqMin; }\n\tpublic int getMaximum() { return this.jqMax; }\n\tpublic int getVisibleAmount() { return this.jqEtendue; }\n\tpublic int getUnitIncrement() { return this.jqPasUnite; }\n\tpublic int getBlockIncrement() { return this.jqPasBloc; }\n\tpublic void setUnitIncrement(int p) { this.jqPasUnite = p; }\n\tpublic void setBlockIncrement(int p) { this.jqPasBloc = p; }\n\tpublic void addAdjustmentListener(AdjustmentListener l) { if (l != null) { this.jqEcouteurs.add(l); } }\n\tpublic void removeAdjustmentListener(AdjustmentListener l) { this.jqEcouteurs.remove(l); }\n\n\t/* Les réglages suivent DefaultBoundedRangeModel (setValue, setMinimum...). */\n\tpublic void setValue(int n)\n\t{\n\t\tint v = Math.max(n, this.jqMin);\n\t\tif (v + this.jqEtendue > this.jqMax) { v = this.jqMax - this.jqEtendue; }\n\t\tthis.jqPlage(v, this.jqEtendue, this.jqMin, this.jqMax);\n\t}\n\n\tpublic void setMinimum(int n)\n\t{\n\t\tint nMax = Math.max(n, this.jqMax);\n\t\tint nVal = Math.max(n, this.jqValeur);\n\t\tint nEt = Math.min(nMax - nVal, this.jqEtendue);\n\t\tthis.jqPlage(nVal, nEt, n, nMax);\n\t}\n\n\tpublic void setMaximum(int n)\n\t{\n\t\tint nMin = Math.min(n, this.jqMin);\n\t\tint nEt = Math.min(n - nMin, this.jqEtendue);\n\t\tint nVal = Math.min(n - nEt, this.jqValeur);\n\t\tthis.jqPlage(nVal, nEt, nMin, n);\n\t}\n\n\tpublic void setVisibleAmount(int n)\n\t{\n\t\tint nEt = Math.max(0, n);\n\t\tif (this.jqValeur + nEt > this.jqMax) { nEt = this.jqMax - this.jqValeur; }\n\t\tthis.jqPlage(this.jqValeur, nEt, this.jqMin, this.jqMax);\n\t}\n\n\tpublic void setValues(int v, int e, int min, int max) { this.jqPlage(v, e, min, max); }\n\n\tprivate void jqPlage(int v, int e, int min, int max)\n\t{\n\t\tif (min > max) { min = max; }\n\t\tif (v > max) { max = v; }\n\t\tif (v < min) { min = v; }\n\t\tif (e + v > max) { e = max - v; }\n\t\tif (e < 0) { e = 0; }\n\t\tif (v == this.jqValeur && e == this.jqEtendue && min == this.jqMin && max == this.jqMax) { return; }\n\t\tthis.jqValeur = v;\n\t\tthis.jqEtendue = e;\n\t\tthis.jqMin = min;\n\t\tthis.jqMax = max;\n\t\t/* JScrollBar signale toujours TRACK, quelle que soit la partie de la barre utilisée. */\n\t\tAdjustmentEvent ev = new AdjustmentEvent(this, 601, 5, this.jqValeur);\n\t\tfor (AdjustmentListener l : new ArrayList<AdjustmentListener>(this.jqEcouteurs)) { l.adjustmentValueChanged(ev); }\n\t}\n\n\t/* Appelé par l'interface du site : flèches (pas unité), clic dans la barre (pas bloc), curseur glissé. */\n\tvoid jqAjuster(int type, int v)\n\t{\n\t\tint nv = v;\n\t\tif (type == 1) { nv = this.jqValeur + this.jqPasUnite; }\n\t\tif (type == 2) { nv = this.jqValeur - this.jqPasUnite; }\n\t\tif (type == 3) { nv = this.jqValeur - this.jqPasBloc; }\n\t\tif (type == 4) { nv = this.jqValeur + this.jqPasBloc; }\n\t\tthis.setValue(nv);\n\t}\n}\n\nclass JComboBox<E> extends JComponent\n{\n\tprivate ArrayList<E> jqItems = new ArrayList<E>();\n\tprivate int jqChoix = -1;\n\tprivate ArrayList<ActionListener> jqActions = new ArrayList<ActionListener>();\n\tprivate ArrayList<ItemListener> jqItemsEcoute = new ArrayList<ItemListener>();\n\n\tpublic JComboBox() { }\n\n\tpublic JComboBox(E[] items)\n\t{\n\t\tfor (int i = 0; i < items.length; i++) { this.jqItems.add(items[i]); }\n\t\tif (items.length > 0) { this.jqChoix = 0; }\n\t}\n\n\tpublic void addItem(E item)\n\t{\n\t\tthis.jqItems.add(item);\n\t\tif (this.jqChoix < 0) { this.setSelectedIndex(0); }\n\t}\n\n\tpublic int getItemCount() { return this.jqItems.size(); }\n\tpublic E getItemAt(int i) { if (i < 0 || i >= this.jqItems.size()) { return null; } return this.jqItems.get(i); }\n\tpublic int getSelectedIndex() { return this.jqChoix; }\n\tpublic Object getSelectedItem() { return this.jqChoix < 0 ? null : this.jqItems.get(this.jqChoix); }\n\tpublic void setSelectedItem(Object o) { int i = this.jqItems.indexOf(o); if (i >= 0) { this.setSelectedIndex(i); } }\n\tpublic void addActionListener(ActionListener l) { if (l != null) { this.jqActions.add(l); } }\n\tpublic void addItemListener(ItemListener l) { if (l != null) { this.jqItemsEcoute.add(l); } }\n\tpublic void setEditable(boolean b) { }\n\n\tpublic void removeAllItems()\n\t{\n\t\tthis.jqItems.clear();\n\t\tthis.jqChoix = -1;\n\t}\n\n\tpublic void setSelectedIndex(int i)\n\t{\n\t\tif (i < -1 || i >= this.jqItems.size()) { throw new IllegalArgumentException(\"setSelectedIndex: \" + i + \" out of bounds\"); }\n\t\tint ancien = this.jqChoix;\n\t\tif (ancien != i)\n\t\t{\n\t\t\tthis.jqChoix = i;\n\t\t\tif (ancien >= 0) { this.jqSignaler(this.jqItems.get(ancien), 2); }\n\t\t\tif (i >= 0) { this.jqSignaler(this.jqItems.get(i), 1); }\n\t\t}\n\t\tActionEvent e = new ActionEvent(this, 1001, \"comboBoxChanged\");\n\t\tfor (ActionListener l : new ArrayList<ActionListener>(this.jqActions)) { l.actionPerformed(e); }\n\t}\n\n\tprivate void jqSignaler(Object item, int etat)\n\t{\n\t\tItemEvent e = new ItemEvent(this, 701, item, etat);\n\t\tfor (ItemListener l : new ArrayList<ItemListener>(this.jqItemsEcoute)) { l.itemStateChanged(e); }\n\t}\n}\n\nclass JMenuBar extends JComponent\n{\n\tpublic JMenu add(JMenu m)\n\t{\n\t\tsuper.add(m);\n\t\treturn m;\n\t}\n}\n\nclass JMenuItem extends AbstractButton\n{\n\tpublic JMenuItem() { }\n\tpublic JMenuItem(String texte) { this.setText(texte); }\n}\n\nclass JMenu extends JMenuItem\n{\n\tpublic JMenu() { }\n\tpublic JMenu(String texte) { super(texte); }\n\n\tpublic JMenuItem add(JMenuItem i)\n\t{\n\t\tsuper.add(i);\n\t\treturn i;\n\t}\n\n\tpublic void addSeparator() { super.add(new JqSeparateur()); }\n}\n\nclass JqSeparateur extends JComponent\n{\n}\n");
 </script>
 <script>
 /* ==========================================================================
@@ -23380,6 +23380,11 @@ var IHM_DECRIRE = T(`
         if (x instanceof JLabel) { s += " \\"" + ((JLabel) x).getText() + "\\""; }
         if (x instanceof JTextField) { s += " (" + ((JTextField) x).getColumns() + " colonnes)"; }
         if (x instanceof JPanel) { s += " " + layout((JPanel) x); }
+        if (x instanceof JScrollBar)
+        {
+            JScrollBar b = (JScrollBar) x;
+            s += " (" + (b.getOrientation() == JScrollBar.HORIZONTAL ? "horizontale" : "verticale") + ", " + b.getMinimum() + " à " + b.getMaximum() + ", étendue " + b.getVisibleAmount() + ", valeur " + b.getValue() + ")";
+        }
         return s;
     }
 
@@ -24192,6 +24197,864 @@ public class PanelNuancier extends JPanel implements ActionListener
 	]
 });
 
+/* ---------------------------------------------------------------- 4 (TP5, TP6 exercice 1) */
+IHM_UNITES.push({
+	id: "i04", num: 4, titre: "Cocher, choisir, saisir", badge: "Formulaire",
+	idee: [
+		"Une **case à cocher** (`JCheckBox`) est un choix non exclusif : on peut en cocher plusieurs. Un **bouton radio** (`JRadioButton`) est un choix exclusif, à condition de le ranger dans un `ButtonGroup` : cocher l'un décoche l'autre. Le `ButtonGroup` n'est **pas** un composant : on n'écrit jamais `this.add(groupe)`, on ajoute les boutons au panneau **et** au groupe.",
+		"Cocher ou décocher envoie un `ItemEvent` aux écouteurs inscrits avec `addItemListener(...)`. L'écouteur implémente `ItemListener` et sa méthode `itemStateChanged(ItemEvent e)`. Passer d'un bouton radio à l'autre appelle cette méthode **deux fois** : `e.getStateChange()` vaut `ItemEvent.DESELECTED` pour l'ancien, puis `ItemEvent.SELECTED` pour le nouveau. `isSelected()` dit si un bouton est coché.",
+		"Un **champ de saisie** (`JTextField`) se lit avec `getText()` et s'écrit avec `setText(...)`. La touche **Entrée** envoie un `ActionEvent` (le même que le clic d'un bouton) : on l'écoute avec `addActionListener`. Le texte se convertit avec `Integer.parseInt` ou `Double.parseDouble`, qui lèvent une `NumberFormatException` si la saisie n'est pas un nombre. `setEditable(false)` bloque la saisie. Avant de coder, on dresse le **tableau des événements** : source, interface d'écoute, cibles modifiées, action. (En AWT : `Checkbox`, `CheckboxGroup`, `TextField`.)"
+	],
+	exemple: {
+		java: T(`
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+
+public class FrameBoisson extends JFrame
+{
+    public FrameBoisson()
+    {
+        this.setTitle("Boisson");
+        this.setSize(320, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelBoisson());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBoisson();
+    }
+}
+
+class PanelBoisson extends JPanel implements ItemListener, ActionListener
+{
+    private JRadioButton rbThe;
+    private JRadioButton rbCafe;
+    private JCheckBox    cbSucre;
+    private JTextField   txtTasses;
+    private JLabel       lblCommande;
+
+    public PanelBoisson()
+    {
+        ButtonGroup bgBoisson;
+
+        this.setLayout(new GridLayout(3, 2));
+
+        /* Création des composants */
+        bgBoisson        = new ButtonGroup();
+        this.rbThe       = new JRadioButton("Thé", true);
+        this.rbCafe      = new JRadioButton("Café");
+        bgBoisson.add(this.rbThe);
+        bgBoisson.add(this.rbCafe);
+        this.cbSucre     = new JCheckBox("Sucre");
+        this.txtTasses   = new JTextField("1", 4);
+        this.lblCommande = new JLabel();
+
+        /* Positionnement des composants */
+        this.add(this.rbThe);
+        this.add(this.rbCafe);
+        this.add(this.cbSucre);
+        this.add(this.txtTasses);
+        this.add(new JLabel("Commande :"));
+        this.add(this.lblCommande);
+
+        /* Activation des composants */
+        this.rbThe.addItemListener(this);
+        this.rbCafe.addItemListener(this);
+        this.cbSucre.addItemListener(this);
+        this.txtTasses.addActionListener(this);
+
+        this.majCommande();
+    }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+        if (e.getStateChange() == ItemEvent.SELECTED) { System.out.println("coché"); }
+        else                                          { System.out.println("décoché"); }
+        this.majCommande();
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        this.majCommande();
+    }
+
+    private void majCommande()
+    {
+        String boisson = "café";
+        if (this.rbThe.isSelected()) { boisson = "thé"; }
+        if (this.cbSucre.isSelected()) { boisson += " sucré"; }
+
+        try
+        {
+            int nb = Integer.parseInt(this.txtTasses.getText());
+            this.lblCommande.setText(nb + " " + boisson);
+        }
+        catch (NumberFormatException ex)
+        {
+            this.lblCommande.setText("nombre ?");
+        }
+    }
+}`),
+		note: "Passe de « Thé » à « Café » : la console affiche « décoché » puis « coché », car les deux boutons radio changent d'état. Change le nombre de tasses puis appuie sur **Entrée** : sans Entrée, aucun événement n'est envoyé. Écris « deux » et valide pour voir la `NumberFormatException` rattrapée."
+	},
+	exos: [
+		{ id: "i04.groupe", k: "qcm", q: "Trois `JRadioButton` sont ajoutés au panneau, mais le programmeur a oublié de les ranger dans un `ButtonGroup`. Que se passe-t-il ?",
+			opts: ["On peut les cocher tous les trois en même temps", "Erreur de compilation", "Aucun ne peut être coché", "Le premier reste coché et les autres sont grisés"], a: 0,
+			expl: "C'est le `ButtonGroup` qui rend le choix exclusif. Sans lui, un `JRadioButton` se comporte comme une case à cocher, seul son dessin change." },
+		{ id: "i04.entree", k: "qcm", q: "L'utilisateur tape un nombre dans un `JTextField` puis appuie sur Entrée. Quelle méthode de l'écouteur est appelée ?",
+			opts: ["`actionPerformed(ActionEvent e)`, après `addActionListener`", "`itemStateChanged(ItemEvent e)`, après `addItemListener`", "`textChanged(TextEvent e)`", "Aucune : il faut un bouton « Valider »"], a: 0,
+			expl: "Entrée dans un champ de saisie produit un `ActionEvent`, comme le clic d'un bouton. `e.getSource()` permet de savoir si l'événement vient du champ ou d'un bouton." },
+		{ id: "i04.parse", k: "qcm", q: "`txtAge.getText()` renvoie `\"vingt\"`. Que fait `Integer.parseInt(this.txtAge.getText())` ?",
+			opts: ["Il lève une `NumberFormatException` à l'exécution", "Il renvoie 0", "Il renvoie 20", "Le code ne compile pas"], a: 0,
+			expl: "Le code compile (on passe bien une `String`), mais la conversion échoue à l'exécution. On l'entoure d'un `try` / `catch (NumberFormatException ex)` pour afficher un message au lieu de planter." },
+		{ id: "i04.trace", k: "predict",
+			q: "`doClick()` coche ou décoche comme la souris. Qu'affiche ce programme ?",
+			code: T(`
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
+public class Menu
+{
+    public static void main(String[] args)
+    {
+        PanelMenu p = new PanelMenu();
+        p.getRbFromage().doClick();
+        p.getRbDessert().doClick();
+        p.getRbDessert().doClick();
+        p.getCbEntree().doClick();
+        p.getCbEntree().doClick();
+    }
+}
+
+class PanelMenu extends JPanel implements ItemListener
+{
+    private JCheckBox    cbEntree;
+    private JRadioButton rbFromage;
+    private JRadioButton rbDessert;
+
+    public PanelMenu()
+    {
+        ButtonGroup bgFin = new ButtonGroup();
+        this.cbEntree  = new JCheckBox("Entrée");
+        this.rbFromage = new JRadioButton("Fromage");
+        this.rbDessert = new JRadioButton("Dessert");
+        bgFin.add(this.rbFromage);
+        bgFin.add(this.rbDessert);
+        this.add(this.cbEntree);
+        this.add(this.rbFromage);
+        this.add(this.rbDessert);
+        this.cbEntree.addItemListener(this);
+        this.rbFromage.addItemListener(this);
+        this.rbDessert.addItemListener(this);
+    }
+
+    public JCheckBox    getCbEntree()  { return this.cbEntree; }
+    public JRadioButton getRbFromage() { return this.rbFromage; }
+    public JRadioButton getRbDessert() { return this.rbDessert; }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+        String nom = "Dessert";
+        if (e.getSource() == this.cbEntree)  { nom = "Entrée"; }
+        if (e.getSource() == this.rbFromage) { nom = "Fromage"; }
+
+        if (e.getStateChange() == ItemEvent.SELECTED) { System.out.println(nom + " coché"); }
+        else                                          { System.out.println(nom + " décoché"); }
+    }
+}`),
+			expl: "Cocher « Dessert » décoche d'abord « Fromage » (même groupe) : deux événements, l'ancien bouton en premier. Un second clic sur un bouton radio déjà coché ne change rien, donc aucun événement. La case « Entrée » n'est dans aucun groupe : chaque clic la coche puis la décoche." },
+		{ id: "i04.ecouteur", k: "bug",
+			code: T(`
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+public class PanelPrenom extends JPanel implements ActionListener
+{
+    private JTextField txtPrenom;
+    private JLabel     lblBonjour;
+
+    public PanelPrenom()
+    {
+        this.txtPrenom  = new JTextField(10);
+        this.lblBonjour = new JLabel("Ton prénom ?");
+        this.add(this.txtPrenom);
+        this.add(this.lblBonjour);
+        this.txtPrenom.addItemListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        this.lblBonjour.setText("Bonjour " + this.txtPrenom.getText());
+    }
+}`),
+			ligne: 18, fix: ["this.txtPrenom.addActionListener(this);"],
+			expl: "Un `JTextField` n'a pas de `addItemListener` (ce n'est pas une case qu'on coche) : javac refuse. La touche Entrée envoie un `ActionEvent`, on écrit donc `addActionListener(this)`." },
+		{ id: "i04.fill", k: "fill", q: "Complète le panneau : deux boutons radio exclusifs « Petit » (coché au départ) et « Grand », et un prix qui change avec la taille.",
+			code: T(`
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
+public class PanelTaille extends JPanel implements ___
+{
+    private JRadioButton rbPetit;
+    private JRadioButton rbGrand;
+    private JLabel       lblPrix;
+
+    public PanelTaille()
+    {
+        ___ bgTaille = new ButtonGroup();
+        this.rbPetit = new JRadioButton("Petit", true);
+        this.rbGrand = new JRadioButton("Grand");
+        bgTaille.___(this.rbPetit);
+        bgTaille.add(this.rbGrand);
+        this.lblPrix = new JLabel("2,50 €");
+
+        this.add(this.rbPetit);
+        this.add(this.rbGrand);
+        this.add(this.lblPrix);
+
+        this.rbPetit.___(this);
+        this.rbGrand.addItemListener(this);
+    }
+
+    public void ___(ItemEvent e)
+    {
+        if (this.rbGrand.___())
+        {
+            this.lblPrix.setText("3,80 €");
+        }
+        else
+        {
+            this.lblPrix.setText("2,50 €");
+        }
+    }
+}`),
+			trous: [["ItemListener"], ["ButtonGroup"], ["add"], ["addItemListener"], ["itemStateChanged"], ["isSelected"]],
+			expl: "Le groupe rend les deux boutons exclusifs (on y ajoute chaque bouton avec `add`). Le panneau écoute les changements d'état avec `ItemListener` / `addItemListener` / `itemStateChanged`, et `isSelected()` dit quel bouton est coché." },
+		{ id: "i04.code", k: "code", mode: "class", titre: "Le convertisseur inch / cm", lanceur: "FrameMesure",
+			enonce: "Écris `PanelMesure` (un `JPanel` en `GridLayout` de 3 lignes et 2 colonnes) qui implémente `ItemListener` et `ActionListener`. Ajoute dans cet ordre :\n\n- deux boutons radio exclusifs `rbInch` « inch » et `rbCm` « cm », aucun coché au départ ;\n- un `JLabel` `lblMessage` « Choisis une unité » et un `JTextField` `txtSaisie` de 8 colonnes, **non modifiable** et gris clair (`Color.LIGHT_GRAY`) au départ ;\n- un `JLabel` « Résultat : » (variable locale) et un `JLabel` `lblResultat` vide.\n\nTableau des événements :\n\n- **choix de « inch »** (`rbInch`, `ItemListener`) : le champ devient modifiable et blanc, il est vidé ainsi que `lblResultat`, `lblMessage` affiche « inch --> cm », `rbInch` prend la couleur `CLAIR` et `rbCm` la couleur `FONCE` ;\n- **choix de « cm »** (`rbCm`, `ItemListener`) : pareil, avec « cm --> inch », `rbCm` en `CLAIR` et `rbInch` en `FONCE` ;\n- **Entrée dans le champ** (`txtSaisie`, `ActionListener`) : convertit la saisie (1 inch = `INCH_VERS_CM` cm) et affiche le résultat arrondi à 2 chiffres dans `lblResultat`, par exemple « 25,40 cm » ou « 3,94 inch » (`String.format(\"%.2f cm\", ...)`). Si la saisie n'est pas un nombre : « Nombre invalide ».\n\nDans `itemStateChanged`, ne réagis qu'au bouton qui vient d'être **coché** (`ItemEvent.SELECTED`).",
+			regles: ["allman"],
+			harness: ihmTest("TestMesure", `
+        PanelMesure p = new PanelMesure();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JRadioButton inch = (JRadioButton) p.getComponent(0);
+        JRadioButton cm = (JRadioButton) p.getComponent(1);
+        JLabel msg = (JLabel) p.getComponent(2);
+        JTextField txt = (JTextField) p.getComponent(3);
+        JLabel res = (JLabel) p.getComponent(5);
+        System.out.println(inch.isSelected() + " " + cm.isSelected() + " " + txt.isEditable() + " " + txt.getBackground().equals(Color.LIGHT_GRAY) + " [" + msg.getText() + "]");
+        inch.doClick();
+        System.out.println("inch : " + txt.isEditable() + " " + txt.getBackground().equals(Color.WHITE) + " [" + msg.getText() + "] " + inch.getBackground() + " " + cm.getBackground());
+        txt.setText("10");
+        txt.postActionEvent();
+        System.out.println("  10 -> [" + res.getText() + "]");
+        txt.setText("2.5");
+        txt.postActionEvent();
+        System.out.println("  2.5 -> [" + res.getText() + "]");
+        cm.doClick();
+        System.out.println("cm : [" + txt.getText() + "] [" + res.getText() + "] [" + msg.getText() + "] " + inch.getBackground() + " " + cm.getBackground());
+        txt.setText("10");
+        txt.postActionEvent();
+        System.out.println("  10 -> [" + res.getText() + "]");
+        txt.setText("dix");
+        txt.postActionEvent();
+        System.out.println("  dix -> [" + res.getText() + "]");
+        cm.doClick();
+        inch.doClick();
+        txt.setText("1");
+        txt.postActionEvent();
+        System.out.println("  1 -> [" + res.getText() + "] " + inch.isSelected() + " " + cm.isSelected());`),
+			depart: T(`
+//// Fichier : FrameMesure.java
+import javax.swing.JFrame;
+
+public class FrameMesure extends JFrame
+{
+    public FrameMesure()
+    {
+        this.setTitle("Conversion");
+        this.setSize(300, 140);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelMesure());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameMesure();
+    }
+}
+//// Fichier : PanelMesure.java
+import java.awt.Color;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+
+public class PanelMesure extends JPanel implements ItemListener, ActionListener
+{
+    private static final double INCH_VERS_CM = 2.54;
+    private static final Color  FONCE = new Color(190, 160, 90);
+    private static final Color  CLAIR = new Color(255, 240, 180);
+
+    private JRadioButton rbInch;
+    private JRadioButton rbCm;
+    private JTextField   txtSaisie;
+    private JLabel       lblMessage;
+    private JLabel       lblResultat;
+
+    public PanelMesure()
+    {
+
+    }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameMesure.java
+import javax.swing.JFrame;
+
+public class FrameMesure extends JFrame
+{
+    public FrameMesure()
+    {
+        this.setTitle("Conversion");
+        this.setSize(300, 140);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelMesure());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameMesure();
+    }
+}
+//// Fichier : PanelMesure.java
+import java.awt.Color;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+
+public class PanelMesure extends JPanel implements ItemListener, ActionListener
+{
+    private static final double INCH_VERS_CM = 2.54;
+    private static final Color  FONCE = new Color(190, 160, 90);
+    private static final Color  CLAIR = new Color(255, 240, 180);
+
+    private JRadioButton rbInch;
+    private JRadioButton rbCm;
+    private JTextField   txtSaisie;
+    private JLabel       lblMessage;
+    private JLabel       lblResultat;
+
+    public PanelMesure()
+    {
+        ButtonGroup bgUnite;
+
+        this.setLayout(new GridLayout(3, 2));
+
+        /* Création des composants */
+        bgUnite          = new ButtonGroup();
+        this.rbInch      = new JRadioButton("inch");
+        this.rbCm        = new JRadioButton("cm");
+        bgUnite.add(this.rbInch);
+        bgUnite.add(this.rbCm);
+        this.lblMessage  = new JLabel("Choisis une unité");
+        this.txtSaisie   = new JTextField(8);
+        this.txtSaisie.setEditable(false);
+        this.txtSaisie.setBackground(Color.LIGHT_GRAY);
+        this.lblResultat = new JLabel("");
+
+        /* Positionnement des composants */
+        this.add(this.rbInch);
+        this.add(this.rbCm);
+        this.add(this.lblMessage);
+        this.add(this.txtSaisie);
+        this.add(new JLabel("Résultat :"));
+        this.add(this.lblResultat);
+
+        /* Activation des composants */
+        this.rbInch.addItemListener(this);
+        this.rbCm.addItemListener(this);
+        this.txtSaisie.addActionListener(this);
+    }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+        if (e.getStateChange() != ItemEvent.SELECTED)
+        {
+            return;
+        }
+
+        this.txtSaisie.setEditable(true);
+        this.txtSaisie.setBackground(Color.WHITE);
+        this.txtSaisie.setText("");
+        this.lblResultat.setText("");
+
+        if (e.getSource() == this.rbInch)
+        {
+            this.lblMessage.setText("inch --> cm");
+            this.rbInch.setBackground(PanelMesure.CLAIR);
+            this.rbCm.setBackground(PanelMesure.FONCE);
+        }
+        else
+        {
+            this.lblMessage.setText("cm --> inch");
+            this.rbCm.setBackground(PanelMesure.CLAIR);
+            this.rbInch.setBackground(PanelMesure.FONCE);
+        }
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        double valeur;
+
+        try
+        {
+            valeur = Double.parseDouble(this.txtSaisie.getText());
+            if (this.rbInch.isSelected())
+            {
+                this.lblResultat.setText(String.format("%.2f cm", valeur * PanelMesure.INCH_VERS_CM));
+            }
+            else
+            {
+                this.lblResultat.setText(String.format("%.2f inch", valeur / PanelMesure.INCH_VERS_CM));
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            this.lblResultat.setText("Nombre invalide");
+        }
+    }
+}`),
+			indices: ["Le constructeur garde ses trois parties. Le `ButtonGroup` est une variable locale : on y ajoute `rbInch` et `rbCm`, mais on ne l'ajoute pas au panneau.",
+				"Dans `itemStateChanged`, commence par `if (e.getStateChange() != ItemEvent.SELECTED) { return; }`, puis regarde `e.getSource()` pour savoir quelle unité vient d'être choisie.",
+				"Dans `actionPerformed`, `Double.parseDouble(this.txtSaisie.getText())` dans un `try`, puis `rbInch.isSelected()` pour choisir le sens de la conversion. `String.format(\"%.2f cm\", x)` écrit la virgule française."] }
+	]
+});
+
+/* ---------------------------------------------------------------- 5 (TP6, TP7) */
+IHM_UNITES.push({
+	id: "i05", num: 5, titre: "Barres de défilement et couleurs", badge: "Curseur",
+	idee: [
+		"Une barre de défilement se crée avec `new JScrollBar(orientation, valeur, étendue, min, max)`. L'**étendue** est la taille du curseur : la valeur va de `min` à `max - étendue`. Pour aller de 0 à 255 avec un curseur de 10, on écrit donc `new JScrollBar(JScrollBar.HORIZONTAL, 0, 10, 0, 265)`. Une plage impossible (min plus grand que max...) lève une `IllegalArgumentException`.",
+		"Les flèches avancent de `setUnitIncrement(...)` (1 par défaut), un clic dans la barre de `setBlockIncrement(...)` (l'étendue par défaut). Chaque changement de valeur, même par `setValue(...)` dans le programme, envoie un `AdjustmentEvent` aux écouteurs `AdjustmentListener` : méthode `adjustmentValueChanged(AdjustmentEvent e)`, valeur avec `getValue()`. Une valeur hors limites est ramenée dans la plage ; si elle ne change pas, aucun événement.",
+		"Conversions utiles : `Integer.toHexString(171)` donne `\"ab\"`, `String.format(\"%02X\", 10)` donne `\"0A\"`, `Integer.parseInt(\"ff\", 16)` donne 255. Une couleur se compose avec `new Color(rouge, vert, bleu)`, chaque part entre 0 et 255. (En AWT, la barre s'appelle `Scrollbar` et `getAdjustmentType()` dit si on a cliqué une flèche ou un bloc ; en Swing, `JScrollBar` répond toujours `TRACK`.)"
+	],
+	exemple: {
+		java: T(`
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GridLayout;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+
+public class FrameMelange extends JFrame
+{
+    public FrameMelange()
+    {
+        this.setTitle("Mélange de couleurs");
+        this.setSize(360, 220);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelMelange());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameMelange();
+    }
+}
+
+class PanelMelange extends JPanel implements AdjustmentListener
+{
+    private JScrollBar sbRouge;
+    private JScrollBar sbVert;
+    private JScrollBar sbBleu;
+    private JPanel     panelApercu;
+    private JLabel     lblCode;
+
+    public PanelMelange()
+    {
+        JPanel panelBarres;
+
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        this.sbRouge     = new JScrollBar(JScrollBar.HORIZONTAL, 255, 10, 0, 265);
+        this.sbVert      = new JScrollBar(JScrollBar.HORIZONTAL, 128, 10, 0, 265);
+        this.sbBleu      = new JScrollBar(JScrollBar.HORIZONTAL, 128, 10, 0, 265);
+        this.sbRouge.setBlockIncrement(32);
+        this.sbRouge.setUnitIncrement(16);
+        this.panelApercu = new JPanel();
+        this.lblCode     = new JLabel("", JLabel.CENTER);
+        panelBarres      = new JPanel(new GridLayout(3, 1, 0, 4));
+
+        /* Positionnement des composants */
+        panelBarres.add(this.sbRouge);
+        panelBarres.add(this.sbVert);
+        panelBarres.add(this.sbBleu);
+        this.add(this.panelApercu, BorderLayout.CENTER);
+        this.add(this.lblCode, BorderLayout.NORTH);
+        this.add(panelBarres, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.sbRouge.addAdjustmentListener(this);
+        this.sbVert.addAdjustmentListener(this);
+        this.sbBleu.addAdjustmentListener(this);
+
+        this.majCouleur();
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+        System.out.println("nouvelle valeur : " + e.getValue());
+        this.majCouleur();
+    }
+
+    private void majCouleur()
+    {
+        int r = this.sbRouge.getValue();
+        int v = this.sbVert.getValue();
+        int b = this.sbBleu.getValue();
+
+        this.panelApercu.setBackground(new Color(r, v, b));
+        this.lblCode.setText(String.format("rgb(%d, %d, %d) = #%02X%02X%02X", r, v, b, r, v, b));
+    }
+}`),
+		note: "Fais glisser les curseurs : l'aperçu change de couleur et le code hexadécimal suit. Sur la barre du rouge, les flèches avancent de 16 et un clic dans la barre de 32. Pousse une barre à fond : la valeur s'arrête à 255, soit `max - étendue`."
+	},
+	exos: [
+		{ id: "i05.max", k: "qcm", q: "Quelle est la plus grande valeur que peut prendre `new JScrollBar(JScrollBar.HORIZONTAL, 0, 40, 0, 300)` ?",
+			opts: ["260", "300", "340", "299"], a: 0,
+			expl: "Le curseur mesure 40 (l'étendue) et ne sort pas de la barre : la valeur, c'est-à-dire le bord gauche du curseur, s'arrête à `max - étendue` = 300 - 40 = 260." },
+		{ id: "i05.pas", k: "qcm", q: "On veut que les **flèches** de la barre `sbNiveau` avancent de 16 à chaque clic. Quelle instruction écrire ?",
+			opts: ["`this.sbNiveau.setUnitIncrement(16);`", "`this.sbNiveau.setBlockIncrement(16);`", "`this.sbNiveau.setValue(16);`", "`this.sbNiveau.setVisibleAmount(16);`"], a: 0,
+			expl: "Le pas « unité » sert aux flèches, le pas « bloc » au clic dans la barre (de chaque côté du curseur). `setVisibleAmount` change la taille du curseur, `setValue` le déplace." },
+		{ id: "i05.hexa", k: "qcm", q: "Que vaut `Integer.parseInt(\"1f\", 16) + 1` ?",
+			opts: ["32", "\"1f1\"", "20", "Une `NumberFormatException`"], a: 0,
+			expl: "Le second paramètre est la base : « 1f » en base 16 vaut 1 × 16 + 15 = 31, et 31 + 1 = 32. Sans la base, `Integer.parseInt(\"1f\")` lèverait une `NumberFormatException`." },
+		{ id: "i05.trace", k: "predict",
+			q: "`setValue` déplace le curseur depuis le programme. Qu'affiche ce programme ?",
+			code: T(`
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JScrollBar;
+
+public class Curseur implements AdjustmentListener
+{
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+        System.out.println("-> " + e.getValue() + " = " + String.format("%02X", e.getValue()));
+    }
+
+    public static void main(String[] args)
+    {
+        JScrollBar sb = new JScrollBar(JScrollBar.HORIZONTAL, 0, 10, 0, 265);
+        sb.addAdjustmentListener(new Curseur());
+        sb.setValue(171);
+        sb.setValue(171);
+        sb.setValue(300);
+        sb.setValue(-8);
+        System.out.println(sb.getValue() + " " + sb.getBlockIncrement());
+    }
+}`),
+			expl: "171 s'écrit AB en hexadécimal. Le second `setValue(171)` ne change rien : pas d'événement. 300 est ramené à 265 - 10 = 255 (FF), -8 à 0. Le pas de bloc n'a pas été réglé : il vaut l'étendue, 10." },
+		{ id: "i05.ecoute", k: "bug",
+			code: T(`
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+
+public class PanelVolume extends JPanel implements AdjustmentListener
+{
+    private JScrollBar sbVolume;
+    private JLabel     lblVolume;
+
+    public PanelVolume()
+    {
+        this.sbVolume  = new JScrollBar(JScrollBar.VERTICAL, 50, 10, 0, 110);
+        this.lblVolume = new JLabel("50");
+        this.add(this.sbVolume);
+        this.add(this.lblVolume);
+        this.sbVolume.addActionListener(this);
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+        this.lblVolume.setText("" + this.sbVolume.getValue());
+    }
+}`),
+			ligne: 18, fix: ["this.sbVolume.addAdjustmentListener(this);"],
+			expl: "Une barre de défilement n'envoie pas d'`ActionEvent` : `JScrollBar` n'a pas de méthode `addActionListener` et javac refuse. Son écouteur s'inscrit avec `addAdjustmentListener`." },
+		{ id: "i05.fill", k: "fill", q: "Complète le panneau : une barre horizontale de 0 à 100 (curseur de 10), des blocs de 20, et un label qui affiche sa valeur.",
+			code: T(`
+import java.awt.BorderLayout;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+
+public class PanelJauge extends JPanel implements ___
+{
+    private JScrollBar sbJauge;
+    private JLabel     lblJauge;
+
+    public PanelJauge()
+    {
+        this.setLayout(new BorderLayout());
+        this.sbJauge  = new JScrollBar(JScrollBar.HORIZONTAL, 0, 10, 0, ___);
+        this.sbJauge.___(20);
+        this.lblJauge = new JLabel("0 %", JLabel.CENTER);
+
+        this.add(this.sbJauge, BorderLayout.SOUTH);
+        this.add(this.lblJauge, BorderLayout.CENTER);
+
+        this.sbJauge.___(this);
+    }
+
+    public void ___(AdjustmentEvent e)
+    {
+        this.lblJauge.setText(e.___() + " %");
+    }
+}`),
+			trous: [["AdjustmentListener"], ["110"], ["setBlockIncrement"], ["addAdjustmentListener"], ["adjustmentValueChanged"], ["getValue"]],
+			expl: "Pour atteindre 100 avec un curseur de 10, le maximum est 100 + 10 = 110. Les blocs se règlent avec `setBlockIncrement`, l'écouteur s'inscrit avec `addAdjustmentListener` et reçoit `adjustmentValueChanged`, où `e.getValue()` donne la nouvelle valeur." },
+		{ id: "i05.code", k: "code", mode: "class", titre: "Décimal et hexadécimal", lanceur: "FrameSelectCouleur",
+			enonce: "Écris `PanelSelectCouleur` (un `JPanel` en `GridLayout` d'une ligne et 3 colonnes) qui implémente `AdjustmentListener` et `ActionListener`. Ajoute dans cet ordre :\n\n- une barre horizontale `sbDefil` pour les valeurs de 0 à 255 (0 au départ, curseur de 10), avec des flèches de 16 et des blocs de 32 ;\n- un `JTextField` `txtDecimal` de 4 colonnes contenant « 0 » ;\n- un `JTextField` `txtHexa` de 4 colonnes contenant « 00 ».\n\nTableau des événements :\n\n- **déplacement de la barre** (`sbDefil`, `AdjustmentListener`) : `txtDecimal` affiche la valeur en décimal, `txtHexa` en hexadécimal sur 2 chiffres majuscules (`String.format(\"%02X\", ...)`) ;\n- **Entrée dans `txtDecimal`** (`ActionListener`) : la barre prend la valeur saisie ;\n- **Entrée dans `txtHexa`** (`ActionListener`) : la barre prend la valeur saisie en base 16.\n\nAprès chaque Entrée, les **deux** champs affichent la valeur réelle de la barre : 300 devient 255 (FF), et une saisie qui n'est pas un nombre est remplacée par la valeur actuelle.",
+			regles: ["allman"],
+			harness: ihmTest("TestSelectCouleur", `
+        PanelSelectCouleur p = new PanelSelectCouleur();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JScrollBar sb = (JScrollBar) p.getComponent(0);
+        JTextField dec = (JTextField) p.getComponent(1);
+        JTextField hex = (JTextField) p.getComponent(2);
+        System.out.println("pas " + sb.getUnitIncrement() + " / " + sb.getBlockIncrement() + " : [" + dec.getText() + "] [" + hex.getText() + "]");
+        sb.setValue(171);
+        System.out.println("barre 171 : [" + dec.getText() + "] [" + hex.getText() + "]");
+        dec.setText("200");
+        dec.postActionEvent();
+        System.out.println("décimal 200 : " + sb.getValue() + " [" + dec.getText() + "] [" + hex.getText() + "]");
+        hex.setText("ff");
+        hex.postActionEvent();
+        System.out.println("hexa ff : " + sb.getValue() + " [" + dec.getText() + "] [" + hex.getText() + "]");
+        dec.setText("300");
+        dec.postActionEvent();
+        System.out.println("décimal 300 : " + sb.getValue() + " [" + dec.getText() + "] [" + hex.getText() + "]");
+        hex.setText("0a");
+        hex.postActionEvent();
+        System.out.println("hexa 0a : " + sb.getValue() + " [" + dec.getText() + "] [" + hex.getText() + "]");
+        hex.setText("zz");
+        hex.postActionEvent();
+        System.out.println("hexa zz : " + sb.getValue() + " [" + dec.getText() + "] [" + hex.getText() + "]");
+        dec.setText("dix");
+        dec.postActionEvent();
+        System.out.println("décimal dix : " + sb.getValue() + " [" + dec.getText() + "] [" + hex.getText() + "]");
+        sb.setValue(sb.getValue() + sb.getBlockIncrement());
+        System.out.println("un bloc : [" + dec.getText() + "] [" + hex.getText() + "]");`),
+			depart: T(`
+//// Fichier : FrameSelectCouleur.java
+import javax.swing.JFrame;
+
+public class FrameSelectCouleur extends JFrame
+{
+    public FrameSelectCouleur()
+    {
+        this.setTitle("Sélection");
+        this.setSize(400, 80);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelSelectCouleur());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameSelectCouleur();
+    }
+}
+//// Fichier : PanelSelectCouleur.java
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JTextField;
+
+public class PanelSelectCouleur extends JPanel implements AdjustmentListener, ActionListener
+{
+    private JScrollBar sbDefil;
+    private JTextField txtDecimal;
+    private JTextField txtHexa;
+
+    public PanelSelectCouleur()
+    {
+
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameSelectCouleur.java
+import javax.swing.JFrame;
+
+public class FrameSelectCouleur extends JFrame
+{
+    public FrameSelectCouleur()
+    {
+        this.setTitle("Sélection");
+        this.setSize(400, 80);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelSelectCouleur());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameSelectCouleur();
+    }
+}
+//// Fichier : PanelSelectCouleur.java
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JTextField;
+
+public class PanelSelectCouleur extends JPanel implements AdjustmentListener, ActionListener
+{
+    private JScrollBar sbDefil;
+    private JTextField txtDecimal;
+    private JTextField txtHexa;
+
+    public PanelSelectCouleur()
+    {
+        this.setLayout(new GridLayout(1, 3));
+
+        /* Création des composants */
+        this.sbDefil    = new JScrollBar(JScrollBar.HORIZONTAL, 0, 10, 0, 265);
+        this.sbDefil.setUnitIncrement(16);
+        this.sbDefil.setBlockIncrement(32);
+        this.txtDecimal = new JTextField("0", 4);
+        this.txtHexa    = new JTextField("00", 4);
+
+        /* Positionnement des composants */
+        this.add(this.sbDefil);
+        this.add(this.txtDecimal);
+        this.add(this.txtHexa);
+
+        /* Activation des composants */
+        this.sbDefil.addAdjustmentListener(this);
+        this.txtDecimal.addActionListener(this);
+        this.txtHexa.addActionListener(this);
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+        this.majChamps();
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        try
+        {
+            if (e.getSource() == this.txtDecimal)
+            {
+                this.sbDefil.setValue(Integer.parseInt(this.txtDecimal.getText()));
+            }
+            if (e.getSource() == this.txtHexa)
+            {
+                this.sbDefil.setValue(Integer.parseInt(this.txtHexa.getText(), 16));
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            /* Pas un nombre : majChamps() remet la valeur de la barre. */
+        }
+
+        this.majChamps();
+    }
+
+    private void majChamps()
+    {
+        int valeur = this.sbDefil.getValue();
+
+        this.txtDecimal.setText("" + valeur);
+        this.txtHexa.setText(String.format("%02X", valeur));
+    }
+}`),
+			indices: ["Pour aller de 0 à 255 avec un curseur de 10 : `new JScrollBar(JScrollBar.HORIZONTAL, 0, 10, 0, 265)`. Règle ensuite les deux pas avant les `add`.",
+				"Écris une méthode privée `majChamps()` qui recopie la valeur de la barre dans les deux champs. `adjustmentValueChanged` n'a qu'à l'appeler.",
+				"Dans `actionPerformed` : `setValue` ne déclenche pas d'événement si la valeur ne change pas (300 quand la barre est déjà à 255). Appelle donc `majChamps()` à la fin, après le `try` / `catch`, dans tous les cas."] }
+	]
+});
+
 /* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
@@ -24730,7 +25593,10 @@ var SwingUI = (function ()
 				case "JTextField":
 					e = el(o, "input", "jq-txt");
 					e.type = "text";
-					if (document.activeElement !== e) { e.value = G(o, "jqTexte") || ""; }
+					/* Champ en cours de frappe : on garde ce que tape l'utilisateur, sauf si le programme a changé le texte (setText). */
+					var jv = G(o, "jqTexte") || "";
+					if ((document.activeElement !== e || jv !== e.__jv) && e.value !== jv) { e.value = jv; }
+					e.__jv = jv;
 					e.readOnly = !G(o, "jqModifiable");
 					e.disabled = !G(o, "jqActif");
 					var cols = G(o, "jqColonnes");
@@ -24741,8 +25607,8 @@ var SwingUI = (function ()
 					if (!e.__on)
 					{
 						e.__on = 1;
-						e.addEventListener("input", function () { gui.call(o, "jqSaisir", [e.value, false]); });
-						e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); act(o, "jqSaisir", [e.value, true]); } });
+						e.addEventListener("input", function () { gui.call(o, "jqSaisir", [e.value, false]); e.__jv = e.value; });
+						e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); e.__jv = e.value; act(o, "jqSaisir", [e.value, true]); } });
 					}
 					break;
 				case "JScrollBar":
@@ -24776,7 +25642,7 @@ var SwingUI = (function ()
 		function common(o, e, k)
 		{
 			var fond = G(o, "jqFond");
-			var opaque = k === "JTextField" || k === "JButton" || k === "JComboBox" || k === "JScrollBar" || k === "JToggleButton" || k === "JMenuItem" || G(o, "jqOpaque");
+			var opaque = k === "JTextField" || k === "JButton" || k === "JComboBox" || k === "JScrollBar" || k === "JToggleButton" || k === "JCheckBox" || k === "JRadioButton" || k === "JMenuItem" || G(o, "jqOpaque");
 			if (k === "JTextField") { e.style.background = fond ? rgb(fond) : (G(o, "jqModifiable") ? "#fff" : DEF_FOND); }
 			else if (k === "JButton" || k === "JToggleButton" || k === "JMenuItem") { e.style.background = fond ? rgb(fond) : ""; }
 			else { e.style.background = opaque ? (fond ? rgb(fond) : (k === "JPanel" ? DEF_FOND : "")) : ""; }
