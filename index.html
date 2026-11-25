@@ -31456,6 +31456,2879 @@ public class PanelAccueil extends JPanel implements ActionListener
 });
 
 /* ==========================================================================
+   JavaQuest : mini-projets de fin d'unité, semestre 2
+   --------------------------------------------------------------------------
+   Même format que OBJETS_PROJETS (contenu-objets-plus.js) : un projet en
+   2 étapes à la fin de chaque unité, la 2e étape repart du code de la 1re.
+   - IHM_PROJETS : un projet par unité de Dév IHM (i01 à i09).
+   - Le projet de l'unité Dév Objets « Types enveloppes » (o04b).
+   Projets IHM : les deux étapes gardent les mêmes fichiers. La fenêtre est
+   déjà écrite ; les tests ne l'ouvrent jamais (Java tourne sans écran dans
+   validate.js --javac) : ils construisent le panneau et simulent clics,
+   saisies et souris. Chaque projet n'utilise que les notions vues jusqu'à
+   son unité.
+   ========================================================================== */
+var IHM_PROJETS = {};
+
+/* ------------------------------------------------------------- Projet IHM 1 */
+IHM_PROJETS.i01 = { id: "i01.p", titre: "La borne du cinéma",
+	intro: "Le cinéma du quartier veut une borne d'accueil. Pour l'instant, on pose seulement les composants : les clics viendront plus tard. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i01.p1", k: "code", mode: "class", titre: "L'écran d'accueil", lanceur: "FrameBorne", xp: 20,
+			enonce: "`FrameBorne` est écrite. Écris `PanelBorne`, qui hérite de `JPanel` et garde le layout par défaut. Il contient, **dans cet ordre** :\n\n- un `JLabel` « Cinéma Lumière » (attribut `lblTitre`) ;\n- trois `JButton` « Réserver », « Horaires » et « Quitter » (`btnReserver`, `btnHoraires`, `btnQuitter`).\n\nSépare bien les deux parties du constructeur : création des composants, puis positionnement.",
+			regles: ["allman"],
+			harness: ihmTest("TestBorne", `
+        PanelBorne p = new PanelBorne();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        System.out.println(p.getComponentCount() + " composants");`),
+			depart: T(`
+//// Fichier : FrameBorne.java
+import javax.swing.JFrame;
+
+public class FrameBorne extends JFrame
+{
+    public FrameBorne()
+    {
+        this.setTitle("Borne");
+        this.setSize(380, 110);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelBorne());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBorne();
+    }
+}
+//// Fichier : PanelBorne.java
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelBorne extends JPanel
+{
+    private JLabel  lblTitre;
+    private JButton btnReserver;
+    private JButton btnHoraires;
+    private JButton btnQuitter;
+
+    public PanelBorne()
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameBorne.java
+import javax.swing.JFrame;
+
+public class FrameBorne extends JFrame
+{
+    public FrameBorne()
+    {
+        this.setTitle("Borne");
+        this.setSize(380, 110);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelBorne());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBorne();
+    }
+}
+//// Fichier : PanelBorne.java
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelBorne extends JPanel
+{
+    private JLabel  lblTitre;
+    private JButton btnReserver;
+    private JButton btnHoraires;
+    private JButton btnQuitter;
+
+    public PanelBorne()
+    {
+        /* Création des composants */
+        this.lblTitre    = new JLabel("Cinéma Lumière");
+        this.btnReserver = new JButton("Réserver");
+        this.btnHoraires = new JButton("Horaires");
+        this.btnQuitter  = new JButton("Quitter");
+
+        /* Positionnement des composants */
+        this.add(this.lblTitre);
+        this.add(this.btnReserver);
+        this.add(this.btnHoraires);
+        this.add(this.btnQuitter);
+    }
+}`),
+			indices: ["Création : un `new` par attribut, par exemple `this.lblTitre = new JLabel(\"Cinéma Lumière\");`.",
+				"Positionnement : `this.add(...)` pour chaque composant, dans l'ordre de l'énoncé. Le panneau a déjà un layout : n'en crée pas."] },
+		{ id: "i01.p2", k: "code", mode: "class", titre: "Une borne pour chaque cinéma", lanceur: "FrameBorne", xp: 30,
+			enonce: "La borne doit servir à plusieurs cinémas. Remplace le constructeur par `PanelBorne(String cinema, int nbSalles)`. Le panneau contient maintenant, dans cet ordre :\n\n- le label « Cinéma » suivi du nom (`Cinéma Rex`) ;\n- un bouton par salle, « Salle 1 », « Salle 2 »... rangés dans un tableau attribut `tabBtnSalles` (crée-les avec une boucle) ;\n- le bouton « Quitter ».\n\nLes boutons « Réserver » et « Horaires » disparaissent. Dans `FrameBorne`, crée le panneau avec `new PanelBorne(\"Lumière\", 4)`.",
+			regles: ["allman"],
+			harness: ihmTest("TestBorne", `
+        PanelBorne p = new PanelBorne("Rex", 3);
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        PanelBorne q = new PanelBorne("Odéon", 1);
+        System.out.println(nom(q));
+        decrire(q, "    ");
+        System.out.println(p.getComponentCount() + " et " + q.getComponentCount() + " composants");`),
+			depart: "",
+			solution: T(`
+//// Fichier : FrameBorne.java
+import javax.swing.JFrame;
+
+public class FrameBorne extends JFrame
+{
+    public FrameBorne()
+    {
+        this.setTitle("Borne");
+        this.setSize(380, 110);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelBorne("Lumière", 4));
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBorne();
+    }
+}
+//// Fichier : PanelBorne.java
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelBorne extends JPanel
+{
+    private JLabel    lblTitre;
+    private JButton[] tabBtnSalles;
+    private JButton   btnQuitter;
+
+    public PanelBorne(String cinema, int nbSalles)
+    {
+        /* Création des composants */
+        this.lblTitre     = new JLabel("Cinéma " + cinema);
+        this.tabBtnSalles = new JButton[nbSalles];
+        for (int i = 0; i < this.tabBtnSalles.length; i++)
+        {
+            this.tabBtnSalles[i] = new JButton("Salle " + (i + 1));
+        }
+        this.btnQuitter = new JButton("Quitter");
+
+        /* Positionnement des composants */
+        this.add(this.lblTitre);
+        for (int i = 0; i < this.tabBtnSalles.length; i++)
+        {
+            this.add(this.tabBtnSalles[i]);
+        }
+        this.add(this.btnQuitter);
+    }
+}`),
+			indices: ["Le tableau se crée en deux temps : `new JButton[nbSalles]` réserve les cases (toutes `null`), puis une boucle crée chaque bouton.",
+				"Le texte du bouton d'indice `i` est `\"Salle \" + (i + 1)` : les parenthèses évitent d'écrire `Salle 01`.",
+				"N'oublie pas `FrameBorne` : l'ancien `new PanelBorne()` ne compile plus."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 2 */
+IHM_PROJETS.i02 = { id: "i02.p", titre: "La calculatrice",
+	intro: "On dessine la façade d'une calculatrice avec des panneaux imbriqués, chacun avec son layout. Elle ne calcule pas encore : seule la mise en page compte. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i02.p1", k: "code", mode: "class", titre: "L'écran et le pavé", lanceur: "FrameCalculatrice", xp: 20,
+			enonce: "`FrameCalculatrice` est écrite. Écris `PanelCalculatrice` (un `JPanel`) en `BorderLayout` avec 5 pixels d'espace dans les deux sens :\n\n- au nord, un `JLabel` attribut `lblEcran` « 0 », aligné à droite (`JLabel.RIGHT`) ;\n- au centre, un panneau local en `GridLayout` de 4 lignes et 4 colonnes, avec 5 pixels d'espace, qui contient les touches du tableau `TOUCHES` (déjà écrit) dans l'ordre, un `JButton` chacune.\n\nAjoute les composants au panneau principal dans l'ordre nord, centre.",
+			regles: ["allman"],
+			harness: ihmTest("TestCalculatrice", `
+        PanelCalculatrice p = new PanelCalculatrice();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JLabel ecran = (JLabel) p.getComponent(0);
+        System.out.println("écran à droite : " + (ecran.getHorizontalAlignment() == JLabel.RIGHT));`),
+			depart: T(`
+//// Fichier : FrameCalculatrice.java
+import javax.swing.JFrame;
+
+public class FrameCalculatrice extends JFrame
+{
+    public FrameCalculatrice()
+    {
+        this.setTitle("Calculatrice");
+        this.setSize(260, 280);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelCalculatrice());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameCalculatrice();
+    }
+}
+//// Fichier : PanelCalculatrice.java
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCalculatrice extends JPanel
+{
+    private static final String[] TOUCHES = { "7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+" };
+
+    private JLabel lblEcran;
+
+    public PanelCalculatrice()
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameCalculatrice.java
+import javax.swing.JFrame;
+
+public class FrameCalculatrice extends JFrame
+{
+    public FrameCalculatrice()
+    {
+        this.setTitle("Calculatrice");
+        this.setSize(260, 280);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelCalculatrice());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameCalculatrice();
+    }
+}
+//// Fichier : PanelCalculatrice.java
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCalculatrice extends JPanel
+{
+    private static final String[] TOUCHES = { "7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+" };
+
+    private JLabel lblEcran;
+
+    public PanelCalculatrice()
+    {
+        JPanel panelPave;
+
+        this.setLayout(new BorderLayout(5, 5));
+
+        /* Création des composants */
+        this.lblEcran = new JLabel("0", JLabel.RIGHT);
+        panelPave     = new JPanel(new GridLayout(4, 4, 5, 5));
+        for (int i = 0; i < PanelCalculatrice.TOUCHES.length; i++)
+        {
+            panelPave.add(new JButton(PanelCalculatrice.TOUCHES[i]));
+        }
+
+        /* Positionnement des composants */
+        this.add(this.lblEcran, BorderLayout.NORTH);
+        this.add(panelPave, BorderLayout.CENTER);
+    }
+}`),
+			indices: ["`this.setLayout(new BorderLayout(5, 5));` en premier. Le label aligné à droite : `new JLabel(\"0\", JLabel.RIGHT)`.",
+				"Le pavé est un panneau local : `JPanel panelPave = new JPanel(new GridLayout(4, 4, 5, 5));`, puis une boucle sur `TOUCHES` qui ajoute un `new JButton(...)` à chaque tour."] },
+		{ id: "i02.p2", k: "code", mode: "class", titre: "Les touches spéciales et les couleurs", lanceur: "FrameCalculatrice", xp: 30,
+			enonce: "Complète la façade :\n\n- l'écran est blanc (`Color.WHITE`) et **opaque** (sinon son fond ne se voit pas) ;\n- les touches d'opération `/`, `*`, `-`, `+` et `=` ont un fond orange clair `new Color(255, 200, 120)` ;\n- à l'est, un panneau local en `GridLayout` de 2 lignes et 1 colonne, avec 5 pixels d'espace, qui contient les boutons « C » puis « ← » ;\n- au sud, un `JLabel` « Mémoire : vide ».\n\nOrdre d'ajout au panneau principal : nord, centre, est, sud.",
+			regles: ["allman"],
+			harness: ihmTest("TestCalculatrice", `
+        PanelCalculatrice p = new PanelCalculatrice();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JLabel ecran = (JLabel) p.getComponent(0);
+        System.out.println("écran : " + ecran.getBackground().equals(Color.WHITE) + " " + ecran.isOpaque() + " " + (ecran.getHorizontalAlignment() == JLabel.RIGHT));
+        JPanel pave = (JPanel) p.getComponent(1);
+        Color orange = new Color(255, 200, 120);
+        String s = "";
+        for (int i = 0; i < pave.getComponentCount(); i++)
+        {
+            JButton b = (JButton) pave.getComponent(i);
+            if (orange.equals(b.getBackground())) { s += b.getText() + " "; }
+        }
+        System.out.println("touches orange : " + s);`),
+			depart: "",
+			solution: T(`
+//// Fichier : FrameCalculatrice.java
+import javax.swing.JFrame;
+
+public class FrameCalculatrice extends JFrame
+{
+    public FrameCalculatrice()
+    {
+        this.setTitle("Calculatrice");
+        this.setSize(260, 280);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelCalculatrice());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameCalculatrice();
+    }
+}
+//// Fichier : PanelCalculatrice.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GridLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCalculatrice extends JPanel
+{
+    private static final String[] TOUCHES = { "7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+" };
+
+    private JLabel lblEcran;
+
+    public PanelCalculatrice()
+    {
+        JPanel  panelPave;
+        JPanel  panelSpecial;
+        JButton btn;
+        String  touche;
+
+        this.setLayout(new BorderLayout(5, 5));
+
+        /* Création des composants */
+        this.lblEcran = new JLabel("0", JLabel.RIGHT);
+        this.lblEcran.setBackground(Color.WHITE);
+        this.lblEcran.setOpaque(true);
+
+        panelPave = new JPanel(new GridLayout(4, 4, 5, 5));
+        for (int i = 0; i < PanelCalculatrice.TOUCHES.length; i++)
+        {
+            touche = PanelCalculatrice.TOUCHES[i];
+            btn    = new JButton(touche);
+            if (touche.equals("/") || touche.equals("*") || touche.equals("-") || touche.equals("+") || touche.equals("="))
+            {
+                btn.setBackground(new Color(255, 200, 120));
+            }
+            panelPave.add(btn);
+        }
+
+        panelSpecial = new JPanel(new GridLayout(2, 1, 5, 5));
+        panelSpecial.add(new JButton("C"));
+        panelSpecial.add(new JButton("←"));
+
+        /* Positionnement des composants */
+        this.add(this.lblEcran, BorderLayout.NORTH);
+        this.add(panelPave, BorderLayout.CENTER);
+        this.add(panelSpecial, BorderLayout.EAST);
+        this.add(new JLabel("Mémoire : vide"), BorderLayout.SOUTH);
+    }
+}`),
+			indices: ["Un `JLabel` est transparent : `setBackground` ne se voit qu'après `setOpaque(true)`.",
+				"Dans la boucle, garde le bouton dans une variable avant de l'ajouter, pour pouvoir changer son fond. Compare les textes avec `equals`, pas `==`.",
+				"Le panneau de l'est est un deuxième panneau local, en `new GridLayout(2, 1, 5, 5)`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 3 */
+IHM_PROJETS.i03 = { id: "i03.p", titre: "Le guichet",
+	intro: "À la poste, on prend un ticket et on attend que le guichet appelle son numéro. Le panneau écoute ses propres boutons et met ses labels à jour. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i03.p1", k: "code", mode: "class", titre: "Prendre un ticket, appeler le suivant", lanceur: "FrameGuichet", xp: 20,
+			enonce: "`FrameGuichet` est écrite. Écris `PanelGuichet` (un `JPanel` en `BorderLayout`) qui implémente `ActionListener`. Ajoute dans cet ordre :\n\n- au nord, un `JLabel` attribut `lblTicket` : « Dernier ticket : 0 » ;\n- au centre, un panneau local (layout par défaut) avec les boutons `btnPrendre` « Prendre un ticket » et `btnAppeler` « Appeler » ;\n- au sud, un `JLabel` attribut `lblAppel` : « En attente ».\n\nDeux attributs entiers : `dernier` (dernier ticket distribué) et `appele` (dernier ticket appelé), à 0 au départ.\n\n- **Prendre un ticket** : `dernier` augmente de 1 et `lblTicket` affiche « Dernier ticket : 3 » ;\n- **Appeler** : s'il reste quelqu'un (`appele < dernier`), `appele` augmente de 1, `lblAppel` affiche « Ticket 2 au guichet » et la console aussi ; sinon `lblAppel` affiche « Personne n'attend ».",
+			regles: ["allman"],
+			harness: ihmTest("TestGuichet", `
+        PanelGuichet p = new PanelGuichet();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JLabel ticket = (JLabel) p.getComponent(0);
+        JPanel boutons = (JPanel) p.getComponent(1);
+        JLabel appel = (JLabel) p.getComponent(2);
+        JButton prendre = (JButton) boutons.getComponent(0);
+        JButton appeler = (JButton) boutons.getComponent(1);
+        appeler.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText());
+        prendre.doClick();
+        prendre.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText());
+        appeler.doClick();
+        prendre.doClick();
+        appeler.doClick();
+        appeler.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText());
+        appeler.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText());`),
+			depart: T(`
+//// Fichier : FrameGuichet.java
+import javax.swing.JFrame;
+
+public class FrameGuichet extends JFrame
+{
+    public FrameGuichet()
+    {
+        this.setTitle("Guichet");
+        this.setSize(360, 140);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelGuichet());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameGuichet();
+    }
+}
+//// Fichier : PanelGuichet.java
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelGuichet extends JPanel implements ActionListener
+{
+    private int     dernier;
+    private int     appele;
+    private JLabel  lblTicket;
+    private JButton btnPrendre;
+    private JButton btnAppeler;
+    private JLabel  lblAppel;
+
+    public PanelGuichet()
+    {
+
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameGuichet.java
+import javax.swing.JFrame;
+
+public class FrameGuichet extends JFrame
+{
+    public FrameGuichet()
+    {
+        this.setTitle("Guichet");
+        this.setSize(360, 140);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelGuichet());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameGuichet();
+    }
+}
+//// Fichier : PanelGuichet.java
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelGuichet extends JPanel implements ActionListener
+{
+    private int     dernier;
+    private int     appele;
+    private JLabel  lblTicket;
+    private JButton btnPrendre;
+    private JButton btnAppeler;
+    private JLabel  lblAppel;
+
+    public PanelGuichet()
+    {
+        JPanel panelBoutons;
+
+        this.setLayout(new BorderLayout());
+        this.dernier = 0;
+        this.appele  = 0;
+
+        /* Création des composants */
+        this.lblTicket  = new JLabel("Dernier ticket : 0");
+        panelBoutons    = new JPanel();
+        this.btnPrendre = new JButton("Prendre un ticket");
+        this.btnAppeler = new JButton("Appeler");
+        this.lblAppel   = new JLabel("En attente");
+
+        /* Positionnement des composants */
+        panelBoutons.add(this.btnPrendre);
+        panelBoutons.add(this.btnAppeler);
+        this.add(this.lblTicket, BorderLayout.NORTH);
+        this.add(panelBoutons, BorderLayout.CENTER);
+        this.add(this.lblAppel, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.btnPrendre.addActionListener(this);
+        this.btnAppeler.addActionListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == this.btnPrendre)
+        {
+            this.dernier++;
+            this.lblTicket.setText("Dernier ticket : " + this.dernier);
+        }
+        if (e.getSource() == this.btnAppeler)
+        {
+            if (this.appele < this.dernier)
+            {
+                this.appele++;
+                this.lblAppel.setText("Ticket " + this.appele + " au guichet");
+                System.out.println("Ticket " + this.appele + " au guichet");
+            }
+            else
+            {
+                this.lblAppel.setText("Personne n'attend");
+            }
+        }
+    }
+}`),
+			indices: ["Constructeur en trois parties : création, positionnement (nord, centre, sud), activation (`addActionListener(this)` sur les deux boutons).",
+				"Dans `actionPerformed`, `e.getSource() == this.btnPrendre` dit quel bouton a été cliqué.",
+				"Personne n'attend quand tous les tickets distribués ont été appelés : `appele == dernier`."] },
+		{ id: "i03.p2", k: "code", mode: "class", titre: "Boutons actifs ou non, et remise à zéro", lanceur: "FrameGuichet", xp: 30,
+			enonce: "Améliore le guichet :\n\n- ajoute un troisième bouton `btnRaz` « Remise à zéro » dans le panneau du centre, après les deux autres ;\n- `lblTicket` affiche aussi le nombre de personnes qui attendent : « Dernier ticket : 3 (2 en attente) » (au départ : « Dernier ticket : 0 (0 en attente) ») ;\n- « Appeler » n'est cliquable (`setEnabled`) que si quelqu'un attend : il est donc **désactivé** au départ ;\n- **Remise à zéro** remet les deux compteurs à 0, les deux labels à leur texte de départ et désactive « Appeler ».\n\nÉcris une méthode privée `majAffichage()` qui met à jour `lblTicket` et l'état du bouton « Appeler », et appelle-la partout où il faut. Le message « Personne n'attend » n'est plus utile : un bouton désactivé n'envoie aucun événement.",
+			regles: ["allman"],
+			harness: ihmTest("TestGuichet", `
+        PanelGuichet p = new PanelGuichet();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JLabel ticket = (JLabel) p.getComponent(0);
+        JPanel boutons = (JPanel) p.getComponent(1);
+        JLabel appel = (JLabel) p.getComponent(2);
+        JButton prendre = (JButton) boutons.getComponent(0);
+        JButton appeler = (JButton) boutons.getComponent(1);
+        JButton raz = (JButton) boutons.getComponent(2);
+        System.out.println(ticket.getText() + " / " + appel.getText() + " / appeler actif : " + appeler.isEnabled());
+        appeler.doClick();
+        prendre.doClick();
+        prendre.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText() + " / appeler actif : " + appeler.isEnabled());
+        appeler.doClick();
+        appeler.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText() + " / appeler actif : " + appeler.isEnabled());
+        appeler.doClick();
+        prendre.doClick();
+        raz.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText() + " / appeler actif : " + appeler.isEnabled());
+        prendre.doClick();
+        appeler.doClick();
+        System.out.println(ticket.getText() + " / " + appel.getText() + " / appeler actif : " + appeler.isEnabled());`),
+			depart: "",
+			solution: T(`
+//// Fichier : FrameGuichet.java
+import javax.swing.JFrame;
+
+public class FrameGuichet extends JFrame
+{
+    public FrameGuichet()
+    {
+        this.setTitle("Guichet");
+        this.setSize(360, 140);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelGuichet());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameGuichet();
+    }
+}
+//// Fichier : PanelGuichet.java
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelGuichet extends JPanel implements ActionListener
+{
+    private int     dernier;
+    private int     appele;
+    private JLabel  lblTicket;
+    private JButton btnPrendre;
+    private JButton btnAppeler;
+    private JButton btnRaz;
+    private JLabel  lblAppel;
+
+    public PanelGuichet()
+    {
+        JPanel panelBoutons;
+
+        this.setLayout(new BorderLayout());
+        this.dernier = 0;
+        this.appele  = 0;
+
+        /* Création des composants */
+        this.lblTicket  = new JLabel();
+        panelBoutons    = new JPanel();
+        this.btnPrendre = new JButton("Prendre un ticket");
+        this.btnAppeler = new JButton("Appeler");
+        this.btnRaz     = new JButton("Remise à zéro");
+        this.lblAppel   = new JLabel("En attente");
+        this.majAffichage();
+
+        /* Positionnement des composants */
+        panelBoutons.add(this.btnPrendre);
+        panelBoutons.add(this.btnAppeler);
+        panelBoutons.add(this.btnRaz);
+        this.add(this.lblTicket, BorderLayout.NORTH);
+        this.add(panelBoutons, BorderLayout.CENTER);
+        this.add(this.lblAppel, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.btnPrendre.addActionListener(this);
+        this.btnAppeler.addActionListener(this);
+        this.btnRaz.addActionListener(this);
+    }
+
+    private void majAffichage()
+    {
+        int nbAttente = this.dernier - this.appele;
+
+        this.lblTicket.setText("Dernier ticket : " + this.dernier + " (" + nbAttente + " en attente)");
+        this.btnAppeler.setEnabled(nbAttente > 0);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == this.btnPrendre)
+        {
+            this.dernier++;
+        }
+        if (e.getSource() == this.btnAppeler)
+        {
+            this.appele++;
+            this.lblAppel.setText("Ticket " + this.appele + " au guichet");
+            System.out.println("Ticket " + this.appele + " au guichet");
+        }
+        if (e.getSource() == this.btnRaz)
+        {
+            this.dernier = 0;
+            this.appele  = 0;
+            this.lblAppel.setText("En attente");
+        }
+        this.majAffichage();
+    }
+}`),
+			indices: ["Le nombre de personnes qui attendent se calcule : `dernier - appele`. Inutile d'ajouter un attribut.",
+				"`this.btnAppeler.setEnabled(nbAttente > 0);` active ou désactive le bouton en une ligne.",
+				"Appelle `majAffichage()` à la fin du constructeur (après la création des composants) et à la fin de `actionPerformed`, quel que soit le bouton."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 4 */
+IHM_PROJETS.i04 = { id: "i04.p", titre: "La pizzeria",
+	intro: "Une borne de commande pour la pizzeria : une taille à choisir (boutons radio), des suppléments à cocher, puis le nombre de pizzas à saisir. Le prix se recalcule à chaque changement. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i04.p1", k: "code", mode: "class", titre: "Taille et suppléments", lanceur: "FramePizza", xp: 20,
+			enonce: "`FramePizza` est écrite. Écris `PanelPizza` (un `JPanel` en `GridLayout` de 3 lignes et 2 colonnes) qui implémente `ItemListener`. Ajoute dans cet ordre :\n\n- deux boutons radio exclusifs `rbPetite` « Petite (8 €) » et `rbGrande` « Grande (11 €) », aucun coché au départ ;\n- deux cases à cocher `cbFromage` « Fromage (+1 €) » et `cbJambon` « Jambon (+2 €) » ;\n- un `JLabel` `lblMessage` « Choisis une taille » et un `JLabel` `lblPrix` « Prix : 0 € ».\n\nLes quatre boutons sont écoutés par le panneau. À **chaque** changement, recalcule tout dans une méthode privée `majPrix()` : sans taille choisie, les labels gardent leur texte de départ ; sinon `lblMessage` affiche « Pizza petite » ou « Pizza grande » et `lblPrix` le prix de la taille plus celui des suppléments cochés (« Prix : 11 € »).",
+			regles: ["allman"],
+			harness: ihmTest("TestPizza", `
+        PanelPizza p = new PanelPizza();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JRadioButton petite = (JRadioButton) p.getComponent(0);
+        JRadioButton grande = (JRadioButton) p.getComponent(1);
+        JCheckBox fromage = (JCheckBox) p.getComponent(2);
+        JCheckBox jambon = (JCheckBox) p.getComponent(3);
+        JLabel msg = (JLabel) p.getComponent(4);
+        JLabel prix = (JLabel) p.getComponent(5);
+        fromage.doClick();
+        System.out.println("fromage seul : " + msg.getText() + " / " + prix.getText());
+        petite.doClick();
+        System.out.println("petite : " + msg.getText() + " / " + prix.getText());
+        jambon.doClick();
+        grande.doClick();
+        System.out.println("grande : " + msg.getText() + " / " + prix.getText() + " " + petite.isSelected());
+        fromage.doClick();
+        System.out.println("sans fromage : " + msg.getText() + " / " + prix.getText());
+        grande.doClick();
+        System.out.println("grande encore : " + grande.isSelected() + " " + prix.getText());`, ["java.awt.event.ItemEvent"]),
+			depart: T(`
+//// Fichier : FramePizza.java
+import javax.swing.JFrame;
+
+public class FramePizza extends JFrame
+{
+    public FramePizza()
+    {
+        this.setTitle("Pizzeria");
+        this.setSize(360, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelPizza());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FramePizza();
+    }
+}
+//// Fichier : PanelPizza.java
+import java.awt.GridLayout;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
+public class PanelPizza extends JPanel implements ItemListener
+{
+    private JRadioButton rbPetite;
+    private JRadioButton rbGrande;
+    private JCheckBox    cbFromage;
+    private JCheckBox    cbJambon;
+    private JLabel       lblMessage;
+    private JLabel       lblPrix;
+
+    public PanelPizza()
+    {
+
+    }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FramePizza.java
+import javax.swing.JFrame;
+
+public class FramePizza extends JFrame
+{
+    public FramePizza()
+    {
+        this.setTitle("Pizzeria");
+        this.setSize(360, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelPizza());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FramePizza();
+    }
+}
+//// Fichier : PanelPizza.java
+import java.awt.GridLayout;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
+public class PanelPizza extends JPanel implements ItemListener
+{
+    private JRadioButton rbPetite;
+    private JRadioButton rbGrande;
+    private JCheckBox    cbFromage;
+    private JCheckBox    cbJambon;
+    private JLabel       lblMessage;
+    private JLabel       lblPrix;
+
+    public PanelPizza()
+    {
+        ButtonGroup grpTaille;
+
+        this.setLayout(new GridLayout(3, 2));
+
+        /* Création des composants */
+        this.rbPetite   = new JRadioButton("Petite (8 €)");
+        this.rbGrande   = new JRadioButton("Grande (11 €)");
+        grpTaille       = new ButtonGroup();
+        grpTaille.add(this.rbPetite);
+        grpTaille.add(this.rbGrande);
+        this.cbFromage  = new JCheckBox("Fromage (+1 €)");
+        this.cbJambon   = new JCheckBox("Jambon (+2 €)");
+        this.lblMessage = new JLabel("Choisis une taille");
+        this.lblPrix    = new JLabel("Prix : 0 €");
+
+        /* Positionnement des composants */
+        this.add(this.rbPetite);
+        this.add(this.rbGrande);
+        this.add(this.cbFromage);
+        this.add(this.cbJambon);
+        this.add(this.lblMessage);
+        this.add(this.lblPrix);
+
+        /* Activation des composants */
+        this.rbPetite.addItemListener(this);
+        this.rbGrande.addItemListener(this);
+        this.cbFromage.addItemListener(this);
+        this.cbJambon.addItemListener(this);
+    }
+
+    private void majPrix()
+    {
+        int prix;
+
+        if (!this.rbPetite.isSelected() && !this.rbGrande.isSelected())
+        {
+            this.lblMessage.setText("Choisis une taille");
+            this.lblPrix.setText("Prix : 0 €");
+            return;
+        }
+
+        if (this.rbPetite.isSelected())
+        {
+            prix = 8;
+            this.lblMessage.setText("Pizza petite");
+        }
+        else
+        {
+            prix = 11;
+            this.lblMessage.setText("Pizza grande");
+        }
+        if (this.cbFromage.isSelected())
+        {
+            prix = prix + 1;
+        }
+        if (this.cbJambon.isSelected())
+        {
+            prix = prix + 2;
+        }
+        this.lblPrix.setText("Prix : " + prix + " €");
+    }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+        this.majPrix();
+    }
+}`),
+			indices: ["Le `ButtonGroup` rend les deux radios exclusifs, mais ce n'est pas un composant : ajoute les boutons au groupe **et** au panneau, jamais le groupe au panneau.",
+				"Inutile de regarder quel bouton a changé : `majPrix()` relit l'état de tous les boutons avec `isSelected()` et recalcule le prix depuis zéro.",
+				"Sans taille choisie, mets les labels à leur texte de départ et sors de la méthode (`return;`)."] },
+		{ id: "i04.p2", k: "code", mode: "class", titre: "Le nombre de pizzas", lanceur: "FramePizza", xp: 30,
+			enonce: "Ajoute une ligne à la grille (qui passe à **4 lignes** et 2 colonnes) : un `JLabel` « Nombre : » (variable locale) puis un `JTextField` attribut `txtNombre` de 3 colonnes contenant « 1 ». Le panneau implémente aussi `ActionListener` et écoute la touche Entrée du champ.\n\n- un attribut `nombre` vaut 1 au départ ;\n- **Entrée dans le champ** : si la saisie est un entier d'au moins 1, `nombre` prend cette valeur ; sinon (`NumberFormatException`, 0 ou négatif) le champ reprend la valeur actuelle de `nombre` et `lblMessage` affiche « Nombre invalide » ;\n- le prix affiché est multiplié par `nombre` : « Prix : 26 € (2 pizzas) », ou « (1 pizza) » au singulier. Sans taille choisie, rien ne change.\n\nAprès une saisie valide, recalcule le prix avec `majPrix()`.",
+			regles: ["allman"],
+			harness: ihmTest("TestPizza", `
+        PanelPizza p = new PanelPizza();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JRadioButton petite = (JRadioButton) p.getComponent(0);
+        JRadioButton grande = (JRadioButton) p.getComponent(1);
+        JCheckBox jambon = (JCheckBox) p.getComponent(3);
+        JLabel msg = (JLabel) p.getComponent(4);
+        JLabel prix = (JLabel) p.getComponent(5);
+        JTextField txt = (JTextField) p.getComponent(7);
+        System.out.println("[" + txt.getText() + "] " + msg.getText() + " / " + prix.getText());
+        txt.setText("3");
+        txt.postActionEvent();
+        System.out.println("3 sans taille : " + msg.getText() + " / " + prix.getText());
+        grande.doClick();
+        System.out.println("grande : " + msg.getText() + " / " + prix.getText());
+        jambon.doClick();
+        txt.setText("2");
+        txt.postActionEvent();
+        System.out.println("2 : " + msg.getText() + " / " + prix.getText());
+        txt.setText("deux");
+        txt.postActionEvent();
+        System.out.println("deux : [" + txt.getText() + "] " + msg.getText() + " / " + prix.getText());
+        txt.setText("0");
+        txt.postActionEvent();
+        System.out.println("0 : [" + txt.getText() + "] " + msg.getText());
+        petite.doClick();
+        txt.setText("1");
+        txt.postActionEvent();
+        System.out.println("1 : " + msg.getText() + " / " + prix.getText());`, ["java.awt.event.ItemEvent"]),
+			depart: "",
+			solution: T(`
+//// Fichier : FramePizza.java
+import javax.swing.JFrame;
+
+public class FramePizza extends JFrame
+{
+    public FramePizza()
+    {
+        this.setTitle("Pizzeria");
+        this.setSize(360, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelPizza());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FramePizza();
+    }
+}
+//// Fichier : PanelPizza.java
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+
+public class PanelPizza extends JPanel implements ItemListener, ActionListener
+{
+    private int          nombre;
+    private JRadioButton rbPetite;
+    private JRadioButton rbGrande;
+    private JCheckBox    cbFromage;
+    private JCheckBox    cbJambon;
+    private JLabel       lblMessage;
+    private JLabel       lblPrix;
+    private JTextField   txtNombre;
+
+    public PanelPizza()
+    {
+        ButtonGroup grpTaille;
+
+        this.setLayout(new GridLayout(4, 2));
+        this.nombre = 1;
+
+        /* Création des composants */
+        this.rbPetite   = new JRadioButton("Petite (8 €)");
+        this.rbGrande   = new JRadioButton("Grande (11 €)");
+        grpTaille       = new ButtonGroup();
+        grpTaille.add(this.rbPetite);
+        grpTaille.add(this.rbGrande);
+        this.cbFromage  = new JCheckBox("Fromage (+1 €)");
+        this.cbJambon   = new JCheckBox("Jambon (+2 €)");
+        this.lblMessage = new JLabel("Choisis une taille");
+        this.lblPrix    = new JLabel("Prix : 0 €");
+        this.txtNombre  = new JTextField("1", 3);
+
+        /* Positionnement des composants */
+        this.add(this.rbPetite);
+        this.add(this.rbGrande);
+        this.add(this.cbFromage);
+        this.add(this.cbJambon);
+        this.add(this.lblMessage);
+        this.add(this.lblPrix);
+        this.add(new JLabel("Nombre : "));
+        this.add(this.txtNombre);
+
+        /* Activation des composants */
+        this.rbPetite.addItemListener(this);
+        this.rbGrande.addItemListener(this);
+        this.cbFromage.addItemListener(this);
+        this.cbJambon.addItemListener(this);
+        this.txtNombre.addActionListener(this);
+    }
+
+    private void majPrix()
+    {
+        int prix;
+
+        if (!this.rbPetite.isSelected() && !this.rbGrande.isSelected())
+        {
+            this.lblMessage.setText("Choisis une taille");
+            this.lblPrix.setText("Prix : 0 €");
+            return;
+        }
+
+        if (this.rbPetite.isSelected())
+        {
+            prix = 8;
+            this.lblMessage.setText("Pizza petite");
+        }
+        else
+        {
+            prix = 11;
+            this.lblMessage.setText("Pizza grande");
+        }
+        if (this.cbFromage.isSelected())
+        {
+            prix = prix + 1;
+        }
+        if (this.cbJambon.isSelected())
+        {
+            prix = prix + 2;
+        }
+        prix = prix * this.nombre;
+
+        if (this.nombre == 1)
+        {
+            this.lblPrix.setText("Prix : " + prix + " € (1 pizza)");
+        }
+        else
+        {
+            this.lblPrix.setText("Prix : " + prix + " € (" + this.nombre + " pizzas)");
+        }
+    }
+
+    public void itemStateChanged(ItemEvent e)
+    {
+        this.majPrix();
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        int saisie;
+
+        try
+        {
+            saisie = Integer.parseInt(this.txtNombre.getText());
+        }
+        catch (NumberFormatException ex)
+        {
+            saisie = 0;
+        }
+
+        if (saisie >= 1)
+        {
+            this.nombre = saisie;
+            this.majPrix();
+        }
+        else
+        {
+            this.txtNombre.setText("" + this.nombre);
+            this.lblMessage.setText("Nombre invalide");
+        }
+    }
+}`),
+			indices: ["Le champ : `new JTextField(\"1\", 3)` (texte, puis nombre de colonnes), écouté avec `addActionListener(this)`.",
+				"Dans `actionPerformed`, entoure `Integer.parseInt` d'un `try` / `catch (NumberFormatException ex)`. Une saisie ratée peut se ramener au cas « 0 », refusé lui aussi.",
+				"« Nombre invalide » doit rester affiché : n'appelle pas `majPrix()` dans ce cas, elle réécrirait `lblMessage`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 5 */
+IHM_PROJETS.i05 = { id: "i05.p", titre: "Le thermostat",
+	intro: "On règle la température d'une pièce avec une barre de défilement. Un voyant change de couleur selon la consigne, puis un champ permet de la taper au clavier. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i05.p1", k: "code", mode: "class", titre: "La barre et le voyant", lanceur: "FrameThermostat", xp: 20,
+			enonce: "`FrameThermostat` est écrite. Écris `PanelThermostat` (un `JPanel` en `BorderLayout`) qui implémente `AdjustmentListener`. Ajoute dans cet ordre :\n\n- au nord, une barre horizontale `sbConsigne` pour les valeurs de **15 à 30** (19 au départ, curseur de 1), avec des blocs de 3 ;\n- au centre, un `JPanel` attribut `panelVoyant` ;\n- au sud, un `JLabel` attribut `lblConsigne` : « Consigne : 19 °C ».\n\nÀ chaque déplacement de la barre, le label affiche la nouvelle valeur. Une méthode privée `majVoyant()` colore le voyant : `Color.BLUE` sous 18 °C, `Color.RED` au-dessus de 22 °C, `Color.GREEN` entre les deux (18 et 22 compris). Appelle-la aussi à la fin du constructeur, pour la couleur de départ.",
+			regles: ["allman"],
+			harness: ihmTest("TestThermostat", `
+        PanelThermostat p = new PanelThermostat();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JScrollBar sb = (JScrollBar) p.getComponent(0);
+        JPanel voyant = (JPanel) p.getComponent(1);
+        JLabel lbl = (JLabel) p.getComponent(2);
+        System.out.println("blocs de " + sb.getBlockIncrement() + " : " + lbl.getText() + " " + voyant.getBackground());
+        int[] valeurs = { 17, 18, 22, 23, 40, 5 };
+        for (int v : valeurs)
+        {
+            sb.setValue(v);
+            System.out.println("  " + v + " -> " + sb.getValue() + " " + lbl.getText() + " " + voyant.getBackground());
+        }`),
+			depart: T(`
+//// Fichier : FrameThermostat.java
+import javax.swing.JFrame;
+
+public class FrameThermostat extends JFrame
+{
+    public FrameThermostat()
+    {
+        this.setTitle("Thermostat");
+        this.setSize(320, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelThermostat());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameThermostat();
+    }
+}
+//// Fichier : PanelThermostat.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+
+public class PanelThermostat extends JPanel implements AdjustmentListener
+{
+    private JScrollBar sbConsigne;
+    private JPanel     panelVoyant;
+    private JLabel     lblConsigne;
+
+    public PanelThermostat()
+    {
+
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameThermostat.java
+import javax.swing.JFrame;
+
+public class FrameThermostat extends JFrame
+{
+    public FrameThermostat()
+    {
+        this.setTitle("Thermostat");
+        this.setSize(320, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelThermostat());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameThermostat();
+    }
+}
+//// Fichier : PanelThermostat.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+
+public class PanelThermostat extends JPanel implements AdjustmentListener
+{
+    private JScrollBar sbConsigne;
+    private JPanel     panelVoyant;
+    private JLabel     lblConsigne;
+
+    public PanelThermostat()
+    {
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        this.sbConsigne = new JScrollBar(JScrollBar.HORIZONTAL, 19, 1, 15, 31);
+        this.sbConsigne.setBlockIncrement(3);
+        this.panelVoyant = new JPanel();
+        this.lblConsigne = new JLabel("Consigne : 19 °C");
+
+        /* Positionnement des composants */
+        this.add(this.sbConsigne, BorderLayout.NORTH);
+        this.add(this.panelVoyant, BorderLayout.CENTER);
+        this.add(this.lblConsigne, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.sbConsigne.addAdjustmentListener(this);
+        this.majVoyant();
+    }
+
+    private void majVoyant()
+    {
+        int t = this.sbConsigne.getValue();
+
+        if (t < 18)
+        {
+            this.panelVoyant.setBackground(Color.BLUE);
+        }
+        else if (t > 22)
+        {
+            this.panelVoyant.setBackground(Color.RED);
+        }
+        else
+        {
+            this.panelVoyant.setBackground(Color.GREEN);
+        }
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+        this.lblConsigne.setText("Consigne : " + this.sbConsigne.getValue() + " °C");
+        this.majVoyant();
+    }
+}`),
+			indices: ["L'étendue compte dans le maximum : pour aller jusqu'à 30 avec un curseur de 1, il faut `new JScrollBar(JScrollBar.HORIZONTAL, 19, 1, 15, 31)`.",
+				"Les blocs se règlent après la création : `setBlockIncrement(3)`.",
+				"`majVoyant()` lit la valeur avec `this.sbConsigne.getValue()` : elle marche aussi bien depuis le constructeur que depuis l'écouteur."] },
+		{ id: "i05.p2", k: "code", mode: "class", titre: "Taper la consigne", lanceur: "FrameThermostat", xp: 30,
+			enonce: "Au sud, remplace le label seul par un panneau local en `GridLayout` d'une ligne et 2 colonnes qui contient `lblConsigne` puis un `JTextField` attribut `txtConsigne` de 4 colonnes contenant « 19 ». Le panneau implémente aussi `ActionListener`.\n\n- **déplacement de la barre** : le label, le voyant **et** le champ affichent la nouvelle valeur ;\n- **Entrée dans le champ** : la barre prend la valeur saisie (elle la ramène elle-même entre 15 et 30). Si la saisie n'est pas un nombre, la barre ne bouge pas.\n\nDans les deux cas, après l'Entrée, le champ affiche la valeur réelle de la barre. Attention : si la valeur ne change pas (30 puis 45), la barre n'envoie aucun événement. Fais donc la mise à jour du champ dans `actionPerformed` aussi.",
+			regles: ["allman"],
+			harness: ihmTest("TestThermostat", `
+        PanelThermostat p = new PanelThermostat();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JScrollBar sb = (JScrollBar) p.getComponent(0);
+        JPanel voyant = (JPanel) p.getComponent(1);
+        JPanel sud = (JPanel) p.getComponent(2);
+        JLabel lbl = (JLabel) sud.getComponent(0);
+        JTextField txt = (JTextField) sud.getComponent(1);
+        sb.setValue(24);
+        System.out.println("barre 24 : " + lbl.getText() + " [" + txt.getText() + "] " + voyant.getBackground());
+        String[] saisies = { "16", "30", "45", "chaud", "10", "21" };
+        for (String s : saisies)
+        {
+            txt.setText(s);
+            txt.postActionEvent();
+            System.out.println("  " + s + " -> " + sb.getValue() + " " + lbl.getText() + " [" + txt.getText() + "] " + voyant.getBackground());
+        }`),
+			depart: "",
+			solution: T(`
+//// Fichier : FrameThermostat.java
+import javax.swing.JFrame;
+
+public class FrameThermostat extends JFrame
+{
+    public FrameThermostat()
+    {
+        this.setTitle("Thermostat");
+        this.setSize(320, 160);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelThermostat());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameThermostat();
+    }
+}
+//// Fichier : PanelThermostat.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JTextField;
+
+public class PanelThermostat extends JPanel implements AdjustmentListener, ActionListener
+{
+    private JScrollBar sbConsigne;
+    private JPanel     panelVoyant;
+    private JLabel     lblConsigne;
+    private JTextField txtConsigne;
+
+    public PanelThermostat()
+    {
+        JPanel panelSud;
+
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        this.sbConsigne = new JScrollBar(JScrollBar.HORIZONTAL, 19, 1, 15, 31);
+        this.sbConsigne.setBlockIncrement(3);
+        this.panelVoyant = new JPanel();
+        panelSud         = new JPanel(new GridLayout(1, 2));
+        this.lblConsigne = new JLabel("Consigne : 19 °C");
+        this.txtConsigne = new JTextField("19", 4);
+
+        /* Positionnement des composants */
+        panelSud.add(this.lblConsigne);
+        panelSud.add(this.txtConsigne);
+        this.add(this.sbConsigne, BorderLayout.NORTH);
+        this.add(this.panelVoyant, BorderLayout.CENTER);
+        this.add(panelSud, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.sbConsigne.addAdjustmentListener(this);
+        this.txtConsigne.addActionListener(this);
+        this.majVoyant();
+    }
+
+    private void majVoyant()
+    {
+        int t = this.sbConsigne.getValue();
+
+        if (t < 18)
+        {
+            this.panelVoyant.setBackground(Color.BLUE);
+        }
+        else if (t > 22)
+        {
+            this.panelVoyant.setBackground(Color.RED);
+        }
+        else
+        {
+            this.panelVoyant.setBackground(Color.GREEN);
+        }
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent e)
+    {
+        this.lblConsigne.setText("Consigne : " + this.sbConsigne.getValue() + " °C");
+        this.txtConsigne.setText("" + this.sbConsigne.getValue());
+        this.majVoyant();
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        try
+        {
+            this.sbConsigne.setValue(Integer.parseInt(this.txtConsigne.getText()));
+        }
+        catch (NumberFormatException ex)
+        {
+            /* la barre ne bouge pas */
+        }
+        this.txtConsigne.setText("" + this.sbConsigne.getValue());
+    }
+}`),
+			indices: ["`setValue` déclenche lui-même `adjustmentValueChanged` quand la valeur change : `actionPerformed` n'a pas à mettre à jour le label ni le voyant.",
+				"Après le `try` / `catch`, une seule ligne remet le champ d'accord avec la barre : `this.txtConsigne.setText(\"\" + this.sbConsigne.getValue());`."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 6 */
+IHM_PROJETS.i06 = { id: "i06.p", titre: "Le tir à la cible",
+	intro: "Un petit jeu de fléchettes à la souris : plus le tir est près du centre, plus il rapporte. Les écouteurs sont des classes internes qui héritent de `MouseAdapter`. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i06.p1", k: "code", mode: "class", titre: "Compter les points", lanceur: "FrameCible", xp: 20,
+			enonce: "`FrameCible` est écrite. Écris `PanelCible` (un `JPanel` en `BorderLayout`). Ajoute dans cet ordre :\n\n- au centre, un `JPanel` attribut `panelCible`, de couleur (250, 230, 200) ;\n- au sud, un `JLabel` attribut `lblScore` : « Score : 0 ».\n\nLe centre de la cible est en (`CENTRE_X`, `CENTRE_Y`) = (100, 75), deux constantes déjà écrites. Une classe interne `GereSouris` (hérite de `MouseAdapter`) écoute les clics de `panelCible` et redéfinit `mousePressed` :\n\n- **bouton droit** (`MouseEvent.BUTTON3`) : le score revient à 0 et le label affiche « Score : 0 » ;\n- autre bouton : le tir rapporte **10** points à 20 pixels ou moins du centre, **5** à 50 pixels ou moins, **1** sinon. Le label affiche « Score : 15 (dernier tir : 5) ».\n\nPour la distance, compare le carré : `dx * dx + dy * dy <= 20 * 20` (pas besoin de racine carrée).",
+			regles: ["allman"],
+			harness: ihmTest("TestCible", `
+        PanelCible p = new PanelCible();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JPanel cible = (JPanel) p.getComponent(0);
+        JLabel lbl = (JLabel) p.getComponent(1);
+        System.out.println(cible.getBackground());
+        int[][] tirs = { { 100, 75, 1 }, { 120, 75, 1 }, { 121, 75, 1 }, { 130, 115, 1 }, { 131, 115, 1 }, { 10, 10, 3 }, { 60, 50, 1 }, { 5, 140, 2 } };
+        for (int[] t : tirs)
+        {
+            cible.dispatchEvent(new MouseEvent(cible, MouseEvent.MOUSE_PRESSED, 0, 0, t[0], t[1], 1, false, t[2]));
+            System.out.println("  (" + t[0] + ", " + t[1] + ") bouton " + t[2] + " : " + lbl.getText());
+        }
+        p.dispatchEvent(new MouseEvent(p, MouseEvent.MOUSE_PRESSED, 0, 0, 100, 75, 1, false, MouseEvent.BUTTON1));
+        System.out.println("  clic hors de la cible : " + lbl.getText());`, ["java.awt.event.MouseEvent"]),
+			depart: T(`
+//// Fichier : FrameCible.java
+import javax.swing.JFrame;
+
+public class FrameCible extends JFrame
+{
+    public FrameCible()
+    {
+        this.setTitle("Tir à la cible");
+        this.setSize(216, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelCible());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameCible();
+    }
+}
+//// Fichier : PanelCible.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCible extends JPanel
+{
+    private static final int CENTRE_X = 100;
+    private static final int CENTRE_Y = 75;
+
+    private int    score;
+    private JPanel panelCible;
+    private JLabel lblScore;
+
+    public PanelCible()
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameCible.java
+import javax.swing.JFrame;
+
+public class FrameCible extends JFrame
+{
+    public FrameCible()
+    {
+        this.setTitle("Tir à la cible");
+        this.setSize(216, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelCible());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameCible();
+    }
+}
+//// Fichier : PanelCible.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCible extends JPanel
+{
+    private static final int CENTRE_X = 100;
+    private static final int CENTRE_Y = 75;
+
+    private int    score;
+    private JPanel panelCible;
+    private JLabel lblScore;
+
+    public PanelCible()
+    {
+        this.setLayout(new BorderLayout());
+        this.score = 0;
+
+        /* Création des composants */
+        this.panelCible = new JPanel();
+        this.panelCible.setBackground(new Color(250, 230, 200));
+        this.lblScore = new JLabel("Score : 0");
+
+        /* Positionnement des composants */
+        this.add(this.panelCible, BorderLayout.CENTER);
+        this.add(this.lblScore, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.panelCible.addMouseListener(new GereSouris());
+    }
+
+    private class GereSouris extends MouseAdapter
+    {
+        public void mousePressed(MouseEvent e)
+        {
+            int dx;
+            int dy;
+            int points;
+
+            if (e.getButton() == MouseEvent.BUTTON3)
+            {
+                PanelCible.this.score = 0;
+                PanelCible.this.lblScore.setText("Score : 0");
+                return;
+            }
+
+            dx = e.getX() - PanelCible.CENTRE_X;
+            dy = e.getY() - PanelCible.CENTRE_Y;
+            if (dx * dx + dy * dy <= 20 * 20)
+            {
+                points = 10;
+            }
+            else if (dx * dx + dy * dy <= 50 * 50)
+            {
+                points = 5;
+            }
+            else
+            {
+                points = 1;
+            }
+
+            PanelCible.this.score = PanelCible.this.score + points;
+            PanelCible.this.lblScore.setText("Score : " + PanelCible.this.score + " (dernier tir : " + points + ")");
+        }
+    }
+}`),
+			indices: ["`private class GereSouris extends MouseAdapter` à l'intérieur de `PanelCible`, avec une seule méthode : `public void mousePressed(MouseEvent e)`. Inscris-la avec `this.panelCible.addMouseListener(new GereSouris());`.",
+				"Dans la classe interne, les attributs du panneau s'écrivent `PanelCible.this.score`, `PanelCible.this.lblScore`.",
+				"`dx = e.getX() - CENTRE_X`, `dy = e.getY() - CENTRE_Y`, puis compare `dx * dx + dy * dy` à `20 * 20` puis à `50 * 50`."] },
+		{ id: "i06.p2", k: "code", mode: "class", titre: "Cinq fléchettes et un viseur", lanceur: "FrameCible", xp: 30,
+			enonce: "Le jeu se joue maintenant en **5 tirs** :\n\n- ajoute au nord un `JLabel` attribut `lblVisee` : « Visée : hors cible ». Ordre d'ajout : nord, centre, sud ;\n- un attribut `nbTirs` compte les tirs. Après le 5e, le label affiche « Partie finie : 32 points » et les clics gauches ne comptent plus. Le clic droit remet aussi `nbTirs` à 0 ;\n- `GereSouris` écoute aussi les **déplacements** de `panelCible` (le même objet sert aux deux `add`) : `mouseMoved` affiche « Visée : (x:y) » dans `lblVisee`, et `mouseExited` remet « Visée : hors cible » ;\n- au-dessus de la cible, le pointeur est une croix (`Cursor.CROSSHAIR_CURSOR`).",
+			regles: ["allman"],
+			harness: ihmTest("TestCible", `
+        PanelCible p = new PanelCible();
+        System.out.println(nom(p));
+        decrire(p, "    ");
+        JLabel visee = (JLabel) p.getComponent(0);
+        JPanel cible = (JPanel) p.getComponent(1);
+        JLabel lbl = (JLabel) p.getComponent(2);
+        System.out.println("curseur " + cible.getCursor().getType() + " / " + visee.getText());
+        cible.dispatchEvent(new MouseEvent(cible, MouseEvent.MOUSE_MOVED, 0, 0, 42, 17, 0, false));
+        System.out.println(visee.getText());
+        cible.dispatchEvent(new MouseEvent(cible, MouseEvent.MOUSE_EXITED, 0, 0, 300, 17, 0, false));
+        System.out.println(visee.getText());
+        int[][] tirs = { { 100, 75 }, { 140, 75 }, { 0, 0 }, { 95, 80 }, { 100, 40 }, { 100, 75 } };
+        for (int[] t : tirs)
+        {
+            cible.dispatchEvent(new MouseEvent(cible, MouseEvent.MOUSE_PRESSED, 0, 0, t[0], t[1], 1, false, MouseEvent.BUTTON1));
+            System.out.println("  (" + t[0] + ", " + t[1] + ") : " + lbl.getText());
+        }
+        cible.dispatchEvent(new MouseEvent(cible, MouseEvent.MOUSE_PRESSED, 0, 0, 10, 10, 1, false, MouseEvent.BUTTON3));
+        System.out.println("clic droit : " + lbl.getText());
+        cible.dispatchEvent(new MouseEvent(cible, MouseEvent.MOUSE_PRESSED, 0, 0, 100, 75, 1, false, MouseEvent.BUTTON1));
+        System.out.println("nouvelle partie : " + lbl.getText());`, ["java.awt.event.MouseEvent"]),
+			depart: "",
+			solution: T(`
+//// Fichier : FrameCible.java
+import javax.swing.JFrame;
+
+public class FrameCible extends JFrame
+{
+    public FrameCible()
+    {
+        this.setTitle("Tir à la cible");
+        this.setSize(216, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelCible());
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameCible();
+    }
+}
+//// Fichier : PanelCible.java
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class PanelCible extends JPanel
+{
+    private static final int CENTRE_X = 100;
+    private static final int CENTRE_Y = 75;
+    private static final int MAX_TIRS = 5;
+
+    private int    score;
+    private int    nbTirs;
+    private JLabel lblVisee;
+    private JPanel panelCible;
+    private JLabel lblScore;
+
+    public PanelCible()
+    {
+        GereSouris gs;
+
+        this.setLayout(new BorderLayout());
+        this.score  = 0;
+        this.nbTirs = 0;
+
+        /* Création des composants */
+        this.lblVisee   = new JLabel("Visée : hors cible");
+        this.panelCible = new JPanel();
+        this.panelCible.setBackground(new Color(250, 230, 200));
+        this.panelCible.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+        this.lblScore = new JLabel("Score : 0");
+
+        /* Positionnement des composants */
+        this.add(this.lblVisee, BorderLayout.NORTH);
+        this.add(this.panelCible, BorderLayout.CENTER);
+        this.add(this.lblScore, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        gs = new GereSouris();
+        this.panelCible.addMouseListener(gs);
+        this.panelCible.addMouseMotionListener(gs);
+    }
+
+    private class GereSouris extends MouseAdapter
+    {
+        public void mousePressed(MouseEvent e)
+        {
+            int dx;
+            int dy;
+            int points;
+
+            if (e.getButton() == MouseEvent.BUTTON3)
+            {
+                PanelCible.this.score  = 0;
+                PanelCible.this.nbTirs = 0;
+                PanelCible.this.lblScore.setText("Score : 0");
+                return;
+            }
+            if (PanelCible.this.nbTirs == PanelCible.MAX_TIRS)
+            {
+                return;
+            }
+
+            dx = e.getX() - PanelCible.CENTRE_X;
+            dy = e.getY() - PanelCible.CENTRE_Y;
+            if (dx * dx + dy * dy <= 20 * 20)
+            {
+                points = 10;
+            }
+            else if (dx * dx + dy * dy <= 50 * 50)
+            {
+                points = 5;
+            }
+            else
+            {
+                points = 1;
+            }
+
+            PanelCible.this.score = PanelCible.this.score + points;
+            PanelCible.this.nbTirs++;
+            if (PanelCible.this.nbTirs == PanelCible.MAX_TIRS)
+            {
+                PanelCible.this.lblScore.setText("Partie finie : " + PanelCible.this.score + " points");
+            }
+            else
+            {
+                PanelCible.this.lblScore.setText("Score : " + PanelCible.this.score + " (dernier tir : " + points + ")");
+            }
+        }
+
+        public void mouseMoved(MouseEvent e)
+        {
+            PanelCible.this.lblVisee.setText("Visée : (" + e.getX() + ":" + e.getY() + ")");
+        }
+
+        public void mouseExited(MouseEvent e)
+        {
+            PanelCible.this.lblVisee.setText("Visée : hors cible");
+        }
+    }
+}`),
+			indices: ["Garde le `GereSouris` dans une variable pour l'inscrire deux fois : `addMouseListener(gs)` et `addMouseMotionListener(gs)`.",
+				"En début de `mousePressed`, après le cas du clic droit : si les 5 tirs sont déjà faits, `return;`.",
+				"Le pointeur : `this.panelCible.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));` (import `java.awt.Cursor`)."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 7 */
+IHM_PROJETS.i07 = { id: "i07.p", titre: "Le bloc-notes",
+	intro: "Le bloc-notes a besoin d'une barre de menus : Fichier, Édition, puis Aide, avec mnémoniques et raccourcis clavier. Toute la barre tient dans une classe `MaBarreMenu`. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i07.p1", k: "code", mode: "class", titre: "Fichier et Édition", lanceur: "FrameNotes", xp: 20,
+			enonce: "`FrameNotes` est écrite : elle pose la barre avec `this.setJMenuBar(new MaBarreMenu());`. Écris `MaBarreMenu`, qui hérite de `JMenuBar` et implémente `ActionListener` :\n\n- menu « Fichier » (mnémonique `F`) : « Nouveau » (`N`, raccourci Ctrl + N), « Ouvrir » (`O`, raccourci Ctrl + O), un séparateur, « Quitter » (`Q`) ;\n- menu « Édition » (mnémonique `E`) : « Copier » (`C`) et « Coller » (`V`).\n\nChaque entrée est écoutée par la barre. `actionPerformed` affiche « Menu : Nouveau » dans la console (le texte de l'entrée), sauf « Quitter », qui appelle `System.exit(0)`. Les raccourcis s'écrivent `KeyStroke.getKeyStroke(\"ctrl N\")`.",
+			regles: ["allman"],
+			harness: ihmTest("TestNotes", `
+        MaBarreMenu b = new MaBarreMenu();
+        System.out.println(b.getMenuCount() + " menus");
+        for (int m = 0; m < b.getMenuCount(); m++)
+        {
+            JMenu menu = b.getMenu(m);
+            System.out.println(menu.getText() + " [" + (char) menu.getMnemonic() + "] " + menu.getItemCount() + " lignes");
+            for (int i = 0; i < menu.getItemCount(); i++)
+            {
+                JMenuItem it = menu.getItem(i);
+                if (it == null)
+                {
+                    System.out.println("    ----");
+                    continue;
+                }
+                KeyStroke k = it.getAccelerator();
+                String acc = k == null ? "" : " " + (char) k.getKeyCode() + ((k.getModifiers() & InputEvent.CTRL_DOWN_MASK) != 0 ? " ctrl" : "");
+                System.out.println("    " + it.getText() + " [" + (char) it.getMnemonic() + "]" + acc + (it.isEnabled() ? "" : " (inactif)"));
+            }
+        }
+        b.getMenu(0).getItem(0).doClick();
+        b.getMenu(1).getItem(1).doClick();
+        b.getMenu(0).getItem(1).doClick();
+        b.getMenu(1).getItem(0).doClick();`, ["java.awt.event.InputEvent"]),
+			depart: T(`
+//// Fichier : FrameNotes.java
+import java.awt.BorderLayout;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+public class FrameNotes extends JFrame
+{
+    public FrameNotes()
+    {
+        this.setTitle("Bloc-notes");
+        this.setSize(360, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setJMenuBar(new MaBarreMenu());
+        this.add(new JLabel("Choisis une entrée dans les menus", JLabel.CENTER), BorderLayout.CENTER);
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameNotes();
+    }
+}
+//// Fichier : MaBarreMenu.java
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
+
+public class MaBarreMenu extends JMenuBar implements ActionListener
+{
+    public MaBarreMenu()
+    {
+
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+
+    }
+}`),
+			solution: T(`
+//// Fichier : FrameNotes.java
+import java.awt.BorderLayout;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+public class FrameNotes extends JFrame
+{
+    public FrameNotes()
+    {
+        this.setTitle("Bloc-notes");
+        this.setSize(360, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setJMenuBar(new MaBarreMenu());
+        this.add(new JLabel("Choisis une entrée dans les menus", JLabel.CENTER), BorderLayout.CENTER);
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameNotes();
+    }
+}
+//// Fichier : MaBarreMenu.java
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
+
+public class MaBarreMenu extends JMenuBar implements ActionListener
+{
+    public MaBarreMenu()
+    {
+        JMenu     menuFichier;
+        JMenu     menuEdition;
+        JMenuItem itemNouveau;
+        JMenuItem itemOuvrir;
+        JMenuItem itemQuitter;
+        JMenuItem itemCopier;
+        JMenuItem itemColler;
+
+        /* Création des composants */
+        menuFichier = new JMenu("Fichier");
+        menuFichier.setMnemonic('F');
+        itemNouveau = new JMenuItem("Nouveau");
+        itemNouveau.setMnemonic('N');
+        itemNouveau.setAccelerator(KeyStroke.getKeyStroke("ctrl N"));
+        itemOuvrir = new JMenuItem("Ouvrir");
+        itemOuvrir.setMnemonic('O');
+        itemOuvrir.setAccelerator(KeyStroke.getKeyStroke("ctrl O"));
+        itemQuitter = new JMenuItem("Quitter");
+        itemQuitter.setMnemonic('Q');
+
+        menuEdition = new JMenu("Édition");
+        menuEdition.setMnemonic('E');
+        itemCopier = new JMenuItem("Copier");
+        itemCopier.setMnemonic('C');
+        itemColler = new JMenuItem("Coller");
+        itemColler.setMnemonic('V');
+
+        /* Positionnement des composants */
+        menuFichier.add(itemNouveau);
+        menuFichier.add(itemOuvrir);
+        menuFichier.addSeparator();
+        menuFichier.add(itemQuitter);
+        menuEdition.add(itemCopier);
+        menuEdition.add(itemColler);
+        this.add(menuFichier);
+        this.add(menuEdition);
+
+        /* Activation des composants */
+        itemNouveau.addActionListener(this);
+        itemOuvrir.addActionListener(this);
+        itemQuitter.addActionListener(this);
+        itemCopier.addActionListener(this);
+        itemColler.addActionListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getActionCommand().equals("Quitter"))
+        {
+            System.exit(0);
+        }
+        System.out.println("Menu : " + e.getActionCommand());
+    }
+}`),
+			indices: ["Un `JMenu` se met dans la barre avec `this.add(menu)` (la barre, c'est `this`), une entrée dans son menu avec `menu.add(item)`, un trait avec `menu.addSeparator()`.",
+				"Mnémonique : `item.setMnemonic('N')`. Raccourci : `item.setAccelerator(KeyStroke.getKeyStroke(\"ctrl N\"))`.",
+				"Dans `actionPerformed`, `e.getActionCommand()` donne le texte de l'entrée choisie : compare-le à `\"Quitter\"` avec `equals`."] },
+		{ id: "i07.p2", k: "code", mode: "class", titre: "Une barre d'état et des entrées inactives", lanceur: "FrameNotes", xp: 30,
+			enonce: "Les messages vont maintenant dans une barre d'état. Le constructeur devient `MaBarreMenu(JLabel lblEtat)` : la barre garde ce label en attribut et y écrit au lieu de la console.\n\n- « Nouveau » : « Nouveau document » ; « Ouvrir » : « Ouverture d'un fichier » ; « Copier » : « Texte copié » ;\n- « Coller » est **inactif** au départ (`setEnabled(false)`) et devient actif après le premier « Copier ». Chaque « Coller » écrit « Collé 1 fois », « Collé 2 fois »... (un attribut compte les collages) ;\n- un troisième menu « Aide » (mnémonique `A`) avec « À propos » (`P`) : « Bloc-notes, version 1 ».\n\nGarde l'entrée « Coller » en attribut (`itemColler`) pour pouvoir l'activer. Reconnais les entrées avec `e.getSource()` : il faut donc garder les autres entrées en attributs aussi.\n\nDans `FrameNotes`, crée un `JLabel lblEtat` (« Prêt »), ajoute-le au sud et passe-le à la barre : `this.setJMenuBar(new MaBarreMenu(lblEtat));`.",
+			regles: ["allman"],
+			harness: ihmTest("TestNotes", `
+        JLabel etat = new JLabel("Prêt");
+        MaBarreMenu b = new MaBarreMenu(etat);
+        System.out.println(b.getMenuCount() + " menus");
+        for (int m = 0; m < b.getMenuCount(); m++)
+        {
+            JMenu menu = b.getMenu(m);
+            System.out.println(menu.getText() + " [" + (char) menu.getMnemonic() + "] " + menu.getItemCount() + " lignes");
+            for (int i = 0; i < menu.getItemCount(); i++)
+            {
+                JMenuItem it = menu.getItem(i);
+                if (it == null)
+                {
+                    System.out.println("    ----");
+                    continue;
+                }
+                KeyStroke k = it.getAccelerator();
+                String acc = k == null ? "" : " " + (char) k.getKeyCode() + ((k.getModifiers() & InputEvent.CTRL_DOWN_MASK) != 0 ? " ctrl" : "");
+                System.out.println("    " + it.getText() + " [" + (char) it.getMnemonic() + "]" + acc + (it.isEnabled() ? "" : " (inactif)"));
+            }
+        }
+        JMenuItem coller = b.getMenu(1).getItem(1);
+        coller.doClick();
+        System.out.println("coller avant copier : " + etat.getText() + " " + coller.isEnabled());
+        b.getMenu(0).getItem(0).doClick();
+        System.out.println(etat.getText());
+        b.getMenu(0).getItem(1).doClick();
+        System.out.println(etat.getText());
+        b.getMenu(1).getItem(0).doClick();
+        System.out.println(etat.getText() + " " + coller.isEnabled());
+        coller.doClick();
+        coller.doClick();
+        System.out.println(etat.getText());
+        b.getMenu(1).getItem(0).doClick();
+        coller.doClick();
+        System.out.println(etat.getText());
+        b.getMenu(2).getItem(0).doClick();
+        System.out.println(etat.getText());`, ["java.awt.event.InputEvent"]),
+			depart: "",
+			solution: T(`
+//// Fichier : FrameNotes.java
+import java.awt.BorderLayout;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+public class FrameNotes extends JFrame
+{
+    public FrameNotes()
+    {
+        JLabel lblEtat = new JLabel("Prêt");
+
+        this.setTitle("Bloc-notes");
+        this.setSize(360, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setJMenuBar(new MaBarreMenu(lblEtat));
+        this.add(new JLabel("Choisis une entrée dans les menus", JLabel.CENTER), BorderLayout.CENTER);
+        this.add(lblEtat, BorderLayout.SOUTH);
+        this.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameNotes();
+    }
+}
+//// Fichier : MaBarreMenu.java
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
+
+public class MaBarreMenu extends JMenuBar implements ActionListener
+{
+    private JLabel    lblEtat;
+    private int       nbCollages;
+    private JMenuItem itemNouveau;
+    private JMenuItem itemOuvrir;
+    private JMenuItem itemQuitter;
+    private JMenuItem itemCopier;
+    private JMenuItem itemColler;
+    private JMenuItem itemAPropos;
+
+    public MaBarreMenu(JLabel lblEtat)
+    {
+        JMenu menuFichier;
+        JMenu menuEdition;
+        JMenu menuAide;
+
+        this.lblEtat    = lblEtat;
+        this.nbCollages = 0;
+
+        /* Création des composants */
+        menuFichier = new JMenu("Fichier");
+        menuFichier.setMnemonic('F');
+        this.itemNouveau = new JMenuItem("Nouveau");
+        this.itemNouveau.setMnemonic('N');
+        this.itemNouveau.setAccelerator(KeyStroke.getKeyStroke("ctrl N"));
+        this.itemOuvrir = new JMenuItem("Ouvrir");
+        this.itemOuvrir.setMnemonic('O');
+        this.itemOuvrir.setAccelerator(KeyStroke.getKeyStroke("ctrl O"));
+        this.itemQuitter = new JMenuItem("Quitter");
+        this.itemQuitter.setMnemonic('Q');
+
+        menuEdition = new JMenu("Édition");
+        menuEdition.setMnemonic('E');
+        this.itemCopier = new JMenuItem("Copier");
+        this.itemCopier.setMnemonic('C');
+        this.itemColler = new JMenuItem("Coller");
+        this.itemColler.setMnemonic('V');
+        this.itemColler.setEnabled(false);
+
+        menuAide = new JMenu("Aide");
+        menuAide.setMnemonic('A');
+        this.itemAPropos = new JMenuItem("À propos");
+        this.itemAPropos.setMnemonic('P');
+
+        /* Positionnement des composants */
+        menuFichier.add(this.itemNouveau);
+        menuFichier.add(this.itemOuvrir);
+        menuFichier.addSeparator();
+        menuFichier.add(this.itemQuitter);
+        menuEdition.add(this.itemCopier);
+        menuEdition.add(this.itemColler);
+        menuAide.add(this.itemAPropos);
+        this.add(menuFichier);
+        this.add(menuEdition);
+        this.add(menuAide);
+
+        /* Activation des composants */
+        this.itemNouveau.addActionListener(this);
+        this.itemOuvrir.addActionListener(this);
+        this.itemQuitter.addActionListener(this);
+        this.itemCopier.addActionListener(this);
+        this.itemColler.addActionListener(this);
+        this.itemAPropos.addActionListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == this.itemQuitter)
+        {
+            System.exit(0);
+        }
+        if (e.getSource() == this.itemNouveau)
+        {
+            this.lblEtat.setText("Nouveau document");
+        }
+        if (e.getSource() == this.itemOuvrir)
+        {
+            this.lblEtat.setText("Ouverture d'un fichier");
+        }
+        if (e.getSource() == this.itemCopier)
+        {
+            this.lblEtat.setText("Texte copié");
+            this.itemColler.setEnabled(true);
+        }
+        if (e.getSource() == this.itemColler)
+        {
+            this.nbCollages++;
+            this.lblEtat.setText("Collé " + this.nbCollages + " fois");
+        }
+        if (e.getSource() == this.itemAPropos)
+        {
+            this.lblEtat.setText("Bloc-notes, version 1");
+        }
+    }
+}`),
+			indices: ["Le label vient de la fenêtre : `this.lblEtat = lblEtat;` dans le constructeur, puis `this.lblEtat.setText(...)` dans `actionPerformed`.",
+				"`this.itemColler.setEnabled(false);` à la création, `setEnabled(true)` au premier « Copier ». Une entrée inactive n'envoie aucun événement.",
+				"N'oublie pas `FrameNotes` : `new MaBarreMenu()` ne compile plus, il faut lui passer le label."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 8 */
+var IHM_P8_METIER = T(`
+//// Fichier : Etudiant.java
+public class Etudiant
+{
+    private String nom;
+    private int    note;
+
+    public Etudiant(String nom, int note)
+    {
+        this.nom  = nom;
+        this.note = note;
+    }
+
+    public String getNom()
+    {
+        return this.nom;
+    }
+
+    public int getNote()
+    {
+        return this.note;
+    }
+
+    public boolean setNote(int note)
+    {
+        if (note < 0 || note > 20)
+        {
+            return false;
+        }
+        this.note = note;
+        return true;
+    }
+}
+//// Fichier : Controleur.java
+import java.util.ArrayList;
+
+public class Controleur
+{
+    private ArrayList<Etudiant> lstEtudiants;
+
+    public Controleur()
+    {
+        this.lstEtudiants = new ArrayList<Etudiant>();
+        this.lstEtudiants.add(new Etudiant("Ana", 12));
+        this.lstEtudiants.add(new Etudiant("Bilal", 8));
+        this.lstEtudiants.add(new Etudiant("Chloé", 15));
+        this.lstEtudiants.add(new Etudiant("Dylan", 9));
+    }
+
+    public String[] getEntetes()
+    {
+        return new String[] { "Nom", "Note", "Admis" };
+    }
+
+    /* Une ligne par étudiant : nom (String), note (Integer), admis (Boolean). */
+    public Object[][] getDonnees()
+    {
+        Object[][] tab = new Object[this.lstEtudiants.size()][3];
+        for (int i = 0; i < tab.length; i++)
+        {
+            Etudiant e = this.lstEtudiants.get(i);
+            tab[i][0] = e.getNom();
+            tab[i][1] = e.getNote();
+            tab[i][2] = e.getNote() >= 10;
+        }
+        return tab;
+    }
+
+    /* Refuse (false) une note hors de 0 à 20. */
+    public boolean modifierNote(int lig, int note)
+    {
+        return this.lstEtudiants.get(lig).setNote(note);
+    }
+
+    public double getMoyenne()
+    {
+        double somme = 0;
+        for (Etudiant e : this.lstEtudiants)
+        {
+            somme = somme + e.getNote();
+        }
+        return somme / this.lstEtudiants.size();
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameNotes(new Controleur());
+    }
+}
+//// Fichier : FrameNotes.java
+import javax.swing.JFrame;
+
+public class FrameNotes extends JFrame
+{
+    public FrameNotes(Controleur ctrl)
+    {
+        this.setTitle("Carnet de notes");
+        this.setSize(360, 200);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(new PanelNotes(ctrl));
+        this.setVisible(true);
+    }
+}`);
+var IHM_P8_DEPART = IHM_P8_METIER + "\n" + T(`
+//// Fichier : GrilleNotesModel.java
+import javax.swing.table.AbstractTableModel;
+
+public class GrilleNotesModel extends AbstractTableModel
+{
+    private Controleur ctrl;
+    private String[]   tabEntetes;
+    private Object[][] tabDonnees;
+
+    public GrilleNotesModel(Controleur ctrl)
+    {
+        this.ctrl = ctrl;
+        this.majTable();
+    }
+
+    public void majTable()
+    {
+
+    }
+}
+//// Fichier : PanelNotes.java
+import java.awt.BorderLayout;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+
+public class PanelNotes extends JPanel
+{
+    private Controleur       ctrl;
+    private GrilleNotesModel modele;
+    private JTable           tblNotes;
+
+    public PanelNotes(Controleur ctrl)
+    {
+
+    }
+}`);
+var IHM_P8_TABLE = T(`
+        JScrollPane sp = (JScrollPane) p.getComponent(0);
+        JTable t = (JTable) sp.getViewport().getView();
+        String ligne = "";
+        for (int c = 0; c < t.getColumnCount(); c++) { ligne += t.getColumnName(c) + (t.isCellEditable(0, c) ? "*" : "") + " | "; }
+        System.out.println(ligne + t.getTableHeader().getReorderingAllowed());
+        for (int l = 0; l < t.getRowCount(); l++)
+        {
+            ligne = "";
+            for (int c = 0; c < t.getColumnCount(); c++) { ligne += t.getValueAt(l, c) + " "; }
+            System.out.println("  " + ligne);
+        }`);
+IHM_PROJETS.i08 = { id: "i08.p", titre: "Le carnet de notes",
+	intro: "Un carnet de notes dans une `JTable`, branché sur la partie Métier par un Contrôleur. D'abord on affiche, ensuite on modifie les notes et on calcule la moyenne. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i08.p1", k: "code", mode: "class", titre: "Afficher le carnet", lanceur: "Controleur", xp: 20,
+			enonce: "`Etudiant`, `Controleur` et `FrameNotes` sont écrites : ne les modifie pas. Le Contrôleur fournit `getEntetes()` et `getDonnees()` (un `Object[][]` : nom, note en `Integer`, admis en `Boolean`).\n\nÉcris le modèle `GrilleNotesModel` (hérite de `AbstractTableModel`) :\n\n- `majTable()` recharge en-têtes et données depuis le Contrôleur, puis prévient la table avec `fireTableDataChanged()` ;\n- `getRowCount()`, `getColumnCount()`, `getColumnName(col)` et `getValueAt(lig, col)` lisent ces tableaux. Aucune case n'est modifiable pour l'instant.\n\nPuis `PanelNotes` (`BorderLayout`) : il crée le modèle, puis la `JTable` `tblNotes` sur ce modèle, dont les colonnes ne se déplacent pas, et la pose au centre dans un `JScrollPane`.",
+			regles: ["allman"],
+			harness: ihmTest("TestNotes", `
+        PanelNotes p = new PanelNotes(new Controleur());
+        System.out.println(nom(p));
+        decrire(p, "    ");` + "\n" + IHM_P8_TABLE),
+			depart: IHM_P8_DEPART,
+			solution: IHM_P8_METIER + "\n" + T(`
+//// Fichier : GrilleNotesModel.java
+import javax.swing.table.AbstractTableModel;
+
+public class GrilleNotesModel extends AbstractTableModel
+{
+    private Controleur ctrl;
+    private String[]   tabEntetes;
+    private Object[][] tabDonnees;
+
+    public GrilleNotesModel(Controleur ctrl)
+    {
+        this.ctrl = ctrl;
+        this.majTable();
+    }
+
+    public void majTable()
+    {
+        this.tabEntetes = this.ctrl.getEntetes();
+        this.tabDonnees = this.ctrl.getDonnees();
+        this.fireTableDataChanged();
+    }
+
+    public int getRowCount()
+    {
+        return this.tabDonnees.length;
+    }
+
+    public int getColumnCount()
+    {
+        return this.tabEntetes.length;
+    }
+
+    public String getColumnName(int col)
+    {
+        return this.tabEntetes[col];
+    }
+
+    public Object getValueAt(int lig, int col)
+    {
+        return this.tabDonnees[lig][col];
+    }
+}
+//// Fichier : PanelNotes.java
+import java.awt.BorderLayout;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+
+public class PanelNotes extends JPanel
+{
+    private Controleur       ctrl;
+    private GrilleNotesModel modele;
+    private JTable           tblNotes;
+
+    public PanelNotes(Controleur ctrl)
+    {
+        this.ctrl = ctrl;
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        this.modele   = new GrilleNotesModel(ctrl);
+        this.tblNotes = new JTable(this.modele);
+        this.tblNotes.getTableHeader().setReorderingAllowed(false);
+
+        /* Positionnement des composants */
+        this.add(new JScrollPane(this.tblNotes), BorderLayout.CENTER);
+    }
+}`),
+			indices: ["Le modèle garde deux tableaux en attributs : `majTable()` les remplit avec `this.ctrl.getEntetes()` et `this.ctrl.getDonnees()`, puis appelle `this.fireTableDataChanged()`.",
+				"Les quatre méthodes du modèle tiennent chacune en une ligne : `tabDonnees.length`, `tabEntetes.length`, `tabEntetes[col]`, `tabDonnees[lig][col]`.",
+				"Dans le panneau : `new JTable(this.modele)`, puis `this.add(new JScrollPane(this.tblNotes), BorderLayout.CENTER)`."] },
+		{ id: "i08.p2", k: "code", mode: "class", titre: "Modifier une note, calculer la moyenne", lanceur: "Controleur", xp: 30,
+			enonce: "Le Contrôleur fournit aussi `modifierNote(lig, note)` (refuse une note hors de 0 à 20) et `getMoyenne()`.\n\nDans le modèle :\n\n- seule la colonne « Note » (1) est modifiable (`isCellEditable`) ;\n- `getColumnClass(col)` renvoie la classe de la valeur de la ligne 0 (la colonne « Admis » s'affiche en cases à cocher) ;\n- `setValueAt(valeur, lig, col)` demande la modification au Contrôleur (la valeur est un `Integer`), puis appelle `majTable()` : la colonne « Admis » suit la nouvelle note.\n\nDans le panneau : au sud, un panneau local (layout par défaut) avec le bouton `btnMoyenne` « Moyenne » et le label `lblMoyenne` « Moyenne : ? ». Un clic affiche « Moyenne : 11.0 » (la valeur de `getMoyenne()`).",
+			regles: ["allman"],
+			harness: ihmTest("TestNotes", `
+        PanelNotes p = new PanelNotes(new Controleur());
+        System.out.println(nom(p));
+        decrire(p, "    ");` + "\n" + IHM_P8_TABLE + "\n" + T(`
+        JPanel sud = (JPanel) p.getComponent(1);
+        JButton btn = (JButton) sud.getComponent(0);
+        JLabel lbl = (JLabel) sud.getComponent(1);
+        System.out.println(lbl.getText() + " / classes : " + ((GrilleNotesModel) t.getModel()).getColumnClass(0).getSimpleName() + " " + ((GrilleNotesModel) t.getModel()).getColumnClass(1).getSimpleName() + " " + ((GrilleNotesModel) t.getModel()).getColumnClass(2).getSimpleName());
+        btn.doClick();
+        System.out.println(lbl.getText());
+        t.setValueAt(14, 1, 1);
+        t.setValueAt(25, 2, 1);
+        t.setValueAt(-3, 3, 1);
+        System.out.println("Bilal : " + t.getValueAt(1, 1) + " " + t.getValueAt(1, 2) + " / Chloé : " + t.getValueAt(2, 1) + " / Dylan : " + t.getValueAt(3, 1));
+        btn.doClick();
+        System.out.println(lbl.getText());
+        t.setValueAt(5, 0, 1);
+        System.out.println("Ana : " + t.getValueAt(0, 1) + " " + t.getValueAt(0, 2));
+        btn.doClick();
+        System.out.println(lbl.getText());`)),
+			depart: "",
+			solution: IHM_P8_METIER + "\n" + T(`
+//// Fichier : GrilleNotesModel.java
+import javax.swing.table.AbstractTableModel;
+
+public class GrilleNotesModel extends AbstractTableModel
+{
+    private Controleur ctrl;
+    private String[]   tabEntetes;
+    private Object[][] tabDonnees;
+
+    public GrilleNotesModel(Controleur ctrl)
+    {
+        this.ctrl = ctrl;
+        this.majTable();
+    }
+
+    public void majTable()
+    {
+        this.tabEntetes = this.ctrl.getEntetes();
+        this.tabDonnees = this.ctrl.getDonnees();
+        this.fireTableDataChanged();
+    }
+
+    public int getRowCount()
+    {
+        return this.tabDonnees.length;
+    }
+
+    public int getColumnCount()
+    {
+        return this.tabEntetes.length;
+    }
+
+    public String getColumnName(int col)
+    {
+        return this.tabEntetes[col];
+    }
+
+    public Object getValueAt(int lig, int col)
+    {
+        return this.tabDonnees[lig][col];
+    }
+
+    public Class<?> getColumnClass(int col)
+    {
+        return this.getValueAt(0, col).getClass();
+    }
+
+    public boolean isCellEditable(int lig, int col)
+    {
+        return col == 1;
+    }
+
+    public void setValueAt(Object valeur, int lig, int col)
+    {
+        if (col == 1)
+        {
+            this.ctrl.modifierNote(lig, (Integer) valeur);
+            this.majTable();
+        }
+    }
+}
+//// Fichier : PanelNotes.java
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+
+public class PanelNotes extends JPanel implements ActionListener
+{
+    private Controleur       ctrl;
+    private GrilleNotesModel modele;
+    private JTable           tblNotes;
+    private JButton          btnMoyenne;
+    private JLabel           lblMoyenne;
+
+    public PanelNotes(Controleur ctrl)
+    {
+        JPanel panelSud;
+
+        this.ctrl = ctrl;
+        this.setLayout(new BorderLayout());
+
+        /* Création des composants */
+        this.modele   = new GrilleNotesModel(ctrl);
+        this.tblNotes = new JTable(this.modele);
+        this.tblNotes.getTableHeader().setReorderingAllowed(false);
+        panelSud        = new JPanel();
+        this.btnMoyenne = new JButton("Moyenne");
+        this.lblMoyenne = new JLabel("Moyenne : ?");
+
+        /* Positionnement des composants */
+        panelSud.add(this.btnMoyenne);
+        panelSud.add(this.lblMoyenne);
+        this.add(new JScrollPane(this.tblNotes), BorderLayout.CENTER);
+        this.add(panelSud, BorderLayout.SOUTH);
+
+        /* Activation des composants */
+        this.btnMoyenne.addActionListener(this);
+    }
+
+    public void actionPerformed(ActionEvent e)
+    {
+        this.lblMoyenne.setText("Moyenne : " + this.ctrl.getMoyenne());
+    }
+}`),
+			indices: ["`isCellEditable(lig, col)` renvoie simplement `col == 1`.",
+				"`getColumnClass` : `return this.getValueAt(0, col).getClass();` (type de retour `Class<?>`).",
+				"Dans `setValueAt`, caste la valeur : `this.ctrl.modifierNote(lig, (Integer) valeur);`, puis `this.majTable();`. Le modèle ne touche jamais lui-même aux données."] }
+	] };
+
+/* ------------------------------------------------------------- Projet IHM 9 */
+var IHM_P9_CTRL = T(`
+//// Fichier : Controleur.java
+public class Controleur
+{
+    public static final int MAX = 10;
+
+    private int[] tabValeurs;
+
+    public Controleur()
+    {
+        this.tabValeurs = new int[] { 3, 7, 5, 2 };
+    }
+
+    public int getNbBarres()
+    {
+        return this.tabValeurs.length;
+    }
+
+    public int getValeur(int i)
+    {
+        return this.tabValeurs[i];
+    }
+
+    /* Ajoute delta à la barre i, en restant entre 0 et MAX. */
+    public void modifier(int i, int delta)
+    {
+        int v = this.tabValeurs[i] + delta;
+        if (v >= 0 && v <= Controleur.MAX)
+        {
+            this.tabValeurs[i] = v;
+        }
+    }
+
+    public static void main(String[] args)
+    {
+        new FrameBarres(new Controleur());
+    }
+}
+//// Fichier : FrameBarres.java
+import java.awt.Color;
+import javax.swing.JFrame;
+
+public class FrameBarres extends JFrame
+{
+    public FrameBarres(Controleur ctrl)
+    {
+        PanelBarres panel = new PanelBarres(ctrl);
+
+        this.setTitle("Diagramme");
+        this.setSize(260, 240);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        panel.setBackground(Color.WHITE);
+        this.add(panel);
+        this.setVisible(true);
+    }
+}`);
+var IHM_P9_PIXELS = T(`
+            BufferedImage img = new BufferedImage(250, 200, BufferedImage.TYPE_INT_RGB);
+            p.paintComponent(img.getGraphics());
+            String s = "";
+            for (int[] pt : points)
+            {
+                int rgb = img.getRGB(pt[0], pt[1]) & 0xFFFFFF;
+                s += "(" + pt[0] + "," + pt[1] + ")=" + (rgb == 0xFFFFFF ? "blanc" : rgb == 0x0000FF ? "bleu" : rgb == 0xFF0000 ? "rouge" : rgb == 0 ? "noir" : String.format("%06X", rgb)) + " ";
+            }
+            System.out.println("  " + s);`);
+IHM_PROJETS.i09 = { id: "i09.p", titre: "Le diagramme en barres",
+	intro: "On dessine un diagramme en barres à partir des valeurs du Contrôleur, puis on le rend interactif : un clic sur une barre la fait grandir. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "i09.p1", k: "code", mode: "class", titre: "Dessiner les barres", lanceur: "Controleur", xp: 20,
+			enonce: "`Controleur` et `FrameBarres` sont écrites : ne les modifie pas. Le Contrôleur fournit `getNbBarres()` et `getValeur(i)` (de 0 à 10).\n\nÉcris `PanelBarres` (hérite de `JPanel`, constructeur `PanelBarres(Controleur ctrl)`). Sa méthode `paintComponent` repeint le fond puis :\n\n- dessine chaque barre `i` en rectangle plein **bleu** (`Color.BLUE`) : coin gauche en x = `GAUCHE + i * PAS`, largeur `LARGEUR`, hauteur `valeur * UNITE` ; le **bas** de la barre touche la ligne `BAS` (le rectangle commence donc en y = `BAS - hauteur`) ;\n- trace ensuite en **noir** l'axe horizontal, de (10, `BAS`) à (230, `BAS`).\n\nLes constantes `GAUCHE` (20), `PAS` (50), `LARGEUR` (40), `UNITE` (15) et `BAS` (180) sont déjà écrites.",
+			regles: ["allman"],
+			harness: ihmTest("TestBarres", `
+        PanelBarres p = new PanelBarres(new Controleur());
+        p.setBackground(Color.WHITE);
+        p.setSize(250, 200);
+        int[][] points = { { 20, 179 }, { 30, 135 }, { 30, 134 }, { 59, 150 }, { 60, 150 }, { 80, 75 }, { 80, 74 }, { 140, 105 }, { 175, 150 }, { 175, 149 }, { 15, 180 }, { 230, 180 }, { 231, 180 }, { 65, 100 } };` + "\n" + IHM_P9_PIXELS.replace(/^ {4}/gm, ""), ["java.awt.image.BufferedImage"]),
+			depart: IHM_P9_CTRL + "\n" + T(`
+//// Fichier : PanelBarres.java
+import java.awt.Color;
+import java.awt.Graphics;
+import javax.swing.JPanel;
+
+public class PanelBarres extends JPanel
+{
+    private static final int GAUCHE  = 20;
+    private static final int PAS     = 50;
+    private static final int LARGEUR = 40;
+    private static final int UNITE   = 15;
+    private static final int BAS     = 180;
+
+    private Controleur ctrl;
+
+    public PanelBarres(Controleur ctrl)
+    {
+        this.ctrl = ctrl;
+    }
+
+    public void paintComponent(Graphics g)
+    {
+
+    }
+}`),
+			solution: IHM_P9_CTRL + "\n" + T(`
+//// Fichier : PanelBarres.java
+import java.awt.Color;
+import java.awt.Graphics;
+import javax.swing.JPanel;
+
+public class PanelBarres extends JPanel
+{
+    private static final int GAUCHE  = 20;
+    private static final int PAS     = 50;
+    private static final int LARGEUR = 40;
+    private static final int UNITE   = 15;
+    private static final int BAS     = 180;
+
+    private Controleur ctrl;
+
+    public PanelBarres(Controleur ctrl)
+    {
+        this.ctrl = ctrl;
+    }
+
+    public void paintComponent(Graphics g)
+    {
+        int hauteur;
+
+        super.paintComponent(g);
+
+        g.setColor(Color.BLUE);
+        for (int i = 0; i < this.ctrl.getNbBarres(); i++)
+        {
+            hauteur = this.ctrl.getValeur(i) * PanelBarres.UNITE;
+            g.fillRect(PanelBarres.GAUCHE + i * PanelBarres.PAS, PanelBarres.BAS - hauteur, PanelBarres.LARGEUR, hauteur);
+        }
+
+        g.setColor(Color.BLACK);
+        g.drawLine(10, PanelBarres.BAS, 230, PanelBarres.BAS);
+    }
+}`),
+			indices: ["Commence par `super.paintComponent(g);` : il repeint le fond, sinon les anciens dessins restent.",
+				"Pour la barre `i` : `hauteur = valeur * UNITE`, puis `g.fillRect(GAUCHE + i * PAS, BAS - hauteur, LARGEUR, hauteur)`.",
+				"L'axe se trace **après** les barres : `g.setColor(Color.BLACK);` puis `g.drawLine(10, BAS, 230, BAS);`."] },
+		{ id: "i09.p2", k: "code", mode: "class", titre: "Des barres qui répondent au clic", lanceur: "Controleur", xp: 30,
+			enonce: "Le Contrôleur fournit aussi `modifier(i, delta)`, qui ajoute `delta` à la barre `i` en restant entre 0 et 10.\n\n- une méthode privée `getIndiceBarre(x, y)` renvoie l'indice de la barre dont la **colonne** contient le point (x entre `GAUCHE + i * PAS` compris et `GAUCHE + i * PAS + LARGEUR` non compris, et y < `BAS`), ou -1 ;\n- une classe interne `GereSouris` (hérite de `MouseAdapter`) redéfinit `mousePressed` : la barre visée devient la barre sélectionnée (attribut `indiceSelection`, -1 au départ), puis elle grandit de 1 (clic gauche) ou rapetisse de 1 (clic droit, `MouseEvent.BUTTON3`). Un clic à côté des barres désélectionne. Puis `repaint()` ;\n- `paintComponent` dessine la barre sélectionnée en **rouge** (`Color.RED`), les autres en bleu.",
+			regles: ["allman"],
+			harness: ihmTest("TestBarres", `
+        PanelBarres p = new PanelBarres(new Controleur());
+        p.setBackground(Color.WHITE);
+        p.setSize(250, 200);
+        int[][] points = { { 30, 150 }, { 80, 75 } };
+        for (int etape = 0; etape < 4; etape++)
+        {
+            if (etape == 1)
+            {
+                p.dispatchEvent(new MouseEvent(p, MouseEvent.MOUSE_PRESSED, 0, 0, 85, 20, 1, false, MouseEvent.BUTTON1));
+                System.out.println("clic gauche au-dessus de la barre 1");
+                points = new int[][] { { 80, 61 }, { 80, 59 }, { 30, 150 }, { 109, 100 }, { 110, 100 } };
+            }
+            if (etape == 2)
+            {
+                p.dispatchEvent(new MouseEvent(p, MouseEvent.MOUSE_PRESSED, 0, 0, 20, 170, 1, false, MouseEvent.BUTTON3));
+                System.out.println("clic droit sur la barre 0");
+                points = new int[][] { { 30, 140 }, { 30, 155 }, { 80, 70 } };
+            }
+            if (etape == 3)
+            {
+                p.dispatchEvent(new MouseEvent(p, MouseEvent.MOUSE_PRESSED, 0, 0, 60, 170, 1, false, MouseEvent.BUTTON1));
+                p.dispatchEvent(new MouseEvent(p, MouseEvent.MOUSE_PRESSED, 0, 0, 175, 185, 1, false, MouseEvent.BUTTON1));
+                System.out.println("clics entre deux barres et sous l'axe");
+                points = new int[][] { { 30, 155 }, { 80, 70 }, { 175, 149 } };
+            }` + "\n" + IHM_P9_PIXELS + T(`
+        }
+        Controleur c = new Controleur();
+        PanelBarres q = new PanelBarres(c);
+        for (int k = 0; k < 12; k++)
+        {
+            q.dispatchEvent(new MouseEvent(q, MouseEvent.MOUSE_PRESSED, 0, 0, 175, 100, 1, false, MouseEvent.BUTTON1));
+            q.dispatchEvent(new MouseEvent(q, MouseEvent.MOUSE_PRESSED, 0, 0, 30, 100, 1, false, MouseEvent.BUTTON3));
+        }
+        System.out.println("après 12 clics : " + c.getValeur(3) + " et " + c.getValeur(0));`), ["java.awt.event.MouseEvent", "java.awt.image.BufferedImage"]),
+			depart: "",
+			solution: IHM_P9_CTRL + "\n" + T(`
+//// Fichier : PanelBarres.java
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JPanel;
+
+public class PanelBarres extends JPanel
+{
+    private static final int GAUCHE  = 20;
+    private static final int PAS     = 50;
+    private static final int LARGEUR = 40;
+    private static final int UNITE   = 15;
+    private static final int BAS     = 180;
+
+    private Controleur ctrl;
+    private int        indiceSelection;
+
+    public PanelBarres(Controleur ctrl)
+    {
+        this.ctrl            = ctrl;
+        this.indiceSelection = -1;
+        this.addMouseListener(new GereSouris());
+    }
+
+    private int getIndiceBarre(int x, int y)
+    {
+        int gauche;
+
+        if (y >= PanelBarres.BAS)
+        {
+            return -1;
+        }
+        for (int i = 0; i < this.ctrl.getNbBarres(); i++)
+        {
+            gauche = PanelBarres.GAUCHE + i * PanelBarres.PAS;
+            if (x >= gauche && x < gauche + PanelBarres.LARGEUR)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void paintComponent(Graphics g)
+    {
+        int hauteur;
+
+        super.paintComponent(g);
+
+        for (int i = 0; i < this.ctrl.getNbBarres(); i++)
+        {
+            if (i == this.indiceSelection)
+            {
+                g.setColor(Color.RED);
+            }
+            else
+            {
+                g.setColor(Color.BLUE);
+            }
+            hauteur = this.ctrl.getValeur(i) * PanelBarres.UNITE;
+            g.fillRect(PanelBarres.GAUCHE + i * PanelBarres.PAS, PanelBarres.BAS - hauteur, PanelBarres.LARGEUR, hauteur);
+        }
+
+        g.setColor(Color.BLACK);
+        g.drawLine(10, PanelBarres.BAS, 230, PanelBarres.BAS);
+    }
+
+    private class GereSouris extends MouseAdapter
+    {
+        public void mousePressed(MouseEvent e)
+        {
+            int i = PanelBarres.this.getIndiceBarre(e.getX(), e.getY());
+
+            PanelBarres.this.indiceSelection = i;
+            if (i != -1)
+            {
+                if (e.getButton() == MouseEvent.BUTTON3)
+                {
+                    PanelBarres.this.ctrl.modifier(i, -1);
+                }
+                else
+                {
+                    PanelBarres.this.ctrl.modifier(i, 1);
+                }
+            }
+            PanelBarres.this.repaint();
+        }
+    }
+}`),
+			indices: ["`getIndiceBarre` : si `y >= BAS`, renvoie -1 tout de suite ; sinon, une boucle teste `x >= gauche && x < gauche + LARGEUR` pour chaque barre.",
+				"Le panneau écoute sa propre souris : `this.addMouseListener(new GereSouris());` dans le constructeur.",
+				"Dans `paintComponent`, choisis la couleur **dans** la boucle, avant chaque `fillRect` : rouge si `i == indiceSelection`, bleu sinon."] }
+	] };
+
+/* Rattache chaque projet à son unité */
+IHM_UNITES.forEach(function (c) { if (IHM_PROJETS[c.id] && !c.projet) { c.projet = IHM_PROJETS[c.id]; } });
+
+/* ------------------------------------------- Dév Objets, unité « Types enveloppes » */
+var OBJETS_PROJET_ENVELOPPES = { id: "o04b.p", titre: "La station météo",
+	intro: "Une station météo reçoit ses relevés sous forme de texte, parfois vides. On les range dans des `ArrayList` de `Double` et d'`Integer` : boxing, `null`, `equals` et `remove` sont au programme. Chaque étape repart de ton code de l'étape précédente.",
+	etapes: [
+		{ id: "o04b.p1", k: "code", mode: "class", titre: "Les températures", fichier: "Station.java", xp: 20,
+			enonce: "Écris la classe `Station`, qui range ses températures dans une `ArrayList<Double>`.\n\n- `ajouter(String texte)` : le relevé arrive en texte (« 12.5 »). Le texte « - » veut dire « pas de relevé » : la méthode renvoie alors `false` sans rien ajouter. Sinon elle convertit avec `Double.parseDouble`, ajoute la valeur et renvoie `true` ;\n- `getNbReleves()` ;\n- `getMin()` et `getMax()` renvoient un `Double` : la plus petite et la plus grande température, ou `null` s'il n'y a encore aucun relevé ;\n- `toString()` : « 4 relevés, de -2.5 à 14.0 », ou « Aucun relevé ».",
+			regles: ["allman"],
+			harness: T(`
+public class TestStation
+{
+    public static void main(String[] args)
+    {
+        Station s = new Station();
+        System.out.println(s + " / min " + s.getMin() + " / max " + s.getMax());
+        String[] textes = { "12.5", "-2.5", "-", "14", "7.0" };
+        for (String t : textes)
+        {
+            System.out.print(s.ajouter(t) + " ");
+        }
+        System.out.println();
+        System.out.println(s.getNbReleves() + " relevés");
+        double ecart = s.getMax() - s.getMin();
+        System.out.println(s + " / écart " + ecart);
+    }
+}`),
+			depart: T(`
+import java.util.ArrayList;
+
+public class Station
+{
+
+}`),
+			solution: T(`
+import java.util.ArrayList;
+
+public class Station
+{
+    private ArrayList<Double> temperatures;
+
+    public Station()
+    {
+        this.temperatures = new ArrayList<Double>();
+    }
+
+    public boolean ajouter(String texte)
+    {
+        if (texte.equals("-"))
+        {
+            return false;
+        }
+        this.temperatures.add(Double.parseDouble(texte));
+        return true;
+    }
+
+    public int getNbReleves()
+    {
+        return this.temperatures.size();
+    }
+
+    public Double getMin()
+    {
+        Double min = null;
+        for (Double t : this.temperatures)
+        {
+            if (min == null || t < min)
+            {
+                min = t;
+            }
+        }
+        return min;
+    }
+
+    public Double getMax()
+    {
+        Double max = null;
+        for (Double t : this.temperatures)
+        {
+            if (max == null || t > max)
+            {
+                max = t;
+            }
+        }
+        return max;
+    }
+
+    public String toString()
+    {
+        if (this.temperatures.isEmpty())
+        {
+            return "Aucun relevé";
+        }
+        return this.temperatures.size() + " relevés, de " + this.getMin() + " à " + this.getMax();
+    }
+}`),
+			indices: ["Compare le texte avec `equals(\"-\")`, jamais avec `==`. `Double.parseDouble(texte)` donne un `double`, rangé dans la liste par boxing.",
+				"Un `Double` peut valoir `null` : pars de `Double min = null;` et, dans la boucle, remplace-le si `min == null || t < min`.",
+				"`\"14\"` se convertit très bien en `14.0` : c'est ce qu'affichera `toString`."] },
+		{ id: "o04b.p2", k: "code", mode: "class", titre: "La pluie du jour", fichier: "Station.java", xp: 30,
+			enonce: "Ajoute la pluie, en millimètres entiers, dans une `ArrayList<Integer>` (un élément par jour, le jour 0 en premier).\n\n- `ajouterPluie(int mm)` ;\n- `getPluie(int jour)` renvoie un `Integer` : la pluie de ce jour, ou `null` si le jour n'existe pas (négatif ou trop grand) ;\n- `memePluie(int j1, int j2)` : vrai si les deux jours existent et ont reçu la **même** quantité. Attention, `==` entre deux `Integer` compare les objets : au-delà de 127, il répond `false` ;\n- `retirerPluie(int mm)` supprime le **premier** jour qui a reçu `mm` millimètres et renvoie `true`, ou `false` s'il n'y en a pas. `remove(mm)` supprimerait l'élément d'**indice** `mm` : il faut lui passer un `Integer`.",
+			regles: ["allman"],
+			harness: T(`
+public class TestStation
+{
+    public static void main(String[] args)
+    {
+        Station s = new Station();
+        s.ajouter("3.5");
+        s.ajouter("-1");
+        int[] pluies = { 0, 1000, 3, 1000, 0, 100, 100 };
+        for (int mm : pluies)
+        {
+            s.ajouterPluie(mm);
+        }
+        System.out.println(s.getPluie(1) + " " + s.getPluie(6) + " " + s.getPluie(7) + " " + s.getPluie(-1));
+        System.out.println(s.memePluie(1, 3) + " " + s.memePluie(5, 6) + " " + s.memePluie(0, 4) + " " + s.memePluie(0, 2) + " " + s.memePluie(3, 9));
+        System.out.println(s.retirerPluie(3) + " " + s.getPluie(2) + " " + s.getPluie(3));
+        System.out.println(s.retirerPluie(1000) + " " + s.getPluie(1) + " " + s.retirerPluie(7));
+        System.out.println(s);
+    }
+}`),
+			depart: "",
+			solution: T(`
+import java.util.ArrayList;
+
+public class Station
+{
+    private ArrayList<Double>  temperatures;
+    private ArrayList<Integer> pluies;
+
+    public Station()
+    {
+        this.temperatures = new ArrayList<Double>();
+        this.pluies       = new ArrayList<Integer>();
+    }
+
+    public boolean ajouter(String texte)
+    {
+        if (texte.equals("-"))
+        {
+            return false;
+        }
+        this.temperatures.add(Double.parseDouble(texte));
+        return true;
+    }
+
+    public int getNbReleves()
+    {
+        return this.temperatures.size();
+    }
+
+    public Double getMin()
+    {
+        Double min = null;
+        for (Double t : this.temperatures)
+        {
+            if (min == null || t < min)
+            {
+                min = t;
+            }
+        }
+        return min;
+    }
+
+    public Double getMax()
+    {
+        Double max = null;
+        for (Double t : this.temperatures)
+        {
+            if (max == null || t > max)
+            {
+                max = t;
+            }
+        }
+        return max;
+    }
+
+    public void ajouterPluie(int mm)
+    {
+        this.pluies.add(mm);
+    }
+
+    public Integer getPluie(int jour)
+    {
+        if (jour < 0 || jour >= this.pluies.size())
+        {
+            return null;
+        }
+        return this.pluies.get(jour);
+    }
+
+    public boolean memePluie(int j1, int j2)
+    {
+        Integer p1 = this.getPluie(j1);
+        Integer p2 = this.getPluie(j2);
+
+        if (p1 == null || p2 == null)
+        {
+            return false;
+        }
+        return p1.equals(p2);
+    }
+
+    public boolean retirerPluie(int mm)
+    {
+        return this.pluies.remove(Integer.valueOf(mm));
+    }
+
+    public String toString()
+    {
+        if (this.temperatures.isEmpty())
+        {
+            return "Aucun relevé";
+        }
+        return this.temperatures.size() + " relevés, de " + this.getMin() + " à " + this.getMax();
+    }
+}`),
+			indices: ["`this.pluies.add(mm);` : le `int` devient un `Integer` tout seul (boxing).",
+				"Dans `memePluie`, réutilise `getPluie` : si l'une des deux vaut `null`, renvoie `false`, sinon compare avec `p1.equals(p2)`.",
+				"`this.pluies.remove(Integer.valueOf(mm))` retire la première valeur égale et renvoie déjà `true` ou `false`."] }
+	] };
+OBJETS_UNITES.forEach(function (c) { if (c.id === "o04b" && !c.projet) { c.projet = OBJETS_PROJET_ENVELOPPES; } });
+
+/* ==========================================================================
    JavaQuest : les langages proposés
    Pour ajouter un langage : écrire son fichier de contenu (unités au même
    format que CHAPITRES), puis l'ajouter ici.
