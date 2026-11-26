@@ -142,14 +142,20 @@ a { color: var(--accent); }
 	position: sticky;
 	top: 0;
 	z-index: 10;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+	padding: calc(8px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
 	background: color-mix(in srgb, var(--surface) 92%, transparent);
 	backdrop-filter: blur(8px);
 	border-bottom: 1px solid var(--line);
 }
+.top-in
+{
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	margin: 0 auto;
+}
+.topnav, .lang-pill, .theme-btn { display: none; }
 .brand
 {
 	font: 700 1.05rem/1 var(--sans);
@@ -1247,18 +1253,331 @@ body.ed-fs-open { overflow: hidden; }
 .jq-mitem { display: flex; gap: 18px; justify-content: space-between; }
 .jq-acc { color: #666; }
 
+/* ==========================================================================
+   Version PC / Bureau (écrans >= 960px et espace de code côte à côte >= 1040px)
+   Sur mobile (< 960px), l'affichage compact et la barre basse restent intacts.
+   ========================================================================== */
+.topnav, .pill.lang-pill, .iconbtn.theme-btn { display: none; }
+.unit-toc { display: none; }
+.ed-layout-btn { display: none; }
+.ed-shell.fs .ed-layout-btn { display: none !important; }
+.sb-top { margin-bottom: 8px; gap: 8px; }
+.sb-top select { width: auto; min-width: 190px; min-height: 36px; padding: 5px 10px; font-size: .88rem; }
+.ide-left, .ide-right, .sb-code, .sb-out, .path-side, .path-main, .profil-col { min-width: 0; }
+label.row { flex-wrap: nowrap; align-items: flex-start; cursor: pointer; }
+label.row > input[type="checkbox"] { flex: none; width: auto; margin-top: 4px; }
+label.row > span { flex: 1; min-width: 0; }
+
+@media (min-width: 960px)
+{
+	/* En-tête bureau : navigation intégrée, sélecteur de matière et bouton thème */
+	.top { padding: 8px 28px; }
+	.top-in { max-width: 1140px; gap: 12px; }
+	body.mode-ide .top-in { max-width: 1440px; }
+	.tabbar { display: none; }
+
+	.pill.lang-pill
+	{
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		border: 1px solid var(--line);
+		background: var(--surface);
+		color: var(--ink);
+		font: 600 .86rem/1 var(--sans);
+		padding: 7px 12px;
+		cursor: pointer;
+		transition: border-color .15s, background .15s;
+	}
+	.pill.lang-pill:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+	.topnav
+	{
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		margin-left: 8px;
+	}
+	.topnav button
+	{
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 8px 13px;
+		border: 0;
+		border-radius: 10px;
+		background: transparent;
+		color: var(--muted);
+		font: 600 .9rem/1 var(--sans);
+		cursor: pointer;
+		transition: background .15s, color .15s;
+	}
+	.topnav button:hover { background: var(--surface-2); color: var(--ink); }
+	.topnav button.on { background: var(--accent-soft); color: var(--accent); }
+	.topnav .ti { font-size: 1.05rem; }
+
+	.iconbtn.theme-btn
+	{
+		display: inline-grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		border-radius: 10px;
+		font-size: 1rem;
+		flex: none;
+	}
+	.iconbtn.theme-btn:hover { border-color: var(--accent); background: var(--surface-2); }
+
+	/* Largeurs principales sur bureau */
+	main { max-width: 1140px; padding: 26px 28px 56px; }
+	body.mode-ide main { max-width: 1440px; padding: 20px 28px 56px; }
+	body.in-lesson:not(.mode-ide) main { max-width: 780px; padding-top: 6px; }
+	body.in-lesson:not(.mode-ide) .lesson-foot-in { max-width: 780px; }
+	body.in-lesson.mode-ide main { max-width: 1440px; padding-top: 6px; }
+	body.in-lesson.mode-ide .lesson-foot-in { max-width: 1440px; }
+	.lesson-body { padding-bottom: 104px; }
+	.timerbar { top: 64px; }
+
+	/* Parcours : 2 colonnes (panneau résumé sticky à gauche, unités en cartes à droite) */
+	.path-layout
+	{
+		display: grid;
+		grid-template-columns: 320px minmax(0, 1fr);
+		gap: 26px;
+		align-items: start;
+	}
+	.path-side
+	{
+		position: sticky;
+		top: 74px;
+		max-height: calc(100vh - 92px);
+		overflow-y: auto;
+		padding-right: 4px;
+		scrollbar-width: thin;
+		scrollbar-color: var(--line) transparent;
+	}
+	.path-side .path-top-row .chip { display: none; }
+	.path-side .path-top-row { justify-content: flex-start; margin-bottom: 10px !important; }
+
+	.unit-toc { display: block; padding: 14px 14px 10px; }
+	.toc-list { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+	.toc-item
+	{
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		padding: 6px 8px;
+		border: 0;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--ink);
+		font: 500 .84rem/1.3 var(--sans);
+		text-align: left;
+		cursor: pointer;
+	}
+	.toc-item:hover { background: var(--surface-2); }
+	.toc-item.cur { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+	.toc-item.locked { opacity: .55; }
+	.toc-item > .grow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.toc-dot
+	{
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		display: inline-grid;
+		place-items: center;
+		flex: none;
+		font: 700 .72rem/1 var(--mono);
+		background: var(--surface-2);
+		color: var(--muted);
+	}
+	.toc-item.done .toc-dot { background: var(--ok-soft); color: var(--ok); }
+	.toc-item.cur .toc-dot { background: var(--accent); color: var(--accent-ink); }
+
+	/* Unités du parcours en cartes avec grille horizontale de leçons */
+	.unit-block
+	{
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 16px;
+		overflow: hidden;
+		margin-bottom: 20px;
+		box-shadow: var(--shadow);
+		scroll-margin-top: 76px;
+	}
+	.unit-block .unit-head
+	{
+		margin: 0;
+		border-radius: 0;
+		padding: 15px 20px;
+	}
+	.unit-block .path
+	{
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+		gap: 12px;
+		padding: 16px 20px 20px;
+		align-items: stretch;
+	}
+	.unit-block .node-wrap
+	{
+		position: relative;
+		transform: none;
+		max-width: none;
+		padding: 14px 12px 12px;
+		border-radius: 14px;
+		border: 1px solid var(--line);
+		background: var(--bg);
+		gap: 9px;
+		justify-content: flex-start;
+		transition: border-color .15s, transform .15s, box-shadow .15s, background .15s;
+	}
+	.unit-block .node-wrap:not(.is-locked):hover
+	{
+		border-color: var(--accent);
+		transform: translateY(-2px);
+		box-shadow: var(--shadow);
+	}
+	.unit-block .node-wrap.is-current
+	{
+		background: var(--accent-soft);
+		border-color: var(--accent);
+	}
+	.unit-block .node-wrap.is-done
+	{
+		background: color-mix(in srgb, var(--ok-soft) 45%, var(--surface));
+		border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
+	}
+	.unit-block .node-wrap.is-opt { border-style: dashed; }
+	.unit-block .node-wrap.is-locked { opacity: .62; }
+	.unit-block .node
+	{
+		position: static;
+		width: 50px;
+		height: 48px;
+		font-size: 1.3rem;
+		box-shadow: 0 3px 0 var(--line);
+	}
+	.unit-block .node.open { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 40%, var(--line)); }
+	.unit-block .node.current { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 60%, #000); outline-width: 3px; outline-offset: 3px; }
+	.unit-block .node.done { box-shadow: 0 3px 0 color-mix(in srgb, var(--ok) 60%, #000); }
+	.unit-block .node.opt { width: 48px; height: 46px; font-size: 1.2rem; }
+	.unit-block .node::after { content: ""; position: absolute; inset: 0; border-radius: 14px; }
+	.unit-block .node-label { color: var(--ink); font-size: .85rem; }
+	.unit-block .node-wrap.is-locked .node-label { color: var(--muted); }
+
+	/* Pratique, Profil, Mini-DS, Matières : grilles multi-colonnes */
+	.desk-grid-2
+	{
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 14px;
+		margin-bottom: 16px;
+	}
+	.desk-grid-2 > .card, .desk-grid-2 > details.card { margin: 0; }
+	.unitlist-grid { align-items: start; }
+
+	.profil-grid
+	{
+		display: grid;
+		grid-template-columns: 1.15fr 1fr;
+		gap: 20px;
+		align-items: start;
+	}
+	.mds-units
+	{
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+		max-height: 400px;
+	}
+	.lang-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+	.langcard { padding: 22px 18px; gap: 8px; }
+	.langcard:hover:not([disabled]) { border-color: var(--accent); transform: translateY(-2px); }
+}
+
+@media (min-width: 1040px)
+{
+	/* Espace de code côte à côte (IDE) sur PC */
+	.ed-layout-btn { display: inline-flex; align-items: center; }
+	.card.card-ide { padding: 22px 24px; }
+
+	.ide-split:not(.ide-stacked)
+	{
+		--ide-top: 74px;
+		display: grid;
+		grid-template-columns: minmax(340px, 41%) minmax(0, 59%);
+		gap: 24px;
+		align-items: start;
+		margin-top: 10px;
+	}
+	body.in-lesson .ide-split:not(.ide-stacked) { --ide-top: 68px; }
+	body.has-timer .ide-split:not(.ide-stacked) { --ide-top: 132px; }
+
+	.ide-split:not(.ide-stacked) > .ide-left
+	{
+		position: sticky;
+		top: var(--ide-top);
+		max-height: calc(100vh - var(--ide-top) - 24px);
+		overflow-y: auto;
+		padding-right: 16px;
+		border-right: 1px solid var(--line);
+		scrollbar-width: thin;
+		scrollbar-color: var(--line) transparent;
+	}
+	body.in-lesson .ide-split:not(.ide-stacked) > .ide-left
+	{
+		max-height: calc(100vh - var(--ide-top) - 96px);
+	}
+	.ide-split:not(.ide-stacked) > .ide-right .ide-ed-lbl { margin-top: 0; }
+	.ide-split:not(.ide-stacked) .preview { height: 300px; }
+
+	/* Bac à sable côte à côte : éditeur à gauche, saisies + sortie / Swing / aperçu à droite */
+	.sandbox-split:not(.ide-stacked)
+	{
+		display: grid;
+		grid-template-columns: minmax(0, 60%) minmax(320px, 40%);
+		gap: 24px;
+		align-items: start;
+	}
+	.sandbox-split:not(.ide-stacked) > .sb-out
+	{
+		position: sticky;
+		top: 74px;
+		max-height: calc(100vh - 96px);
+		overflow-y: auto;
+		padding-left: 16px;
+		border-left: 1px solid var(--line);
+		scrollbar-width: thin;
+		scrollbar-color: var(--line) transparent;
+	}
+	.sandbox-split:not(.ide-stacked) > .sb-out .ide-ed-lbl { margin-top: 0; }
+	.sandbox-split:not(.ide-stacked) iframe.preview.tall { height: 480px; }
+}
+
 </style>
 </head>
 <body>
 <!-- JavaQuest : fichier généré par site-src/build.js (ne pas modifier à la main, modifier site-src/ puis relancer : node build.js) -->
 <a class="skip" href="#app">Aller au contenu</a>
 <header class="top">
-	<button class="brand" id="homeBtn" type="button" aria-label="Parcours JavaQuest"><span class="logo" aria-hidden="true">{ }</span><span class="brand-name">JavaQuest</span></button>
-	<span class="spacer"></span>
-	<button class="pill admin" id="adminPill" type="button" hidden aria-label="Mode admin activé, ouvrir les outils">ADMIN</button>
-	<span class="pill" id="streak">🔥 0</span>
-	<span class="pill" id="xp">⭐ 0</span>
-	<span class="ring" id="goalRing" role="img"><span aria-hidden="true">🎯</span></span>
+	<div class="top-in">
+		<button class="brand" id="homeBtn" type="button" aria-label="Parcours JavaQuest"><span class="logo" aria-hidden="true">{ }</span><span class="brand-name">JavaQuest</span></button>
+		<button class="pill lang-pill" id="langPill" type="button" aria-label="Changer de matière"></button>
+		<nav class="topnav" aria-label="Navigation principale">
+			<button type="button" data-tab="parcours"><span class="ti" aria-hidden="true">🗺️</span><span>Parcours</span></button>
+			<button type="button" data-tab="pratique"><span class="ti" aria-hidden="true">⌨️</span><span>Pratique</span></button>
+			<button type="button" data-tab="sandbox"><span class="ti" aria-hidden="true">🧪</span><span>Bac à sable</span></button>
+			<button type="button" data-tab="profil"><span class="ti" aria-hidden="true">👤</span><span>Profil</span></button>
+		</nav>
+		<span class="spacer"></span>
+		<button class="pill admin" id="adminPill" type="button" hidden aria-label="Mode admin activé, ouvrir les outils">ADMIN</button>
+		<span class="pill" id="streak">🔥 0</span>
+		<span class="pill" id="xp">⭐ 0</span>
+		<span class="ring" id="goalRing" role="img"><span aria-hidden="true">🎯</span></span>
+		<button class="iconbtn theme-btn" id="themeBtn" type="button" aria-label="Changer de thème" title="Changer de thème">🌙</button>
+	</div>
 </header>
 <main id="app" tabindex="-1"></main>
 <nav class="tabbar" aria-label="Navigation principale">
@@ -51308,7 +51627,7 @@ var KEY = "javaquest-s1-v1";
 var ADMIN_CODE = "iut-admin";
 function freshState(theme)
 {
-	return { xp: 0, done: {}, failed: {}, lives: {}, badges: {}, code: {}, tries: {}, ctl: {}, lessons: {}, days: {}, rev: {}, hints: {}, goal: 20, langue: "java", unlockAll: false, freeFiles: true, admin: false, theme: theme || "auto", backup: "" };
+	return { xp: 0, done: {}, failed: {}, lives: {}, badges: {}, code: {}, tries: {}, ctl: {}, lessons: {}, days: {}, rev: {}, hints: {}, goal: 20, langue: "java", unlockAll: false, freeFiles: true, ideStack: false, admin: false, theme: theme || "auto", backup: "" };
 }
 var state = freshState();
 try
@@ -51468,6 +51787,12 @@ function niveauOf(e) { var x = e && EX[e.id]; return (x && x.langue && x.langue.
 
 /* ---------- En-tête ---------- */
 var app = document.getElementById("app");
+function isDarkTheme()
+{
+	if (state.theme === "dark") { return true; }
+	if (state.theme === "light") { return false; }
+	return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
 function refreshHeader()
 {
 	var s = streak();
@@ -51482,6 +51807,22 @@ function refreshHeader()
 	ring.title = "Objectif du jour : " + todayXp() + "/" + state.goal + " XP";
 	var ad = document.getElementById("adminPill");
 	if (ad) { ad.hidden = !state.admin; }
+	var lp = document.getElementById("langPill");
+	if (lp)
+	{
+		var L = lang();
+		lp.textContent = L.icone + " " + L.nom + " ▾";
+		lp.setAttribute("aria-label", "Matière : " + L.nom + ", changer");
+		lp.title = "Changer de matière (" + L.nom + ")";
+	}
+	var tb = document.getElementById("themeBtn");
+	if (tb)
+	{
+		var dark = isDarkTheme();
+		tb.textContent = dark ? "☀️" : "🌙";
+		tb.setAttribute("aria-label", dark ? "Passer en thème clair" : "Passer en thème sombre");
+		tb.title = dark ? "Passer en thème clair" : "Passer en thème sombre";
+	}
 }
 /* Tout est ouvert : réglage « voir tout le parcours » ou mode admin */
 function allOpen() { return !!(state.unlockAll || state.admin); }
@@ -51591,6 +51932,8 @@ function route()
 	if (timer) { clearInterval(timer); timer = null; }
 	if (typeof destroyGui === "function") { destroyGui(); }
 	document.body.classList.remove("ed-fs-open");
+	document.body.classList.remove("mode-ide");
+	document.body.classList.remove("has-timer");
 	clear(app);
 	document.body.classList.remove("in-lesson");
 	useLang(lang());
@@ -51608,10 +51951,13 @@ function route()
 }
 function updateTabs(hsh)
 {
+	var isSandbox = /^#\/sandbox/.test(hsh);
 	var tab = /^#\/(pratique|sandbox|exo|projet|eval|revision|minids)/.test(hsh) ? "pratique" : /^#\/(profil|langues|admin)/.test(hsh) ? "profil" : "parcours";
 	Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b)
 	{
-		var on = b.getAttribute("data-tab") === tab;
+		var dt = b.getAttribute("data-tab");
+		var inTop = !!(b.closest && b.closest(".topnav"));
+		var on = dt === "sandbox" ? isSandbox : (inTop && dt === "pratique" && isSandbox) ? false : (dt === tab);
 		b.classList.toggle("on", on);
 		if (on) { b.setAttribute("aria-current", "page"); } else { b.removeAttribute("aria-current"); }
 	});
@@ -52345,7 +52691,8 @@ var SwingUI = (function ()
 
 	function renderExercise(e, ctx)
 	{
-		var card = h("article", { "class": "card", "aria-label": KIND[e.k] + (ctx.num ? " " + ctx.num : "") });
+		var isIde = e.k === "code" || e.k === "web";
+		var card = h("article", { "class": "card" + (isIde ? " card-ide" : ""), "aria-label": KIND[e.k] + (ctx.num ? " " + ctx.num : "") });
 		card.appendChild(h("div", { "class": "row between" },
 			h("span", { "class": "kind", text: KIND[e.k] + (ctx.num ? " · " + ctx.num : "") }),
 			(ctx.isDone ? ctx.isDone(e) : state.done[e.id]) ? h("span", { "class": "badge", text: "✓ réussi" }) : null));
@@ -52378,10 +52725,10 @@ var SwingUI = (function ()
 			},
 			info: function (title, body, extra) { feedback("info", title, body, extra); }
 		};
-		var body = ({ qcm: exQcm, predict: exPredict, bug: exBug, fill: exFill, code: exCode, memory: exMemory, web: exWeb })[e.k](e, api, { exam: !!ctx.exam, strict: !!ctx.strict, inLesson: !!ctx.inLesson });
+		var body = ({ qcm: exQcm, predict: exPredict, bug: exBug, fill: exFill, code: exCode, memory: exMemory, web: exWeb })[e.k](e, api, { exam: !!ctx.exam, strict: !!ctx.strict, inLesson: !!ctx.inLesson, fb: isIde ? fb : null });
 		card.appendChild(body);
 		if (state.admin) { card.appendChild(adminAnswer(e)); }
-		card.appendChild(fb);
+		if (!fb.parentNode) { card.appendChild(fb); }
 		if (nextBtn) { card.appendChild(h("div", { "class": "row", style: "margin-top:12px;justify-content:flex-end" }, nextBtn)); }
 		return card;
 	}
@@ -53806,8 +54153,14 @@ var SwingUI = (function ()
 		var memoBtn = !strict ? h("button", { "class": "ed-fs-btn", type: "button", text: "📖 Mémo", title: "Mémo rapide des signatures (masqué en mode examen strict)", "aria-pressed": "false", on: { click: function () { memoBar.hidden = !memoBar.hidden; memoBtn.setAttribute("aria-pressed", memoBar.hidden ? "false" : "true"); if (!memoBar.hidden) { drawMemo(); } } } }) : null;
 		var fmtBtn = (mode === "java" && !strict) ? h("button", { "class": "ed-fs-btn", type: "button", text: "{ } Allman", title: "Ré-indenter le fichier en style Allman", on: { click: formatCurrent } }) : null;
 		var dlBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "⬇", title: "Télécharger le(s) fichier(s)", "aria-label": "Télécharger le code", on: { click: downloadCurrent } });
+		var layoutBtn = opts.onToggleLayout ? h("button", { "class": "ed-fs-btn ed-layout-btn", type: "button", text: state.ideStack ? "◫ Côte à côte" : "☰ Empiler", title: "Basculer entre affichage côte à côte et empilé", "aria-pressed": state.ideStack ? "false" : "true", on: { click: function ()
+		{
+			var stacked = opts.onToggleLayout();
+			layoutBtn.textContent = stacked ? "◫ Côte à côte" : "☰ Empiler";
+			layoutBtn.setAttribute("aria-pressed", stacked ? "false" : "true");
+		} } }) : null;
 		var fsBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "⛶ Agrandir", "aria-pressed": "false", on: { click: toggleFs } });
-		var toolsRight = h("div", { "class": "ed-tools" }, findBtn, memoBtn, fmtBtn, dlBtn, fsBtn);
+		var toolsRight = h("div", { "class": "ed-tools" }, findBtn, memoBtn, fmtBtn, dlBtn, layoutBtn, fsBtn);
 		var status = h("div", { "class": "ed-status" }, posEl, keysEl, toolsRight);
 		var shell = h("div", { "class": "ed-shell" }, head, findBar, memoBar, wrap, emptySlot, status);
 
@@ -54023,7 +54376,8 @@ var SwingUI = (function ()
 
 		function setRows(r)
 		{
-			var px = Math.min(540, Math.max(240, r * 22 + 28));
+			var desk = window.innerWidth >= 1024;
+			var px = Math.min(desk ? 600 : 540, Math.max(desk ? 340 : 240, r * 22 + 28));
 			wrap.style.height = px + "px";
 		}
 		setRows(opts.rows || 14);
@@ -54357,9 +54711,11 @@ var SwingUI = (function ()
 		opts = opts || {};
 		var niv = niveauOf(e);
 		var strict = !!opts.strict;
-		var box = h("div");
-		add(box, para(e.enonce));
-		if (e.regles && e.regles.length) { box.appendChild(h("div", { "class": "rules", "aria-label": "Règles imposées" }, e.regles.map(function (r) { return h("span", { "class": "rule", text: ruleLabel(r) }); }))); }
+		var left = h("div", { "class": "ide-left" });
+		var right = h("div", { "class": "ide-right" });
+		var box = h("div", { "class": "ide-split" + (state.ideStack ? " ide-stacked" : "") }, left, right);
+		add(left, para(e.enonce));
+		if (e.regles && e.regles.length) { left.appendChild(h("div", { "class": "rules", "aria-label": "Règles imposées" }, e.regles.map(function (r) { return h("span", { "class": "rule", text: ruleLabel(r) }); }))); }
 		var multiSol = isMultiEx(e);
 		var canMulti = multiSol || (niv >= 2 && (e.mode || "program") !== "method");
 		var freeMode = !!(e.fichiersLibres || (multiSol && strict) || (opts.inProject && multiSol && state.freeFiles !== false));
@@ -54371,22 +54727,22 @@ var SwingUI = (function ()
 
 		if (multiSol && freeMode)
 		{
-			box.appendChild(h("p", { "class": "small muted" }, rich("Espace **multi-fichiers** : crée chaque classe publique dans son propre fichier `.java` avec **＋ Fichier** (avec ses propres `import`), comme sur machine.")));
+			left.appendChild(h("p", { "class": "small muted" }, rich("Espace **multi-fichiers** : crée chaque classe publique dans son propre fichier `.java` avec **＋ Fichier** (avec ses propres `import`), comme sur machine.")));
 		}
 		else if (multiSol)
 		{
 			var noms = JavaMini.splitFiles(e.solution).map(function (f) { return f.name; });
-			box.appendChild(h("p", { "class": "small muted" }, (noms.length > 1 ? noms.length + " fichiers, un onglet chacun : " : "1 fichier : "), noms.map(function (n, i) { return [i ? ", " : "", h("code", { "class": "inline", text: n })]; }), ". Tu peux aussi ajouter ou renommer des fichiers avec **＋ Fichier**."));
+			left.appendChild(h("p", { "class": "small muted" }, (noms.length > 1 ? noms.length + " fichiers, un onglet chacun : " : "1 fichier : "), noms.map(function (n, i) { return [i ? ", " : "", h("code", { "class": "inline", text: n })]; }), ". Tu peux aussi ajouter ou renommer des fichiers avec **＋ Fichier**."));
 		}
-		else if (e.fichier) { box.appendChild(h("p", { "class": "small muted" }, "Fichier : ", h("code", { "class": "inline", text: e.fichier }), canMulti ? " (tu peux créer d'autres fichiers avec ＋ Fichier)" : "")); }
-		if (e.given) { box.appendChild(h("details", { "class": "given" }, h("summary", { text: "Classes fournies (déjà écrites, ajoutées à ton code)" }), codeBlock(e.given))); }
-		dataBlock(box, e, false);
-		if ((e.mode === "method" || e.mode === "class") && e.montrerTest !== false) { box.appendChild(h("details", { "class": "given" }, h("summary", { text: "Programme de test" + (multiSol ? " (" + harnessName(e.harness) + ".java, déjà écrit)" : " (appelle ton code)") }), codeBlock(e.mode === "method" ? "public static void main(String[] args)\n{\n" + e.harness.replace(/^\t\t/gm, "\t") + "\n}" : e.harness))); }
+		else if (e.fichier) { left.appendChild(h("p", { "class": "small muted" }, "Fichier : ", h("code", { "class": "inline", text: e.fichier }), canMulti ? " (tu peux créer d'autres fichiers avec ＋ Fichier)" : "")); }
+		if (e.given) { left.appendChild(h("details", { "class": "given" }, h("summary", { text: "Classes fournies (déjà écrites, ajoutées à ton code)" }), codeBlock(e.given))); }
+		dataBlock(left, e, false);
+		if ((e.mode === "method" || e.mode === "class") && e.montrerTest !== false) { left.appendChild(h("details", { "class": "given" }, h("summary", { text: "Programme de test" + (multiSol ? " (" + harnessName(e.harness) + ".java, déjà écrit)" : " (appelle ton code)") }), codeBlock(e.mode === "method" ? "public static void main(String[] args)\n{\n" + e.harness.replace(/^\t\t/gm, "\t") + "\n}" : e.harness))); }
 
 		var tests = e.tests || [{ "in": [] }];
 		var t0 = tests[0];
-		box.appendChild(h("p", { "class": "small", style: "margin:12px 0 0" }, h("strong", { text: "Trace attendue" }), (t0["in"] && t0["in"].length) ? " (saisies soulignées)" : "", tests.length > 1 ? " · " + (tests.length - 1) + " autre" + (tests.length > 2 ? "s" : "") + " jeu" + (tests.length > 2 ? "x" : "") + " de saisies testé" + (tests.length > 2 ? "s" : "") + " en plus" : ""));
-		box.appendChild(outputBlock(expectedOut(e, t0, 0), "Trace attendue"));
+		left.appendChild(h("p", { "class": "small", style: "margin:12px 0 0" }, h("strong", { text: "Trace attendue" }), (t0["in"] && t0["in"].length) ? " (saisies soulignées)" : "", tests.length > 1 ? " · " + (tests.length - 1) + " autre" + (tests.length > 2 ? "s" : "") + " jeu" + (tests.length > 2 ? "x" : "") + " de saisies testé" + (tests.length > 2 ? "s" : "") + " en plus" : ""));
+		left.appendChild(outputBlock(expectedOut(e, t0, 0), "Trace attendue"));
 
 		var edId = "ed-" + e.id;
 		var AIDE = strict
@@ -54405,6 +54761,13 @@ var SwingUI = (function ()
 			onInput: function () { if (fe) { fe.clearError(); } saveCode(); },
 			onRun: function () { runOnce(); },
 			onCheck: function () { checkAll(); },
+			onToggleLayout: function ()
+			{
+				state.ideStack = !state.ideStack;
+				save();
+				box.classList.toggle("ide-stacked", state.ideStack);
+				return state.ideStack;
+			},
 			onEscapeChange: function (v) { aide.textContent = v ? "Échap : la touche Tab sort maintenant de l'éditeur." : AIDE; }
 		});
 		var addSingleBtn = canMulti && !multiMode ? h("button", { "class": "btn ghost small", type: "button", text: "＋ Fichier", on: { click: function ()
@@ -54428,9 +54791,9 @@ var SwingUI = (function ()
 		}
 		else { edApi.setValue(startRaw, true); }
 
-		box.appendChild(h("label", { "class": "fld", "for": edId, text: multiMode ? "Ton code (un onglet par fichier)" : "Ton code" }));
-		box.appendChild(edApi.el);
-		box.appendChild(aide);
+		right.appendChild(h("label", { "class": "fld ide-ed-lbl", "for": edId, text: multiMode ? "Ton code (un onglet par fichier)" : "Ton code" }));
+		right.appendChild(edApi.el);
+		right.appendChild(aide);
 
 		var inId = "in-" + e.id;
 		var inBox = h("textarea", { id: inId, "class": "answer", rows: "2", spellcheck: "false", autocapitalize: "off", style: "min-height:0" });
@@ -54451,14 +54814,15 @@ var SwingUI = (function ()
 					saveCode();
 				} }, { label: "Annuler" }]);
 			} } }));
-		box.appendChild(toolbar);
+		right.appendChild(toolbar);
 		if (t0["in"] && t0["in"].length || (tests.some(function (t) { return t["in"] && t["in"].length; })))
 		{
-			box.appendChild(h("label", { "class": "fld", "for": inId, text: "Saisies pour ▶ Exécuter (une par ligne)" }));
-			box.appendChild(inBox);
+			right.appendChild(h("label", { "class": "fld", "for": inId, text: "Saisies pour ▶ Exécuter (une par ligne)" }));
+			right.appendChild(inBox);
 		}
-		box.appendChild(out);
-		box.appendChild(solZone);
+		right.appendChild(out);
+		if (opts.fb) { right.appendChild(opts.fb); }
+		right.appendChild(solZone);
 
 		function markError(err, b)
 		{
@@ -55015,15 +55379,16 @@ var SwingUI = (function ()
 		opts = opts || {};
 		var strict = !!opts.strict;
 		var noHelp = opts.exam || strict;
-		var box = h("div");
-		add(box, para(e.enonce));
-		box.appendChild(h("p", { "class": "small", style: "margin:10px 0 4px" }, h("strong", { text: "Ce que la page doit contenir" })));
+		var left = h("div", { "class": "ide-left" });
+		var right = h("div", { "class": "ide-right" });
+		var box = h("div", { "class": "ide-split" + (state.ideStack ? " ide-stacked" : "") }, left, right);
+		add(left, para(e.enonce));
+		left.appendChild(h("p", { "class": "small", style: "margin:10px 0 4px" }, h("strong", { text: "Ce que la page doit contenir" })));
 		var list = h("ul", { "class": "checks" });
 		var items = e.tests.map(function (t) { var li = h("li", { text: t.desc }); list.appendChild(li); return li; });
-		box.appendChild(list);
+		left.appendChild(list);
 		var edId = "ed-" + e.id;
 		var depart = e.depart || "";
-		box.appendChild(h("label", { "class": "fld", "for": edId, text: "Ton code HTML" }));
 		var prev = h("iframe", { "class": "preview", sandbox: "", title: "Aperçu de ta page" });
 		var t0 = null, fails = 0, solZone = h("div");
 		function refresh() { prev.srcdoc = edApi.getValue(); }
@@ -55045,18 +55410,27 @@ var SwingUI = (function ()
 		var edApi = codeEditor({
 			id: edId, mode: "html", strict: strict, fileName: "index.html",
 			onInput: function (v) { state.code[e.id] = v; save(); clearTimeout(t0); t0 = setTimeout(refresh, 300); },
-			onCheck: checkWeb
+			onCheck: checkWeb,
+			onToggleLayout: function ()
+			{
+				state.ideStack = !state.ideStack;
+				save();
+				box.classList.toggle("ide-stacked", state.ideStack);
+				return state.ideStack;
+			}
 		});
 		edApi.setValue(state.code[e.id] !== undefined ? state.code[e.id] : depart, true);
-		box.appendChild(edApi.el);
-		box.appendChild(h("p", { "class": "small", style: "margin:12px 0 4px" }, h("strong", { text: "Aperçu (mis à jour pendant que tu tapes)" })));
-		box.appendChild(prev);
+		left.appendChild(h("p", { "class": "small", style: "margin:12px 0 4px" }, h("strong", { text: "Aperçu (mis à jour pendant que tu tapes)" })));
+		left.appendChild(prev);
 		refresh();
-		box.appendChild(h("div", { "class": "toolbar" },
+		right.appendChild(h("label", { "class": "fld ide-ed-lbl", "for": edId, text: "Ton code HTML" }));
+		right.appendChild(edApi.el);
+		right.appendChild(h("div", { "class": "toolbar" },
 			h("button", { "class": "btn ghost small", type: "button", text: "⇥ Tab", "aria-label": "Insérer une tabulation", on: { click: function () { insertText(edApi.ta, "\t"); edApi.focus(); } } }),
 			h("button", { "class": "btn", text: "Vérifier", on: { click: checkWeb } }),
 			h("button", { "class": "btn ghost small", text: "Repartir du code de départ", on: { click: function () { edApi.setValue(depart, true); state.code[e.id] = depart; save(); refresh(); } } })));
-		box.appendChild(solZone);
+		if (opts.fb) { right.appendChild(opts.fb); }
+		right.appendChild(solZone);
 		return box;
 	}
 
@@ -55064,7 +55438,7 @@ var SwingUI = (function ()
 	function renderProject(p, label, opts)
 	{
 		opts = opts || {};
-		var sec = h("section", { "class": "card", "aria-labelledby": "proj-" + p.id });
+		var sec = h("section", { "class": "card card-ide", "aria-labelledby": "proj-" + p.id });
 		sec.appendChild(h("span", { "class": "kind", text: label }));
 		sec.appendChild(h(opts.h1 ? "h1" : "h2", { id: "proj-" + p.id, text: p.titre }));
 		add(sec, para(p.intro));
@@ -55124,9 +55498,9 @@ var SwingUI = (function ()
 			};
 			var fallback = "";
 			for (var k = cur; k >= 0 && !fallback; k--) { fallback = p.etapes[k].depart || ""; }
-			card.appendChild(exCode(e, api, { carry: cur > 0 ? p.etapes[cur - 1].id : null, fallback: fallback, inProject: true }));
+			card.appendChild(exCode(e, api, { carry: cur > 0 ? p.etapes[cur - 1].id : null, fallback: fallback, inProject: true, fb: fb }));
 			if (state.admin) { card.appendChild(adminAnswer(e)); }
-			card.appendChild(fb);
+			if (!fb.parentNode) { card.appendChild(fb); }
 			holder.appendChild(card);
 		}
 		draw();
@@ -55137,6 +55511,7 @@ var SwingUI = (function ()
 	{
 		var ev = EV.filter(function (x) { return x.id === id; })[0];
 		if (!ev) { renderHome(); return; }
+		document.body.classList.add("mode-ide");
 		app.appendChild(h("div", { "class": "crumb" }, h("button", { "class": "btn ghost small", text: "← Pratique", on: { click: function () { go("#/pratique"); } } })));
 		if (ev.prerequis) { app.appendChild(h("p", { "class": "small muted" }, rich("Notions utilisées : " + ev.prerequis))); }
 		app.appendChild(renderProject(ev, "Entraînement · " + ev.theme, { h1: true, store: view.evalIdx }));
@@ -55152,6 +55527,8 @@ var SwingUI = (function ()
 	function renderTimedRun(ct, st, cfg)
 	{
 		cfg = cfg || {};
+		document.body.classList.add("has-timer");
+		document.body.classList.add("mode-ide");
 		var limite = ct.duree * 60000;
 		var strict = !!st.strict;
 		var examMode = cfg.exam !== undefined ? !!cfg.exam : true;
@@ -55686,13 +56063,18 @@ function codeTitle(e) { return e.titre || String(e.enonce || e.q || e.id).replac
 function renderPath()
 {
 	var L = lang();
-	app.appendChild(h("div", { "class": "row between", style: "margin-bottom:6px" },
+	var side = h("aside", { "class": "path-side", "aria-label": "Résumé et accès rapide" });
+	var mainCol = h("div", { "class": "path-main" });
+	var layout = h("div", { "class": "path-layout" }, side, mainCol);
+	app.appendChild(h("h1", { "class": "sr", text: "Parcours " + L.nom }));
+	app.appendChild(layout);
+
+	side.appendChild(h("div", { "class": "row between path-top-row", style: "margin-bottom:6px" },
 		h("button", { "class": "chip", "aria-label": "Matière : " + L.nom + ", changer", on: { click: function () { go("#/langues"); } } }, L.icone + " " + L.nom + " ▾"),
 		h("span", { "class": "small muted", text: "Objectif du jour : " + todayXp() + "/" + state.goal + " XP" })));
-	app.appendChild(h("h1", { "class": "sr", text: "Parcours " + L.nom }));
 
 	var st = stats();
-	app.appendChild(bigProgress("Parcours " + L.nom, st.lecons[0], st.lecons[1], st.lecons[0] + "/" + st.lecons[1] + " leçons · " + st.code[0] + "/" + st.code[1] + " exercices de code" + (st.controles[1] ? " · " + st.controles[0] + "/" + st.controles[1] + " contrôles réussis" : "")));
+	side.appendChild(bigProgress("Parcours " + L.nom, st.lecons[0], st.lecons[1], st.lecons[0] + "/" + st.lecons[1] + " leçons · " + st.code[0] + "/" + st.code[1] + " exercices de code" + (st.controles[1] ? " · " + st.controles[0] + "/" + st.controles[1] + " contrôles réussis" : "")));
 	var nx = nextLesson();
 	var hero = h("section", { "class": "card hero-card" });
 	if (nx)
@@ -55714,11 +56096,11 @@ function renderPath()
 		hero.appendChild(h("h2", { text: "Parcours terminé 🎉" }));
 		hero.appendChild(h("p", { "class": "muted", text: "Tu as fini toutes les leçons. Refais les contrôles, l'examen final ou les exercices de code dans l'onglet Pratique." }));
 	}
-	app.appendChild(hero);
+	side.appendChild(hero);
 
 	if (st.code[1] >= 2)
 	{
-		app.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/minids"); } } },
+		side.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/minids"); } } },
 			h("span", { "class": "rowicon", "aria-hidden": "true", text: "⏱" }),
 			h("span", { "class": "grow" }, h("strong", { text: "Mini-DS sur mesure" }), h("br"), h("span", { "class": "small muted", text: "Choisis tes chapitres, le chrono et entraîne-toi en conditions d'examen" })),
 			h("span", { "aria-hidden": "true", text: "›" })));
@@ -55727,7 +56109,7 @@ function renderPath()
 	var failedCodes = failedCodeIds();
 	if (failedCodes.length)
 	{
-		app.appendChild(h("button", { "class": "card rowcard", on: { click: function () { if (failedCodes.length === 1) { openFailedExo(failedCodes[0]); } else { go("#/pratique"); } } } },
+		side.appendChild(h("button", { "class": "card rowcard", on: { click: function () { if (failedCodes.length === 1) { openFailedExo(failedCodes[0]); } else { go("#/pratique"); } } } },
 			h("span", { "class": "rowicon", "aria-hidden": "true", text: "🎯" }),
 			h("span", { "class": "grow" }, h("strong", { text: "Exercices de code à refaire" }), h("br"), h("span", { "class": "small muted", text: failedCodes.length + " exercice" + (failedCodes.length > 1 ? "s" : "") + " raté" + (failedCodes.length > 1 ? "s" : "") + " récemment" })),
 			h("span", { "aria-hidden": "true", text: "›" })));
@@ -55736,14 +56118,36 @@ function renderPath()
 	var nbRev = reviewIds().length;
 	if (nbRev)
 	{
-		app.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/revision"); } } },
+		side.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/revision"); } } },
 			h("span", { "class": "rowicon", "aria-hidden": "true", text: "🔁" }),
 			h("span", { "class": "grow" }, h("strong", { text: "Réviser mes erreurs" }), h("br"), h("span", { "class": "small muted", text: nbRev + " question" + (nbRev > 1 ? "s" : "") + " à revoir aujourd'hui" })),
 			h("span", { "aria-hidden": "true", text: "›" })));
 	}
 	else if (reviewLater())
 	{
-		app.appendChild(h("p", { "class": "small muted", style: "margin:0 4px 12px" }, "🔁 " + reviewLater() + " question" + (reviewLater() > 1 ? "s" : "") + " ratée" + (reviewLater() > 1 ? "s" : "") + " reviendr" + (reviewLater() > 1 ? "ont" : "a") + " en révision les prochains jours."));
+		side.appendChild(h("p", { "class": "small muted", style: "margin:0 4px 12px" }, "🔁 " + reviewLater() + " question" + (reviewLater() > 1 ? "s" : "") + " ratée" + (reviewLater() > 1 ? "s" : "") + " reviendr" + (reviewLater() > 1 ? "ont" : "a") + " en révision les prochains jours."));
+	}
+
+	if (CH.length > 1)
+	{
+		var tocList = h("div", { "class": "toc-list" });
+		CH.forEach(function (c)
+		{
+			var ls = lessonsOf(c);
+			var nbD = ls.filter(function (l) { return lessonDone(l.id); }).length;
+			var uDone = uniteDone(c), uCur = nx && nx.unite === c, uOpen = uniteOpen(c);
+			tocList.appendChild(h("button", {
+				type: "button",
+				"class": "toc-item" + (uDone ? " done" : uCur ? " cur" : uOpen ? "" : " locked"),
+				on: { click: function () { var t = document.getElementById("unit-" + c.id); if (t) { t.scrollIntoView({ behavior: "smooth", block: "start" }); } } }
+			},
+				h("span", { "class": "toc-dot", "aria-hidden": "true", text: uDone ? "✓" : String(c.num) }),
+				h("span", { "class": "grow", text: c.titre }),
+				h("span", { "class": "small muted", text: nbD + "/" + ls.length })));
+		});
+		side.appendChild(h("nav", { "class": "card unit-toc", "aria-label": "Accès rapide aux unités" },
+			h("p", { "class": "small", style: "margin:0 0 8px" }, h("strong", { text: "Unités du parcours" })),
+			tocList));
 	}
 
 	var XS = [0, 1, 2, 1, 0, -1, -2, -1];
@@ -55751,7 +56155,8 @@ function renderPath()
 	{
 		var ls = lessonsOf(c);
 		var nbDone = ls.filter(function (l) { return lessonDone(l.id); }).length;
-		app.appendChild(h("div", { "class": "unit-head" + (uniteDone(c) ? " done" : "") },
+		var unitSec = h("section", { "class": "unit-block" + (uniteDone(c) ? " done" : ""), id: "unit-" + c.id });
+		unitSec.appendChild(h("div", { "class": "unit-head" + (uniteDone(c) ? " done" : "") },
 			h("div", { "class": "grow" }, h("div", { "class": "small", text: "Unité " + c.num }), h("h2", { text: c.titre }),
 				h("div", { "class": "unit-bar", "aria-hidden": "true" }, h("span", { style: "width:" + Math.round(100 * nbDone / ls.length) + "%" }))),
 			h("span", { "class": "unit-prog", text: uniteDone(c) ? "★ " + c.badge : nbDone + "/" + ls.length })));
@@ -55759,7 +56164,14 @@ function renderPath()
 		var k = 0;
 		function node(icon, label, cls, onClick, aria)
 		{
-			var wrap = h("div", { "class": "node-wrap", style: "--x:" + XS[k % XS.length] });
+			var wCls = "node-wrap";
+			if (/\bdone\b/.test(cls)) { wCls += " is-done"; }
+			else if (/\bcurrent\b/.test(cls)) { wCls += " is-current"; }
+			else if (/\bopen\b/.test(cls)) { wCls += " is-open"; }
+			else if (/\blocked\b/.test(cls)) { wCls += " is-locked"; }
+			if (/\bopt\b/.test(cls)) { wCls += " is-opt"; }
+			if (/\bcoder\b/.test(cls)) { wCls += " is-coder"; }
+			var wrap = h("div", { "class": wCls, style: "--x:" + XS[k % XS.length] });
 			k++;
 			wrap.appendChild(h("button", { "class": "node " + cls, "aria-label": aria, on: { click: onClick } }, h("span", { "aria-hidden": "true", text: icon })));
 			wrap.appendChild(h("span", { "class": "node-label", text: label }));
@@ -55795,7 +56207,8 @@ function renderPath()
 				function () { if (open) { go("#/ctl/" + ct.id); } else { modal("🔒", ct.titre, "Il s'ouvre quand les exercices de code de l'unité " + c.num + " sont terminés.", [{ label: "Compris" }]); } },
 				ct.titre + ", " + ct.duree + " minutes");
 		});
-		app.appendChild(path);
+		unitSec.appendChild(path);
+		mainCol.appendChild(unitSec);
 	});
 }
 var renderHome = renderPath;
@@ -55843,6 +56256,7 @@ function lessonPlayer(cfg)
 		skip.style.display = "none";
 		codeFails = 0;
 		var it = queue[pos];
+		document.body.classList.toggle("mode-ide", !!(it && !it.carte && isCode(it)));
 		window.scrollTo(0, 0);
 		if (it.carte) { body.appendChild(renderCard(it)); setReady(true); cont.focus({ preventScroll: true }); return; }
 		setReady(false);
@@ -55885,6 +56299,7 @@ function lessonPlayer(cfg)
 	skip.addEventListener("click", function () { pos++; if (pos >= queue.length) { end(); } else { show(); } });
 	function lost()
 	{
+		document.body.classList.remove("mode-ide");
 		clear(body);
 		foot.remove();
 		body.appendChild(h("div", { "class": "endcard" },
@@ -55897,6 +56312,7 @@ function lessonPlayer(cfg)
 	}
 	function end()
 	{
+		document.body.classList.remove("mode-ide");
 		bar.style.width = "100%";
 		var nbQ = questions.length;
 		var nbOk = questions.filter(function (q) { return firstOk[q.id]; }).length;
@@ -55995,17 +56411,19 @@ function renderPratique()
 	var st = stats();
 	app.appendChild(h("h1", { text: "Pratique" }));
 	app.appendChild(h("p", { "class": "muted", text: "Le meilleur moyen de progresser, c'est d'écrire du code. Ici, tu codes autant que tu veux, sans cœurs à perdre." }));
-	app.appendChild(h("button", { "class": "card rowcard accent", on: { click: function () { go("#/sandbox"); } } },
+	var topTools = h("div", { "class": "desk-grid-2" });
+	topTools.appendChild(h("button", { "class": "card rowcard accent", on: { click: function () { go("#/sandbox"); } } },
 		h("span", { "class": "rowicon", "aria-hidden": "true", text: "🧪" }),
 		h("span", { "class": "grow" }, h("strong", { text: "Bac à sable" }), h("br"), h("span", { "class": "small muted", text: L.runner === "web" ? "Écris du HTML et du CSS, vois le résultat en direct" : "Écris et exécute ton propre programme Java (multi-fichiers, export .zip)" })),
 		h("span", { "aria-hidden": "true", text: "›" })));
 	if (st.code[1] >= 2)
 	{
-		app.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/minids"); } } },
+		topTools.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/minids"); } } },
 			h("span", { "class": "rowicon", "aria-hidden": "true", text: "⏱" }),
 			h("span", { "class": "grow" }, h("strong", { text: "Mini-DS sur mesure" }), h("br"), h("span", { "class": "small muted", text: "Choisis tes chapitres, le nombre d'exos, la durée et le mode examen strict" })),
 			h("span", { "aria-hidden": "true", text: "›" })));
 	}
+	app.appendChild(topTools);
 
 	/* File « À refaire » : exercices de code ratés récemment */
 	var failedCodes = failedCodeIds();
@@ -56036,6 +56454,7 @@ function renderPratique()
 
 	app.appendChild(bigProgress("Exercices de code réussis", st.code[0], st.code[1], [st.projets[1] ? "Projets : " + st.projets[0] + "/" + st.projets[1] + " étapes" : "", st.controles[1] ? "contrôles : " + st.controles[0] + "/" + st.controles[1] : "", st.bonus[1] ? "bonus : " + st.bonus[0] + "/" + st.bonus[1] + " étapes" : ""].filter(Boolean).join(" · ")));
 	app.appendChild(h("h2", { "class": "section-h", text: "Exercices de code" }));
+	var unitGrid = h("div", { "class": "desk-grid-2 unitlist-grid" });
 	CH.forEach(function (c)
 	{
 		var codes = c.exos.filter(isCode);
@@ -56051,49 +56470,56 @@ function renderPratique()
 			det.appendChild(h("button", { "class": "listbtn", disabled: !open, on: { click: function () { go("#/exo/" + e.id); } } },
 				h("span", { "aria-hidden": "true", text: state.done[e.id] ? "✅" : state.failed[e.id] ? "🔁" : "⌨️" }), h("span", { "class": "grow", text: codeTitle(e) })));
 		});
-		app.appendChild(det);
+		unitGrid.appendChild(det);
 	});
+	app.appendChild(unitGrid);
 
 	var projets = CH.filter(function (c) { return c.projet; });
 	if (projets.length)
 	{
 		app.appendChild(h("h2", { "class": "section-h", text: "Mini-projets" }));
+		var projGrid = h("div", { "class": "desk-grid-2" });
 		projets.forEach(function (c)
 		{
 			var open = allOpen() || uniteCodeDone(c);
 			var d = c.projet.etapes.filter(function (e) { return state.done[e.id]; }).length;
-			app.appendChild(h("button", { "class": "card rowcard", disabled: !open, on: { click: function () { go("#/projet/" + c.id); } } },
+			projGrid.appendChild(h("button", { "class": "card rowcard", disabled: !open, on: { click: function () { go("#/projet/" + c.id); } } },
 				h("span", { "class": "rowicon", "aria-hidden": "true", text: open ? "🧩" : "🔒" }),
 				h("span", { "class": "grow" }, h("strong", { text: c.projet.titre }), h("br"), h("span", { "class": "small muted", text: "Unité " + c.num + " · " + d + "/" + c.projet.etapes.length + " étapes" })),
 				h("span", { "aria-hidden": "true", text: "›" })));
 		});
+		app.appendChild(projGrid);
 	}
 	if (CT.length)
 	{
 		app.appendChild(h("h2", { "class": "section-h", text: "Contrôles chronométrés" }));
+		var ctlGrid = h("div", { "class": "desk-grid-2" });
 		CT.forEach(function (ct)
 		{
 			var open = ctlOpen(ct), b = ctlState(ct).best;
 			var etat = !open ? "s'ouvre après l'unité " + CH[chapIndex(ct.apres)].num : b ? "meilleur : " + b.nb + "/" + b.total + (b.hors ? " hors temps" : "") : "pas encore passé";
-			app.appendChild(h("button", { "class": "card rowcard", disabled: !open, on: { click: function () { go("#/ctl/" + ct.id); } } },
+			ctlGrid.appendChild(h("button", { "class": "card rowcard", disabled: !open, on: { click: function () { go("#/ctl/" + ct.id); } } },
 				h("span", { "class": "rowicon", "aria-hidden": "true", text: !open ? "🔒" : ct.final ? "🏆" : "⏱" }),
 				h("span", { "class": "grow" }, h("strong", { text: ct.titre }), h("br"), h("span", { "class": "small muted", text: ct.duree + " min · " + ct.exos.length + " exercices · " + etat }),
 					b ? h("span", { "class": "progress mini", style: "display:block;width:100%;margin-top:6px", "aria-hidden": "true" }, h("span", { style: "width:" + Math.round(100 * b.nb / b.total) + "%" })) : null),
 				h("span", { "aria-hidden": "true", text: "›" })));
 		});
+		app.appendChild(ctlGrid);
 	}
 	if (EV.length)
 	{
 		app.appendChild(h("h2", { "class": "section-h", text: "Bonus : sujets type évaluation" }));
 		app.appendChild(h("p", { "class": "small muted", text: "Des sujets longs, sur le modèle des évaluations de l'IUT. Toujours ouverts." }));
+		var evGrid = h("div", { "class": "desk-grid-2" });
 		EV.forEach(function (ev)
 		{
 			var d = ev.etapes.filter(function (e) { return state.done[e.id]; }).length;
-			app.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/eval/" + ev.id); } } },
+			evGrid.appendChild(h("button", { "class": "card rowcard", on: { click: function () { go("#/eval/" + ev.id); } } },
 				h("span", { "class": "rowicon", "aria-hidden": "true", text: "📝" }),
 				h("span", { "class": "grow" }, h("strong", { text: ev.titre }), h("br"), h("span", { "class": "small muted", text: ev.theme + " · " + d + "/" + ev.etapes.length + " · " + (ev.duree || "") })),
 				h("span", { "aria-hidden": "true", text: "›" })));
 		});
+		app.appendChild(evGrid);
 	}
 }
 
@@ -56316,6 +56742,7 @@ function renderExo(m)
 	var r = EX[m[1]];
 	if (!r) { current = "#/pratique"; renderPratique(); return; }
 	useLang(r.langue);
+	if (isCode(r.ex)) { document.body.classList.add("mode-ide"); }
 	app.appendChild(h("div", { "class": "crumb" }, h("button", { "class": "btn ghost small", text: "← Pratique", on: { click: function () { go("#/pratique"); } } })));
 	app.appendChild(h("h1", { "class": "h-ex", text: codeTitle(r.ex) }));
 	var liste = [];
@@ -56340,6 +56767,7 @@ function renderProjetPage(m)
 {
 	var i = chapIndex(m[1]);
 	if (i < 0 || !CH[i].projet) { current = "#/pratique"; renderPratique(); return; }
+	document.body.classList.add("mode-ide");
 	app.appendChild(h("div", { "class": "crumb" }, h("button", { "class": "btn ghost small", text: "← Retour", on: { click: function () { history.length > 1 ? history.back() : go("#/"); } } })));
 	app.appendChild(renderProject(CH[i].projet, "Mini-projet · unité " + CH[i].num, { h1: true }));
 }
@@ -56363,6 +56791,7 @@ var SANDBOX = {
 };
 function renderSandbox()
 {
+	document.body.classList.add("mode-ide");
 	var L = lang(), web = L.runner === "web", niv = L.niveau || 1;
 	var key = "sandbox-" + L.id;
 	var multiOK = !web && niv >= 2;
@@ -56372,16 +56801,24 @@ function renderSandbox()
 	app.appendChild(h("p", { "class": "muted", text: web ? "Écris du HTML et du CSS : l'aperçu se met à jour pendant que tu tapes." : "Écris un programme Java complet et exécute-le (Ctrl+Entrée). Clavier fonctionne : mets les saisies dans la case prévue, une par ligne." + (multiOK ? " Tu peux répartir tes classes dans plusieurs fichiers (bouton ＋ Fichier) : une classe publique par fichier, au nom du fichier." : "") }));
 	var sel = h("select", { id: "sbEx", "aria-label": "Charger un exemple" }, h("option", { value: "", text: "Charger un exemple…" }), ex.map(function (x, i) { return h("option", { value: String(i), text: x.nom }); }));
 	var fe = null, multiMode = false, prev = null, t0 = null;
+	var sbSplit = h("div", { "class": "sandbox-split" + (state.ideStack ? " ide-stacked" : "") });
 	function curCode() { return multiMode && fe ? JavaMini.joinFiles(fe.files()) : edApi.getValue(); }
 	function saveCode() { state.code[key] = curCode(); save(); }
 	function refresh() { if (prev) { prev.srcdoc = edApi.getValue(); } }
 	var edApi = codeEditor({
-		id: "sbEd", mode: web ? "html" : "java", niveau: niv, rows: 16,
+		id: "sbEd", mode: web ? "html" : "java", niveau: niv, rows: 20,
 		fileName: web ? "index.html" : null,
 		downloadName: "bac-a-sable-" + L.id,
 		getFiles: function () { return multiMode && fe ? fe.files() : null; },
 		onInput: function () { if (fe) { fe.clearError(); } saveCode(); if (web) { clearTimeout(t0); t0 = setTimeout(refresh, 300); } },
-		onRun: web ? null : function () { run(); }
+		onRun: web ? null : function () { run(); },
+		onToggleLayout: function ()
+		{
+			state.ideStack = !state.ideStack;
+			save();
+			sbSplit.classList.toggle("ide-stacked", state.ideStack);
+			return state.ideStack;
+		}
 	});
 	var addBtn = multiOK ? h("button", { "class": "btn ghost small", type: "button", text: "＋ Fichier", on: { click: function ()
 	{
@@ -56405,8 +56842,9 @@ function renderSandbox()
 		if (addBtn) { addBtn.hidden = multiMode; }
 	}
 	setCode(state.code[key] !== undefined ? state.code[key] : (ex.filter(function (x) { return x.niveau && x.niveau === L.niveau; })[0] || ex[0]).code);
-	var inBox = h("textarea", { "class": "answer", id: "sbIn", rows: "2", spellcheck: "false", style: "min-height:0" });
-	var out = h("div");
+	var inBox = h("textarea", { "class": "answer", id: "sbIn", rows: "3", spellcheck: "false", style: "min-height:0" });
+	var out = h("div", { "class": "sb-console" });
+	if (!web) { out.appendChild(h("p", { "class": "small muted", style: "margin:10px 0 0", text: "Clique sur « ▶ Exécuter » (ou Ctrl+Entrée) pour voir la sortie ici." })); }
 	sel.addEventListener("change", function ()
 	{
 		if (sel.value === "") { return; }
@@ -56417,15 +56855,22 @@ function renderSandbox()
 		if (web) { refresh(); }
 		sel.value = "";
 	});
-	app.appendChild(h("div", { "class": "card" },
-		h("label", { "class": "fld", "for": "sbEx", text: "Exemples" }), sel,
-		h("label", { "class": "fld", "for": "sbEd", text: "Ton code" }), edApi.el,
+	var sbCodeCol = h("div", { "class": "sb-code" },
+		h("div", { "class": "sb-top row between" },
+			h("label", { "class": "fld", style: "margin:0", "for": "sbEd", text: "Ton code" }),
+			h("div", { "class": "row", style: "gap:8px" }, h("label", { "class": "small muted", "for": "sbEx", text: "Exemple :" }), sel)),
+		edApi.el,
 		h("div", { "class": "toolbar" },
 			h("button", { "class": "btn ghost small", type: "button", text: "⇥ Tab", "aria-label": "Insérer une tabulation", on: { click: function () { insertText(edApi.ta, "\t"); edApi.focus(); } } }),
 			addBtn,
-			web ? null : h("button", { "class": "btn", text: "▶ Exécuter", on: { click: run } })),
-		web ? null : h("label", { "class": "fld", "for": "sbIn", text: "Saisies au clavier (une par ligne)" }), web ? null : inBox,
-		out));
+			web ? null : h("button", { "class": "btn", text: "▶ Exécuter", on: { click: run } })));
+	var sbOutCol = h("div", { "class": "sb-out" },
+		web ? null : h("label", { "class": "fld ide-ed-lbl", "for": "sbIn", text: "Saisies au clavier (une par ligne)" }),
+		web ? null : inBox,
+		out);
+	sbSplit.appendChild(sbCodeCol);
+	sbSplit.appendChild(sbOutCol);
+	app.appendChild(h("div", { "class": "card card-ide" }, sbSplit));
 	if (web)
 	{
 		prev = h("iframe", { "class": "preview tall", sandbox: "", title: "Aperçu" });
@@ -56475,6 +56920,10 @@ function renderProfil()
 		h("div", { "class": "tile" }, h("span", { "class": "tv", text: "⭐ " + state.xp }), h("span", { "class": "small muted", text: "XP au total" })),
 		h("div", { "class": "tile" }, h("span", { "class": "tv", text: "★ " + nbBadges }), h("span", { "class": "small muted", text: "badge" + (nbBadges > 1 ? "s" : "") }))));
 
+	var pLeft = h("div", { "class": "profil-col" });
+	var pRight = h("div", { "class": "profil-col" });
+	app.appendChild(h("div", { "class": "profil-grid" }, pLeft, pRight));
+
 	var goal = h("section", { "class": "card" }, h("h2", { text: "Objectif du jour" }),
 		h("p", { "class": "small muted", text: "Aujourd'hui : " + todayXp() + " XP sur " + state.goal + "." }));
 	var grp = h("div", { "class": "row", role: "group", "aria-label": "Objectif quotidien en XP" });
@@ -56496,11 +56945,11 @@ function renderProfil()
 			h("span", { "class": "small muted", text: ["D", "L", "M", "M", "J", "V", "S"][d.getDay()] })));
 	}
 	goal.appendChild(week);
-	app.appendChild(goal);
+	pLeft.appendChild(goal);
 
 	var L = lang();
 	var st = stats();
-	app.appendChild(h("section", { "class": "card" }, h("h2", { text: "Vue d'ensemble" }),
+	pLeft.appendChild(h("section", { "class": "card" }, h("h2", { text: "Vue d'ensemble" }),
 		progRow("Leçons terminées", st.lecons[0], st.lecons[1]),
 		progRow("Questions réussies", st.quiz[0], st.quiz[1]),
 		progRow("Exercices de code réussis", st.code[0], st.code[1]),
@@ -56516,20 +56965,11 @@ function renderProfil()
 			h("span", { "class": "progress mini" }, h("span", { style: "width:" + Math.round(100 * d / ls.length) + "%" })),
 			h("span", { "class": "small muted", text: state.badges[c.id] ? "★" : d + "/" + ls.length })));
 	});
-	app.appendChild(prog);
-
-	renderInstall();
-	renderBackup();
-	if (SUPPORT_URL)
-	{
-		app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "☕ Soutenir le projet" }),
-			h("p", { "class": "small muted", text: "JavaQuest est gratuit et sans pub. Si l'appli t'aide, tu peux soutenir son développement." }),
-			h("a", { "class": "btn ghost", href: SUPPORT_URL, target: "_blank", rel: "noopener", text: "Soutenir JavaQuest" })));
-	}
+	pLeft.appendChild(prog);
 
 	var themeSel = h("select", { id: "themeSel" }, [["auto", "Automatique"], ["light", "Clair"], ["dark", "Sombre"]].map(function (o) { return h("option", { value: o[0], text: o[1], selected: state.theme === o[0] }); }));
-	themeSel.addEventListener("change", function () { state.theme = themeSel.value; applyTheme(); save(); });
-	app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "Réglages" }),
+	themeSel.addEventListener("change", function () { state.theme = themeSel.value; applyTheme(); refreshHeader(); save(); });
+	pRight.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "Réglages" }),
 		h("button", { "class": "card rowcard flat", on: { click: function () { go("#/langues"); } } },
 			h("span", { "class": "rowicon", "aria-hidden": "true", text: L.icone }), h("span", { "class": "grow" }, h("strong", { text: "Matière : " + L.nom }), h("br"), h("span", { "class": "small muted", text: "Changer de matière" })), h("span", { "aria-hidden": "true", text: "›" })),
 		h("label", { "class": "fld", "for": "themeSel", text: "Thème" }), themeSel,
@@ -56539,13 +56979,23 @@ function renderProfil()
 		h("label", { "class": "row" },
 			h("input", { type: "checkbox", checked: state.freeFiles !== false, on: { change: function (e) { state.freeFiles = e.target.checked; save(); } } }),
 			h("span", { text: "Créer soi-même les fichiers dans les projets et DS (S2/S3)" })),
-		h("button", { "class": "btn ghost small", text: state.admin ? "🔑 Outils admin" : "🔑 Mode admin", on: { click: function () { go("#/admin"); } } }),
-		h("button", { "class": "btn danger small", text: "Réinitialiser ma progression", on: { click: function ()
-		{
-			modal("⚠", "Tout effacer ?", "XP, série, badges, leçons terminées et code sauvegardé seront supprimés de ce navigateur.", [
-				{ label: "Tout effacer", action: function () { var adm = state.admin; state = freshState(state.theme); state.admin = adm; save(); go("#/"); } },
-				{ label: "Annuler" }]);
-		} } })));
+		h("div", { "class": "row", style: "margin-top:4px" },
+			h("button", { "class": "btn ghost small", text: state.admin ? "🔑 Outils admin" : "🔑 Mode admin", on: { click: function () { go("#/admin"); } } }),
+			h("button", { "class": "btn danger small", text: "Réinitialiser ma progression", on: { click: function ()
+			{
+				modal("⚠", "Tout effacer ?", "XP, série, badges, leçons terminées et code sauvegardé seront supprimés de ce navigateur.", [
+					{ label: "Tout effacer", action: function () { var adm = state.admin; state = freshState(state.theme); state.admin = adm; save(); go("#/"); } },
+					{ label: "Annuler" }]);
+			} } }))));
+
+	renderBackup(pRight);
+	renderInstall(pRight);
+	if (SUPPORT_URL)
+	{
+		pRight.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "☕ Soutenir le projet" }),
+			h("p", { "class": "small muted", text: "JavaQuest est gratuit et sans pub. Si l'appli t'aide, tu peux soutenir son développement." }),
+			h("a", { "class": "btn ghost", href: SUPPORT_URL, target: "_blank", rel: "noopener", text: "Soutenir JavaQuest" })));
+	}
 }
 
 /* ---------- Installer l'appli (seulement dans la version hébergée, voir build.js) ---------- */
@@ -56556,21 +57006,22 @@ var installPrompt = null;
 window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installPrompt = e; });
 function isStandalone() { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
 function isIos() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
-function renderInstall()
+function renderInstall(target)
 {
+	target = target || app;
 	if (isStandalone()) { return; }
 	if (!window.JQ_PWA)
 	{
 		// Artefact claude.ai : renvoyer vers la version installable
-		app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "📲 L'appli JavaQuest" }),
-			h("p", { "class": "small muted", text: "JavaQuest existe aussi en appli à installer sur ton téléphone (plein écran, sans connexion). Crée d'abord ton code de sauvegarde ci-dessous pour y retrouver ta progression." }),
+		target.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "📲 L'appli JavaQuest" }),
+			h("p", { "class": "small muted", text: "JavaQuest existe aussi en appli à installer sur ton téléphone ou ton PC (plein écran, sans connexion). Crée d'abord ton code de sauvegarde ci-dessous pour y retrouver ta progression." }),
 			h("a", { "class": "btn", href: APP_URL, target: "_blank", rel: "noopener", text: "Ouvrir l'appli" })));
 		return;
 	}
 	var card = h("section", { "class": "card stack" }, h("h2", { text: "📲 Installer l'appli" }));
 	if (installPrompt)
 	{
-		card.appendChild(h("p", { "class": "small muted", text: "Ajoute JavaQuest à ton écran d'accueil : plein écran, et utilisable sans connexion." }));
+		card.appendChild(h("p", { "class": "small muted", text: "Ajoute JavaQuest à ton écran d'accueil ou ton bureau : plein écran, et utilisable sans connexion." }));
 		card.appendChild(h("button", { "class": "btn", text: "Installer JavaQuest", on: { click: function () { installPrompt.prompt(); installPrompt.userChoice.then(function () { installPrompt = null; route(); }); } } }));
 	}
 	else if (isIos())
@@ -56585,12 +57036,13 @@ function renderInstall()
 	{
 		card.appendChild(h("p", { "class": "small muted", text: "Dans le menu de ton navigateur, choisis « Installer l'application » ou « Ajouter à l'écran d'accueil »." }));
 	}
-	app.appendChild(card);
+	target.appendChild(card);
 }
 
 /* ---------- Sauvegarder / restaurer avec un code ---------- */
-function renderBackup()
+function renderBackup(target)
 {
+	target = target || app;
 	var out = h("textarea", { "class": "answer", id: "bkOut", rows: "3", readonly: "readonly", spellcheck: "false", "aria-label": "Ton code de sauvegarde", hidden: "hidden" });
 	var inp = h("textarea", { "class": "answer", id: "bkIn", rows: "3", spellcheck: "false", autocapitalize: "off", autocomplete: "off", placeholder: "Colle ici un code qui commence par JQ…" });
 	var file = h("input", { type: "file", accept: ".txt,.json,text/plain,application/json", hidden: "hidden" });
@@ -56629,7 +57081,7 @@ function renderBackup()
 		});
 	} } });
 	var shareBtn = h("button", { "class": "btn ghost", text: "Partager…", hidden: "hidden", on: { click: function () { navigator.share({ title: "Sauvegarde JavaQuest", text: out.value }).catch(function () {}); } } });
-	app.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "💾 Sauvegarde" }),
+	target.appendChild(h("section", { "class": "card stack" }, h("h2", { text: "💾 Sauvegarde" }),
 		h("p", { "class": "small muted", text: "Ta progression est gardée sur cet appareil, dans ce navigateur. Pour la retrouver ailleurs (autre téléphone, appli installée, ordinateur), crée un code et colle-le là-bas. Aucune donnée n'est envoyée sur internet." }),
 		h("p", { "class": "small", text: "Dernière sauvegarde : " + (state.backup ? state.backup.split("-").reverse().join("/") : "jamais") }),
 		h("div", { "class": "row" }, copyBtn, shareBtn), out,
@@ -56683,10 +57135,25 @@ ROUTES.push([/.*/, renderPath]);
 
 Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b)
 {
-	b.addEventListener("click", function () { go({ parcours: "#/", pratique: "#/pratique", profil: "#/profil" }[b.getAttribute("data-tab")]); });
+	b.addEventListener("click", function () { go({ parcours: "#/", pratique: "#/pratique", sandbox: "#/sandbox", profil: "#/profil" }[b.getAttribute("data-tab")]); });
 });
 document.getElementById("homeBtn").addEventListener("click", function () { go("#/"); });
 document.getElementById("adminPill").addEventListener("click", function () { go("#/admin"); });
+var langPillEl = document.getElementById("langPill");
+if (langPillEl) { langPillEl.addEventListener("click", function () { go("#/langues"); }); }
+var themeBtnEl = document.getElementById("themeBtn");
+if (themeBtnEl)
+{
+	themeBtnEl.addEventListener("click", function ()
+	{
+		state.theme = isDarkTheme() ? "light" : "dark";
+		applyTheme();
+		refreshHeader();
+		save();
+		var sel = document.getElementById("themeSel");
+		if (sel) { sel.value = state.theme; }
+	});
+}
 applyTheme();
 route();
 
