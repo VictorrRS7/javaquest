@@ -1111,6 +1111,77 @@ body.ed-fs-open { overflow: hidden; }
 	white-space: nowrap;
 }
 
+/* Surbrillance des parenthèses / accolades appariées */
+.ed-br-layer { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
+.ed-br
+{
+	position: absolute;
+	box-sizing: border-box;
+	border-radius: 3px;
+	background: color-mix(in srgb, var(--accent) 24%, transparent);
+	outline: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.ed-br.bad
+{
+	background: color-mix(in srgb, var(--ko) 28%, transparent);
+	outline: 1px solid var(--ko);
+}
+.ed-br[hidden] { display: none; }
+
+/* Tiroir Mémo syntaxe dans l'éditeur */
+.ed-memo
+{
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	padding: 7px 9px;
+	background: var(--surface);
+	border-bottom: 1px solid var(--line);
+}
+.ed-memo[hidden] { display: none; }
+.ed-memo-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.ed-memo-list { display: flex; flex-wrap: wrap; gap: 5px; max-height: 150px; overflow-y: auto; }
+.ed-memo-chip
+{
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: var(--surface-2);
+	color: var(--ink);
+	padding: 4px 8px;
+	font: 500 .76rem/1.3 var(--sans);
+	cursor: pointer;
+	text-align: left;
+}
+.ed-memo-chip code { font-family: var(--mono); font-weight: 700; color: var(--ink); }
+.ed-memo-chip:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
+
+/* Checklist détaillée par test (Vérifier) */
+.test-pills
+{
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 8px 0 6px;
+}
+.test-pill
+{
+	border: 1px solid var(--line);
+	border-radius: 99px;
+	padding: 4px 10px;
+	font: 600 .8rem/1.2 var(--sans);
+	cursor: pointer;
+	background: var(--surface-2);
+	color: var(--ink);
+}
+.test-pill.ok { border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: color-mix(in srgb, var(--ok) 13%, transparent); color: var(--ok); }
+.test-pill.ko { border-color: color-mix(in srgb, var(--ko) 50%, transparent); background: color-mix(in srgb, var(--ko) 13%, transparent); color: var(--ko); }
+.test-pill.cur { box-shadow: 0 0 0 2px currentColor; }
+.test-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.test-detail { margin-top: 4px; }
+
 @media (max-width: 640px)
 {
 	.ed-wrap { --ed-fs: 16px; --ed-lh: 24px; }
@@ -53529,6 +53600,115 @@ var SwingUI = (function ()
 	   Numéros de ligne, coloration syntaxique en direct, surbrillance de la
 	   ligne active et des erreurs, position Ln/Col, recherche/remplacement,
 	   auto-complétion légère, formatage Allman, export .java/.zip et plein écran. */
+	/* Appariement des parenthèses / accolades / crochets en une passe (ignore chaînes et commentaires). */
+	var _brCacheSrc = null, _brCacheMap = null;
+	function bracketMap(src)
+	{
+		if (src === _brCacheSrc && _brCacheMap) { return _brCacheMap; }
+		var map = {}, stack = [], n = src.length;
+		var OPEN = { "(": ")", "{": "}", "[": "]" }, CLOSE = { ")": "(", "}": "{", "]": "[" };
+		var inStr = false, inChr = false, inLine = false, inBlock = false;
+		for (var i = 0; i < n; i++)
+		{
+			var c = src.charAt(i), nxt = i + 1 < n ? src.charAt(i + 1) : "";
+			if (inLine) { if (c === "\n") { inLine = false; } continue; }
+			if (inBlock) { if (c === "*" && nxt === "/") { inBlock = false; i++; } continue; }
+			if (inStr) { if (c === "\\") { i++; } else if (c === '"' || c === "\n") { inStr = false; } continue; }
+			if (inChr) { if (c === "\\") { i++; } else if (c === "'" || c === "\n") { inChr = false; } continue; }
+			if (c === "/" && nxt === "/") { inLine = true; i++; continue; }
+			if (c === "/" && nxt === "*") { inBlock = true; i++; continue; }
+			if (c === '"') { inStr = true; continue; }
+			if (c === "'") { inChr = true; continue; }
+			if (OPEN[c]) { stack.push({ ch: c, idx: i }); }
+			else if (CLOSE[c])
+			{
+				if (stack.length && stack[stack.length - 1].ch === CLOSE[c])
+				{
+					var top = stack.pop();
+					map[top.idx] = i;
+					map[i] = top.idx;
+				}
+				else { map[i] = -1; }
+			}
+		}
+		while (stack.length) { map[stack.pop().idx] = -1; }
+		_brCacheSrc = src;
+		_brCacheMap = map;
+		return map;
+	}
+	function findMatchingBracket(src, pos)
+	{
+		var map = bracketMap(src);
+		var p = -1;
+		if (pos > 0 && map[pos - 1] !== undefined) { p = pos - 1; }
+		else if (map[pos] !== undefined) { p = pos; }
+		if (p < 0) { return null; }
+		return map[p] >= 0 ? { a: p, b: map[p], bad: false } : { a: p, b: -1, bad: true };
+	}
+
+	/* Mémo syntaxe rapide filtré par matière/niveau (masqué en mode examen strict). */
+	var MEMO_JAVA = [
+		{ cat: "Saisie / Sortie", min: 1, items: [
+			{ l: "System.out.println(…);", i: "System.out.println($0);", d: "affiche + retour" },
+			{ l: "System.out.printf(\"%d%n\", …);", i: "System.out.printf(\"$0%n\");", d: "formaté" },
+			{ l: "Clavier.lire_int()", i: "Clavier.lire_int()", d: "lire int" },
+			{ l: "Clavier.lire_double()", i: "Clavier.lire_double()", d: "lire double" },
+			{ l: "Clavier.lireString()", i: "Clavier.lireString()", d: "lire String" },
+			{ l: "Clavier.lire_char()", i: "Clavier.lire_char()", d: "lire char" }
+		] },
+		{ cat: "String & Math", min: 1, items: [
+			{ l: "s.length()", i: ".length()", d: "longueur" },
+			{ l: "s.charAt(i)", i: ".charAt($0)", d: "caractère i" },
+			{ l: "s.equals(t)", i: ".equals($0)", d: "égalité texte" },
+			{ l: "s.substring(a, b)", i: ".substring($0, )", d: "sous-chaîne" },
+			{ l: "s.indexOf(…)", i: ".indexOf($0)", d: "position (-1 si absent)" },
+			{ l: "Math.max(a, b)", i: "Math.max($0, )", d: "maximum" },
+			{ l: "Math.sqrt(x)", i: "Math.sqrt($0)", d: "racine carrée" }
+		] },
+		{ cat: "Objets & Collections", min: 2, items: [
+			{ l: "ArrayList<T> l = new ArrayList<>();", i: "ArrayList<$0>  = new ArrayList<>();", d: "liste dynamique" },
+			{ l: "l.add(x) / l.get(i) / l.size()", i: ".add($0)", d: "opérations List" },
+			{ l: "HashMap<K, V> m = new HashMap<>();", i: "HashMap<$0, >  = new HashMap<>();", d: "dictionnaire" },
+			{ l: "m.put(k, v) / m.getOrDefault(k, d)", i: ".getOrDefault($0, )", d: "accès Map" },
+			{ l: "implements Comparable<T>", i: "implements Comparable<$0>", d: "compareTo(T o)" },
+			{ l: "Collections.sort(l);", i: "Collections.sort($0);", d: "trier liste" }
+		] },
+		{ cat: "Swing (IHM)", min: 3, items: [
+			{ l: "new BorderLayout(5, 5)", i: "new BorderLayout(5, 5)", d: "NORTH/SOUTH/CENTER…" },
+			{ l: "new GridLayout(lig, col)", i: "new GridLayout($0, )", d: "grille régulière" },
+			{ l: "btn.addActionListener(this);", i: ".addActionListener(this);", d: "actionPerformed(ActionEvent e)" },
+			{ l: "lbl.setOpaque(true);", i: ".setOpaque(true);", d: "nécessaire pour setBackground" },
+			{ l: "setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);", i: "this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);", d: "fermer fenêtre" },
+			{ l: "protected void paintComponent(Graphics g)", i: "protected void paintComponent(Graphics g)\n{\n\tsuper.paintComponent(g);\n\t$0\n}", d: "dessin panneau" }
+		] },
+		{ cat: "Dév efficace (S3)", min: 4, items: [
+			{ l: "BigInteger.valueOf(n)", i: "BigInteger.valueOf($0)", d: "grand entier" },
+			{ l: "Scanner sc = new Scanner(new File(…));", i: "Scanner sc = new Scanner(new File(\"$0\"));", d: "lire un fichier" },
+			{ l: "sc.useDelimiter(\"\\t\")", i: ".useDelimiter(\"\\t\")", d: "séparateur tab" },
+			{ l: "Iterator<T> it = l.iterator();", i: "Iterator<$0> it = .iterator();", d: "hasNext / next / remove" },
+			{ l: "Collections.sort(l, (a, b) -> …);", i: "Collections.sort($0, (a, b) -> Integer.compare(a, b));", d: "tri Comparator" },
+			{ l: "public record Nom(Type champ) {}", i: "public record $0()\n{\n}", d: "record immuable" }
+		] }
+	];
+	var MEMO_HTML = [
+		{ cat: "Structure & Texte", items: [
+			{ l: "<h1>…</h1> / <p>…</p>", i: "<h1>$0</h1>", d: "titre / paragraphe" },
+			{ l: "<a href=\"…\">…</a>", i: "<a href=\"$0\"></a>", d: "lien hypertexte" },
+			{ l: "<img src=\"…\" alt=\"…\">", i: "<img src=\"$0\" alt=\"\">", d: "image" },
+			{ l: "<ul><li>…</li></ul>", i: "<ul>\n\t<li>$0</li>\n</ul>", d: "liste à puces" }
+		] },
+		{ cat: "Tableaux & CSS", items: [
+			{ l: "<table><tr><th>…</th></tr></table>", i: "<table>\n\t<tr><th>$0</th></tr>\n</table>", d: "tableau" },
+			{ l: "display: flex; gap: 12px;", i: "display: flex; gap: 12px;", d: "mise en page flex" },
+			{ l: "color / background / padding", i: "color: $0;", d: "styles de base" }
+		] }
+	];
+
+	/* ======================= Éditeur de code amélioré =======================
+	   Numéros de ligne, coloration syntaxique en direct, surbrillance de la
+	   ligne active, des erreurs et des accolades appariées, position Ln/Col,
+	   recherche/remplacement, auto-complétion légère, mémo syntaxe, formatage
+	   Allman, raccourcis Ctrl+/ et Ctrl+D, export .java/.zip et plein écran. */
 	function codeEditor(opts)
 	{
 		opts = opts || {};
@@ -53558,11 +53738,58 @@ var SwingUI = (function ()
 				h("button", { "class": "ed-find-btn", type: "button", text: "✕", title: "Fermer (Échap)", on: { click: closeFind } })),
 			replRow);
 
+		/* Tiroir Mémo syntaxe (masqué en mode examen strict) */
+		var memoBar = h("div", { "class": "ed-memo", hidden: true });
+		var memoIdx = 0;
+		function memoCats()
+		{
+			if (mode === "html") { return MEMO_HTML; }
+			return MEMO_JAVA.filter(function (c) { return !c.min || niv >= c.min; });
+		}
+		function drawMemo()
+		{
+			clear(memoBar);
+			var cats = memoCats();
+			if (!cats.length) { return; }
+			if (memoIdx >= cats.length) { memoIdx = 0; }
+			var tabs = h("div", { "class": "ed-memo-tabs" },
+				cats.map(function (c, i)
+				{
+					return h("button", { type: "button", "class": "ed-find-btn" + (i === memoIdx ? " on" : ""), text: c.cat, on: { click: function () { memoIdx = i; drawMemo(); } } });
+				}),
+				h("button", { type: "button", "class": "ed-find-btn", style: "margin-left:auto", text: "✕", title: "Fermer le mémo", on: { click: function () { memoBar.hidden = true; if (memoBtn) { memoBtn.setAttribute("aria-pressed", "false"); } ta.focus(); } } }));
+			var items = h("div", { "class": "ed-memo-list" },
+				cats[memoIdx].items.map(function (it)
+				{
+					return h("button", { type: "button", "class": "ed-memo-chip", title: "Cliquer pour insérer dans l'éditeur", on: { click: function ()
+					{
+						var s = ta.selectionStart || 0, en = ta.selectionEnd || 0;
+						var raw = it.i;
+						if (raw.indexOf("\n") >= 0)
+						{
+							var ls = ta.value.lastIndexOf("\n", s - 1) + 1;
+							var ind = ta.value.slice(ls, s).match(/^[\t ]*/)[0];
+							raw = raw.replace(/\n/g, "\n" + ind);
+						}
+						var mk = raw.indexOf("$0");
+						var txt = mk >= 0 ? raw.replace("$0", "") : raw;
+						var caret = s + (mk >= 0 ? mk : txt.length);
+						replaceRange(ta, s, en, txt, caret, caret);
+						ta.focus();
+					} } }, h("code", { text: it.l }), h("span", { "class": "muted", text: it.d }));
+				}));
+			memoBar.appendChild(tabs);
+			memoBar.appendChild(items);
+		}
+
 		var gutIn = h("div", { "class": "ed-gutter-in" });
 		var gutter = h("div", { "class": "ed-gutter", "aria-hidden": "true" }, gutIn);
 		var curBand = h("div", { "class": "ed-band cur", "aria-hidden": "true" });
 		var errBand = h("div", { "class": "ed-band err", "aria-hidden": "true", hidden: true });
 		var hlLayer = h("div", { "class": "ed-hl", "aria-hidden": "true" }, curBand, errBand);
+		var brA = h("div", { "class": "ed-br", hidden: true });
+		var brB = h("div", { "class": "ed-br", hidden: true });
+		var brLayer = h("div", { "class": "ed-br-layer", "aria-hidden": "true" }, brA, brB);
 		var hi = h("pre", { "class": "ed-hi", "aria-hidden": "true" });
 		var ta = h("textarea", {
 			"class": "editor", id: opts.id || "", spellcheck: "false",
@@ -53570,18 +53797,19 @@ var SwingUI = (function ()
 			"aria-describedby": opts.ariaDescribedBy || null
 		});
 		var acBox = h("div", { "class": "ed-ac", role: "listbox", "aria-label": "Suggestions Java", hidden: true });
-		var stage = h("div", { "class": "ed-stage" }, hlLayer, hi, ta, acBox);
+		var stage = h("div", { "class": "ed-stage" }, hlLayer, brLayer, hi, ta, acBox);
 		var wrap = h("div", { "class": "ed-wrap" }, gutter, stage);
 		var emptySlot = h("div", { "class": "ed-empty", hidden: true });
 		var posEl = h("span", { "class": "ed-pos", text: "Ln 1, Col 1" });
-		var keysEl = h("span", { "class": "ed-keys", text: strict ? "🔒 Mode examen strict · Ctrl+F : Chercher" : (opts.onRun && opts.onCheck ? "Ctrl+Entrée : Exécuter · Ctrl+Maj+Entrée : Vérifier · Ctrl+Espace : Aide" : opts.onRun ? "Ctrl+Entrée : Exécuter · Ctrl+Espace : Aide" : opts.onCheck ? "Ctrl+Maj+Entrée : Vérifier" : "") });
+		var keysEl = h("span", { "class": "ed-keys", text: strict ? "🔒 Mode examen strict · Ctrl+F : Chercher · Ctrl+/ : Commenter" : (opts.onRun && opts.onCheck ? "Ctrl+Entrée : Exécuter · Ctrl+Maj+Entrée : Vérifier · Ctrl+/ : Commenter" : opts.onRun ? "Ctrl+Entrée : Exécuter · Ctrl+/ : Commenter" : opts.onCheck ? "Ctrl+Maj+Entrée : Vérifier" : "") });
 		var findBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "🔍", title: "Rechercher / remplacer (Ctrl+F)", "aria-label": "Rechercher dans le code", on: { click: function () { if (findBar.hidden) { openFind(false); } else { closeFind(); } } } });
+		var memoBtn = !strict ? h("button", { "class": "ed-fs-btn", type: "button", text: "📖 Mémo", title: "Mémo rapide des signatures (masqué en mode examen strict)", "aria-pressed": "false", on: { click: function () { memoBar.hidden = !memoBar.hidden; memoBtn.setAttribute("aria-pressed", memoBar.hidden ? "false" : "true"); if (!memoBar.hidden) { drawMemo(); } } } }) : null;
 		var fmtBtn = (mode === "java" && !strict) ? h("button", { "class": "ed-fs-btn", type: "button", text: "{ } Allman", title: "Ré-indenter le fichier en style Allman", on: { click: formatCurrent } }) : null;
 		var dlBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "⬇", title: "Télécharger le(s) fichier(s)", "aria-label": "Télécharger le code", on: { click: downloadCurrent } });
 		var fsBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "⛶ Agrandir", "aria-pressed": "false", on: { click: toggleFs } });
-		var toolsRight = h("div", { "class": "ed-tools" }, findBtn, fmtBtn, dlBtn, fsBtn);
+		var toolsRight = h("div", { "class": "ed-tools" }, findBtn, memoBtn, fmtBtn, dlBtn, fsBtn);
 		var status = h("div", { "class": "ed-status" }, posEl, keysEl, toolsRight);
-		var shell = h("div", { "class": "ed-shell" }, head, findBar, wrap, emptySlot, status);
+		var shell = h("div", { "class": "ed-shell" }, head, findBar, memoBar, wrap, emptySlot, status);
 
 		/* --- Recherche / remplacement --- */
 		function computeMatches()
@@ -53810,10 +54038,111 @@ var SwingUI = (function ()
 			var pt = parseFloat(window.getComputedStyle(ta).paddingTop);
 			return isNaN(pt) ? 10 : pt;
 		}
+		var _cw = 0;
+		function charWidth()
+		{
+			if (_cw > 0) { return _cw; }
+			var probe = h("span", { style: "position:absolute;visibility:hidden;white-space:pre;font:inherit", text: "0000000000" });
+			hi.appendChild(probe);
+			var w = probe.getBoundingClientRect().width / 10;
+			probe.remove();
+			if (w > 2) { _cw = w; }
+			return w || ((parseFloat(window.getComputedStyle(ta).fontSize) || 14) * 0.6);
+		}
+		function placeBracket(el, src, idx, bad)
+		{
+			if (idx < 0) { el.hidden = true; return; }
+			var before = src.slice(0, idx);
+			var nl = before.lastIndexOf("\n");
+			var lineIdx = before.split("\n").length - 1;
+			var linePart = before.slice(nl + 1);
+			var vcol = 0;
+			for (var i = 0; i < linePart.length; i++)
+			{
+				if (linePart.charAt(i) === "\t") { vcol += 4 - (vcol % 4); }
+				else { vcol++; }
+			}
+			var lh = lineHeight(), pt = padTop(), cw = charWidth();
+			var pl = parseFloat(window.getComputedStyle(ta).paddingLeft) || 12;
+			el.hidden = false;
+			el.classList.toggle("bad", !!bad);
+			el.style.top = (pt + lineIdx * lh) + "px";
+			el.style.left = (pl + vcol * cw) + "px";
+			el.style.width = cw + "px";
+			el.style.height = lh + "px";
+		}
+		function updateBrackets()
+		{
+			if (mode !== "java" || ta.selectionStart !== ta.selectionEnd)
+			{
+				brA.hidden = true;
+				brB.hidden = true;
+				return;
+			}
+			var m = findMatchingBracket(ta.value, ta.selectionStart || 0);
+			if (!m) { brA.hidden = true; brB.hidden = true; return; }
+			placeBracket(brA, ta.value, m.a, m.bad);
+			placeBracket(brB, ta.value, m.b, m.bad);
+		}
+		function toggleComment()
+		{
+			var v = ta.value, s = ta.selectionStart || 0, en = ta.selectionEnd || 0;
+			var blockStart = v.lastIndexOf("\n", s - 1) + 1;
+			var blockEnd = v.indexOf("\n", en);
+			if (blockEnd < 0) { blockEnd = v.length; }
+			var lines = v.slice(blockStart, blockEnd).split("\n");
+			if (mode === "html")
+			{
+				var sel = v.slice(blockStart, blockEnd);
+				var hm = sel.match(/^([\t ]*)<!--\s?([\s\S]*?)\s?-->([\t ]*)$/);
+				var outH = hm ? hm[1] + hm[2] + hm[3] : "<!-- " + sel + " -->";
+				replaceRange(ta, blockStart, blockEnd, outH, blockStart, blockStart + outH.length);
+				return;
+			}
+			var nonEmpty = lines.filter(function (l) { return l.trim() !== ""; });
+			var allCom = nonEmpty.length > 0 && nonEmpty.every(function (l) { return /^[\t ]*\/\//.test(l); });
+			var deltaFirst = 0, deltaTot = 0;
+			var out = lines.map(function (l, i)
+			{
+				if (l.trim() === "") { return l; }
+				if (allCom)
+				{
+					var m = l.match(/^([\t ]*)\/\/ ?/);
+					if (!m) { return l; }
+					var rem = m[0].length - m[1].length;
+					if (i === 0) { deltaFirst = -rem; }
+					deltaTot -= rem;
+					return m[1] + l.slice(m[0].length);
+				}
+				var ind = l.match(/^[\t ]*/)[0];
+				if (i === 0) { deltaFirst = 3; }
+				deltaTot += 3;
+				return ind + "// " + l.slice(ind.length);
+			}).join("\n");
+			replaceRange(ta, blockStart, blockEnd, out, Math.max(blockStart, s + deltaFirst), Math.max(blockStart, en + deltaTot));
+		}
+		function duplicateLine()
+		{
+			var v = ta.value, s = ta.selectionStart || 0, en = ta.selectionEnd || 0;
+			if (s !== en)
+			{
+				var sel = v.slice(s, en);
+				replaceRange(ta, en, en, sel, en, en + sel.length);
+				return;
+			}
+			var ls = v.lastIndexOf("\n", s - 1) + 1;
+			var le = v.indexOf("\n", s);
+			if (le < 0) { le = v.length; }
+			var line = v.slice(ls, le);
+			var col = s - ls;
+			var ins = "\n" + line;
+			replaceRange(ta, le, le, ins, le + 1 + col, le + 1 + col);
+		}
 		function syncScroll()
 		{
 			var x = ta.scrollLeft, y = ta.scrollTop;
 			hi.style.transform = "translate3d(" + (-x) + "px," + (-y) + "px,0)";
+			brLayer.style.transform = "translate3d(" + (-x) + "px," + (-y) + "px,0)";
 			hlLayer.style.transform = "translate3d(0," + (-y) + "px,0)";
 			gutIn.style.transform = "translate3d(0," + (-y) + "px,0)";
 		}
@@ -53858,6 +54187,7 @@ var SwingUI = (function ()
 			posEl.textContent = "Ln " + curLine + ", Col " + col;
 			updateGutter(v.split("\n").length);
 			updateBands();
+			updateBrackets();
 		}
 		function render()
 		{
@@ -53916,6 +54246,22 @@ var SwingUI = (function ()
 				openFind(true);
 				return;
 			}
+			/* Commenter / décommenter (Ctrl+/ ou Ctrl+:) */
+			if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && (ev.key === "/" || ev.key === ":" || ev.code === "Slash" || ev.code === "NumpadDivide"))
+			{
+				ev.preventDefault();
+				closeAc();
+				toggleComment();
+				return;
+			}
+			/* Dupliquer ligne ou sélection (Ctrl+D) */
+			if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && (ev.key === "d" || ev.key === "D"))
+			{
+				ev.preventDefault();
+				closeAc();
+				duplicateLine();
+				return;
+			}
 			/* Auto-complétion : Ctrl+Espace ou navigation dans le menu ouvert */
 			if (ev.ctrlKey && ev.code === "Space" && mode === "java" && !strict)
 			{
@@ -53960,6 +54306,7 @@ var SwingUI = (function ()
 			{
 				mode = m || "java";
 				if (fmtBtn) { fmtBtn.hidden = mode !== "java" || strict; }
+				if (!memoBar.hidden) { drawMemo(); }
 				closeAc();
 				render();
 			},
@@ -54162,33 +54509,98 @@ var SwingUI = (function ()
 			clear(out);
 			if (fe) { fe.clearError(); } else { edApi.clearError(); }
 			var ruleMsgs = JavaMini.check(b.ruleSrc, e.regles || []).map(function (m) { return fixLines(m, b.offset, b.multi ? b.ruleSrc : null); });
+
+			var results = [];
 			for (var i = 0; i < tests.length; i++)
 			{
 				var t = tests[i];
 				var r = JavaMini.run(b.src, runOpts(e, b, { inputs: t["in"] || [], seed: t.seed || 7 }));
 				var exp = expectedOut(e, t, i);
-				var label = (t["in"] && t["in"].length) ? "avec les saisies " + t["in"].join(", ") : (tests.length > 1 ? "test " + (i + 1) : "");
-				if (r.error)
+				var hasIn = t["in"] && t["in"].length;
+				var shortLbl = hasIn ? "Test " + (i + 1) + " (" + t["in"].join(", ").slice(0, 18) + (t["in"].join(", ").length > 18 ? "…" : "") + ")" : "Test " + (i + 1);
+				var longLbl = hasIn ? "avec les saisies " + t["in"].join(", ") : (tests.length > 1 ? "test " + (i + 1) : "");
+				var ok = !r.error && norm(r.out) === norm(exp);
+				results.push({ i: i, shortLbl: shortLbl, longLbl: longLbl, ok: ok, r: r, exp: exp });
+			}
+
+			var passed = results.filter(function (x) { return x.ok; }).length;
+			var failedRes = results.filter(function (x) { return !x.ok; });
+
+			function renderTestDetail(res)
+			{
+				if (res.r.error)
 				{
-					markError(r.error, b);
-					return fail("Le programme ne passe pas " + (label ? "le test " + label : "le test"), [errorView(r.error, b, jumpToError), r.out ? h("div", null, h("p", { "class": "small", text: "Affiché avant l'erreur :" }), outputBlock(r.out)) : null]);
+					markError(res.r.error, b);
+					return h("div", null,
+						errorView(res.r.error, b, jumpToError),
+						res.r.out ? h("div", null, h("p", { "class": "small", text: "Affiché avant l'erreur :" }), outputBlock(res.r.out)) : null);
 				}
-				if (norm(r.out) !== norm(exp))
+				if (fe) { fe.clearError(); } else { edApi.clearError(); }
+				if (res.ok)
 				{
-					return fail("La sortie ne correspond pas à la trace" + (label ? " (" + label + ")" : ""), [
-						diffView(norm(exp), norm(r.out), "obtenu"),
-						h("details", { "class": "given", style: "margin-top:8px" },
-							h("summary", { text: "Voir la sortie brute" }),
-							h("p", { "class": "small", text: "Ta sortie :" }), outputBlock(r.out),
-							(i > 0 ? [h("p", { "class": "small", text: "Trace attendue pour ce test :" }), outputBlock(exp)] : null))
-					]);
+					return h("div", null,
+						h("p", { "class": "small", style: "margin:6px 0 4px", text: "Sortie conforme" + (res.longLbl ? " (" + res.longLbl + ")" : "") + " :" }),
+						outputBlock(res.r.out));
 				}
+				return h("div", null,
+					diffView(norm(res.exp), norm(res.r.out), "obtenu"),
+					h("details", { "class": "given", style: "margin-top:8px" },
+						h("summary", { text: "Voir la sortie brute" }),
+						h("p", { "class": "small", text: "Ta sortie :" }), outputBlock(res.r.out),
+						(res.i > 0 ? [h("p", { "class": "small", text: "Trace attendue pour ce test :" }), outputBlock(res.exp)] : null)));
+			}
+
+			function buildChecklist(activeIdx, detailBox)
+			{
+				if (results.length <= 1) { return null; }
+				var bar = h("div", { "class": "test-pills", role: "tablist", "aria-label": "Résultats des tests" });
+				var btns = results.map(function (res, idx)
+				{
+					var btn = h("button", {
+						type: "button",
+						role: "tab",
+						"class": "test-pill " + (res.ok ? "ok" : "ko") + (idx === activeIdx ? " cur" : ""),
+						"aria-selected": idx === activeIdx ? "true" : "false",
+						text: (res.ok ? "✓ " : "✕ ") + res.shortLbl,
+						on: { click: function ()
+						{
+							if (!detailBox) { return; }
+							btns.forEach(function (bt, j) { bt.classList.toggle("cur", j === idx); bt.setAttribute("aria-selected", j === idx ? "true" : "false"); });
+							clear(detailBox);
+							detailBox.appendChild(renderTestDetail(res));
+						} }
+					});
+					bar.appendChild(btn);
+					return btn;
+				});
+				return bar;
+			}
+
+			if (failedRes.length)
+			{
+				var firstBad = failedRes[0];
+				var detailBox = h("div", { "class": "test-detail" }, renderTestDetail(firstBad));
+				var checklist = buildChecklist(firstBad.i, detailBox);
+				var title;
+				if (results.length > 1)
+				{
+					title = passed + "/" + results.length + " test" + (results.length > 1 ? "s" : "") + " réussi" + (passed > 1 ? "s" : "") + (firstBad.r.error ? " · erreur sur le test " + (firstBad.i + 1) : " · sortie différente sur le test " + (firstBad.i + 1));
+				}
+				else if (firstBad.r.error)
+				{
+					title = "Le programme ne passe pas " + (firstBad.longLbl ? "le test " + firstBad.longLbl : "le test");
+				}
+				else
+				{
+					title = "La sortie ne correspond pas à la trace" + (firstBad.longLbl ? " (" + firstBad.longLbl + ")" : "");
+				}
+				return fail(title, [checklist, detailBox]);
 			}
 			if (ruleMsgs.length)
 			{
-				return fail("La sortie est bonne, mais une règle n'est pas respectée", h("ul", null, ruleMsgs.map(function (m) { return h("li", { text: m }); })));
+				return fail("La sortie est bonne, mais une règle n'est pas respectée", [buildChecklist(-1, null), h("ul", null, ruleMsgs.map(function (m) { return h("li", { text: m }); }))]);
 			}
-			api.win(e.bravo || "Tous les tests passent et les règles sont respectées.");
+			api.win(e.bravo || "Tous les tests passent et les règles sont respectées.", buildChecklist(-1, null));
 			if (opts.onSolved) { opts.onSolved(); }
 			return true;
 		}
