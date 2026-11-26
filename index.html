@@ -1330,11 +1330,14 @@ label.row > span { flex: 1; min-width: 0; }
 
 	/* Largeurs principales sur bureau */
 	main { max-width: 1140px; padding: 26px 28px 56px; }
-	body.mode-ide main { max-width: 1440px; padding: 20px 28px 56px; }
+	body.mode-ide .top-in { max-width: 1680px; }
+	body.mode-ide main { max-width: 1680px; padding: 14px 24px 48px; }
+	body.mode-ide .crumb { margin-bottom: 6px; }
+	body.mode-ide h1.h-ex { margin-bottom: 4px; }
 	body.in-lesson:not(.mode-ide) main { max-width: 780px; padding-top: 6px; }
 	body.in-lesson:not(.mode-ide) .lesson-foot-in { max-width: 780px; }
-	body.in-lesson.mode-ide main { max-width: 1440px; padding-top: 6px; }
-	body.in-lesson.mode-ide .lesson-foot-in { max-width: 1440px; }
+	body.in-lesson.mode-ide main { max-width: 1680px; padding-top: 4px; }
+	body.in-lesson.mode-ide .lesson-foot-in { max-width: 1680px; }
 	.lesson-body { padding-bottom: 104px; }
 	.timerbar { top: 64px; }
 
@@ -1497,63 +1500,104 @@ label.row > span { flex: 1; min-width: 0; }
 	.langcard:hover:not([disabled]) { border-color: var(--accent); transform: translateY(-2px); }
 }
 
+.ide-resizer { display: none; }
+body.ide-resizing { cursor: col-resize !important; user-select: none; }
+body.ide-resizing * { cursor: col-resize !important; }
+
 @media (min-width: 1040px)
 {
-	/* Espace de code côte à côte (IDE) sur PC */
+	/* Espace de code côte à côte (IDE) sur PC : l'éditeur occupe ~2/3 de l'écran */
 	.ed-layout-btn { display: inline-flex; align-items: center; }
-	.card.card-ide { padding: 22px 24px; }
+	.ed-wrap { --ed-fs: 15px; --ed-lh: 24px; --ed-pad: 12px; }
+	.card.card-ide { padding: 16px 20px; }
 
 	.ide-split:not(.ide-stacked)
 	{
-		--ide-top: 74px;
+		--ide-top: 72px;
 		display: grid;
-		grid-template-columns: minmax(340px, 41%) minmax(0, 59%);
-		gap: 24px;
+		grid-template-columns: minmax(280px, var(--ide-left, 33%)) 12px minmax(0, 1fr);
+		gap: 0 8px;
 		align-items: start;
-		margin-top: 10px;
+		margin-top: 8px;
 	}
-	body.in-lesson .ide-split:not(.ide-stacked) { --ide-top: 68px; }
-	body.has-timer .ide-split:not(.ide-stacked) { --ide-top: 132px; }
+	body.in-lesson .ide-split:not(.ide-stacked) { --ide-top: 64px; }
+	body.has-timer .ide-split:not(.ide-stacked) { --ide-top: 126px; }
 
 	.ide-split:not(.ide-stacked) > .ide-left
 	{
 		position: sticky;
 		top: var(--ide-top);
-		max-height: calc(100vh - var(--ide-top) - 24px);
+		max-height: calc(100vh - var(--ide-top) - 20px);
 		overflow-y: auto;
-		padding-right: 16px;
-		border-right: 1px solid var(--line);
+		padding-right: 8px;
 		scrollbar-width: thin;
 		scrollbar-color: var(--line) transparent;
 	}
 	body.in-lesson .ide-split:not(.ide-stacked) > .ide-left
 	{
-		max-height: calc(100vh - var(--ide-top) - 96px);
+		max-height: calc(100vh - var(--ide-top) - 92px);
 	}
 	.ide-split:not(.ide-stacked) > .ide-right .ide-ed-lbl { margin-top: 0; }
-	.ide-split:not(.ide-stacked) .preview { height: 300px; }
+	.ide-split:not(.ide-stacked) .preview { height: 320px; }
 
-	/* Bac à sable côte à côte : éditeur à gauche, saisies + sortie / Swing / aperçu à droite */
+	/* Poignée de redimensionnement entre les deux panneaux */
+	.ide-split:not(.ide-stacked) > .ide-resizer,
+	.sandbox-split:not(.ide-stacked) > .ide-resizer
+	{
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		align-self: stretch;
+		min-height: 240px;
+		cursor: col-resize;
+		position: relative;
+	}
+	.ide-resizer::before
+	{
+		content: "";
+		width: 2px;
+		height: 100%;
+		background: var(--line);
+		border-radius: 2px;
+		transition: background .15s, width .15s;
+	}
+	.ide-resizer::after
+	{
+		content: "";
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 6px;
+		height: 44px;
+		border-radius: 99px;
+		background: var(--line);
+		opacity: .7;
+		transition: background .15s, opacity .15s;
+	}
+	.ide-resizer:hover::before, .ide-resizer.drag::before { background: var(--accent); width: 3px; }
+	.ide-resizer:hover::after, .ide-resizer.drag::after { background: var(--accent); opacity: 1; }
+
+	/* Bac à sable côte à côte : éditeur large (~2/3) à gauche, saisies + sortie / Swing / aperçu à droite */
 	.sandbox-split:not(.ide-stacked)
 	{
 		display: grid;
-		grid-template-columns: minmax(0, 60%) minmax(320px, 40%);
-		gap: 24px;
+		grid-template-columns: minmax(0, 1fr) 12px minmax(280px, var(--sb-right, 33%));
+		gap: 0 8px;
 		align-items: start;
 	}
 	.sandbox-split:not(.ide-stacked) > .sb-out
 	{
 		position: sticky;
-		top: 74px;
-		max-height: calc(100vh - 96px);
+		top: 72px;
+		max-height: calc(100vh - 92px);
 		overflow-y: auto;
-		padding-left: 16px;
-		border-left: 1px solid var(--line);
+		padding-left: 6px;
 		scrollbar-width: thin;
 		scrollbar-color: var(--line) transparent;
 	}
 	.sandbox-split:not(.ide-stacked) > .sb-out .ide-ed-lbl { margin-top: 0; }
-	.sandbox-split:not(.ide-stacked) iframe.preview.tall { height: 480px; }
+	.sandbox-split:not(.ide-stacked) iframe.preview.tall { height: 520px; }
 }
 
 </style>
@@ -51627,7 +51671,7 @@ var KEY = "javaquest-s1-v1";
 var ADMIN_CODE = "iut-admin";
 function freshState(theme)
 {
-	return { xp: 0, done: {}, failed: {}, lives: {}, badges: {}, code: {}, tries: {}, ctl: {}, lessons: {}, days: {}, rev: {}, hints: {}, goal: 20, langue: "java", unlockAll: false, freeFiles: true, ideStack: false, admin: false, theme: theme || "auto", backup: "" };
+	return { xp: 0, done: {}, failed: {}, lives: {}, badges: {}, code: {}, tries: {}, ctl: {}, lessons: {}, days: {}, rev: {}, hints: {}, goal: 20, langue: "java", unlockAll: false, freeFiles: true, ideStack: false, edFont: 0, ideSplit: 0, admin: false, theme: theme || "auto", backup: "" };
 }
 var state = freshState();
 try
@@ -54153,6 +54197,8 @@ var SwingUI = (function ()
 		var memoBtn = !strict ? h("button", { "class": "ed-fs-btn", type: "button", text: "📖 Mémo", title: "Mémo rapide des signatures (masqué en mode examen strict)", "aria-pressed": "false", on: { click: function () { memoBar.hidden = !memoBar.hidden; memoBtn.setAttribute("aria-pressed", memoBar.hidden ? "false" : "true"); if (!memoBar.hidden) { drawMemo(); } } } }) : null;
 		var fmtBtn = (mode === "java" && !strict) ? h("button", { "class": "ed-fs-btn", type: "button", text: "{ } Allman", title: "Ré-indenter le fichier en style Allman", on: { click: formatCurrent } }) : null;
 		var dlBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "⬇", title: "Télécharger le(s) fichier(s)", "aria-label": "Télécharger le code", on: { click: downloadCurrent } });
+		var fontMinusBtn = h("button", { "class": "ed-fs-btn ed-font-btn", type: "button", text: "A−", title: "Réduire la taille du code", "aria-label": "Réduire la taille du code", on: { click: function () { stepFont(-1); } } });
+		var fontPlusBtn = h("button", { "class": "ed-fs-btn ed-font-btn", type: "button", text: "A+", title: "Agrandir la taille du code", "aria-label": "Agrandir la taille du code", on: { click: function () { stepFont(1); } } });
 		var layoutBtn = opts.onToggleLayout ? h("button", { "class": "ed-fs-btn ed-layout-btn", type: "button", text: state.ideStack ? "◫ Côte à côte" : "☰ Empiler", title: "Basculer entre affichage côte à côte et empilé", "aria-pressed": state.ideStack ? "false" : "true", on: { click: function ()
 		{
 			var stacked = opts.onToggleLayout();
@@ -54160,7 +54206,7 @@ var SwingUI = (function ()
 			layoutBtn.setAttribute("aria-pressed", stacked ? "false" : "true");
 		} } }) : null;
 		var fsBtn = h("button", { "class": "ed-fs-btn", type: "button", text: "⛶ Agrandir", "aria-pressed": "false", on: { click: toggleFs } });
-		var toolsRight = h("div", { "class": "ed-tools" }, findBtn, memoBtn, fmtBtn, dlBtn, layoutBtn, fsBtn);
+		var toolsRight = h("div", { "class": "ed-tools" }, findBtn, memoBtn, fmtBtn, fontMinusBtn, fontPlusBtn, dlBtn, layoutBtn, fsBtn);
 		var status = h("div", { "class": "ed-status" }, posEl, keysEl, toolsRight);
 		var shell = h("div", { "class": "ed-shell" }, head, findBar, memoBar, wrap, emptySlot, status);
 
@@ -54374,25 +54420,58 @@ var SwingUI = (function ()
 			drawAc();
 		}
 
+		function defaultFont() { return window.innerWidth >= 1040 ? 15 : 14; }
+		function applyEdFont()
+		{
+			var fs = state.edFont || 0;
+			if (fs >= 12 && fs <= 22)
+			{
+				wrap.style.setProperty("--ed-fs", fs + "px");
+				wrap.style.setProperty("--ed-lh", Math.round(fs * 1.6) + "px");
+			}
+			else
+			{
+				wrap.style.removeProperty("--ed-fs");
+				wrap.style.removeProperty("--ed-lh");
+			}
+			_cw = 0;
+		}
+		function stepFont(delta)
+		{
+			var cur = state.edFont || defaultFont();
+			var next = Math.max(12, Math.min(22, cur + delta));
+			state.edFont = next;
+			save();
+			applyEdFont();
+			render();
+		}
 		function setRows(r)
 		{
-			var desk = window.innerWidth >= 1024;
-			var px = Math.min(desk ? 600 : 540, Math.max(desk ? 340 : 240, r * 22 + 28));
-			wrap.style.height = px + "px";
+			var desk = window.innerWidth >= 1040;
+			if (desk)
+			{
+				var vh = Math.round(window.innerHeight * (opts.tall ? 0.66 : 0.58));
+				var px = Math.min(760, Math.max(480, Math.max(vh, r * 24 + 32)));
+				wrap.style.height = px + "px";
+				return;
+			}
+			var pxM = Math.min(540, Math.max(240, r * 22 + 28));
+			wrap.style.height = pxM + "px";
 		}
+		var _cw = 0;
+		applyEdFont();
 		setRows(opts.rows || 14);
 
 		function lineHeight()
 		{
 			var lh = parseFloat(window.getComputedStyle(ta).lineHeight);
-			return isNaN(lh) ? 22 : lh;
+			return isNaN(lh) ? 24 : lh;
 		}
 		function padTop()
 		{
 			var pt = parseFloat(window.getComputedStyle(ta).paddingTop);
 			return isNaN(pt) ? 10 : pt;
 		}
-		var _cw = 0;
 		function charWidth()
 		{
 			if (_cw > 0) { return _cw; }
@@ -54706,6 +54785,57 @@ var SwingUI = (function ()
 		};
 	}
 
+	/* Poignée de redimensionnement entre l'énoncé et l'éditeur (PC >= 1040px). */
+	function makeSplitResizer(container, opts)
+	{
+		opts = opts || {};
+		var prop = opts.reverse ? "--sb-right" : "--ide-left";
+		var defPct = 33;
+		if (!opts.reverse && state.ideSplit >= 22 && state.ideSplit <= 55)
+		{
+			container.style.setProperty(prop, state.ideSplit + "%");
+		}
+		var bar = h("div", {
+			"class": "ide-resizer",
+			role: "separator",
+			"aria-orientation": "vertical",
+			"aria-label": "Redimensionner les panneaux",
+			title: "Glisser pour redimensionner (double-clic pour réinitialiser)"
+		});
+		bar.addEventListener("dblclick", function ()
+		{
+			container.style.removeProperty(prop);
+			if (!opts.reverse) { state.ideSplit = 0; save(); }
+		});
+		bar.addEventListener("mousedown", function (ev)
+		{
+			if (ev.button !== 0) { return; }
+			ev.preventDefault();
+			var rect = container.getBoundingClientRect();
+			if (!rect.width) { return; }
+			document.body.classList.add("ide-resizing");
+			bar.classList.add("drag");
+			var lastPct = defPct;
+			function onMove(e)
+			{
+				var raw = opts.reverse ? ((rect.right - e.clientX) / rect.width) * 100 : ((e.clientX - rect.left) / rect.width) * 100;
+				lastPct = Math.round(Math.max(22, Math.min(55, raw)) * 10) / 10;
+				container.style.setProperty(prop, lastPct + "%");
+			}
+			function onUp()
+			{
+				document.body.classList.remove("ide-resizing");
+				bar.classList.remove("drag");
+				window.removeEventListener("mousemove", onMove);
+				window.removeEventListener("mouseup", onUp);
+				if (!opts.reverse) { state.ideSplit = Math.round(lastPct); save(); }
+			}
+			window.addEventListener("mousemove", onMove);
+			window.addEventListener("mouseup", onUp);
+		});
+		return bar;
+	}
+
 	function exCode(e, api, opts)
 	{
 		opts = opts || {};
@@ -54713,7 +54843,10 @@ var SwingUI = (function ()
 		var strict = !!opts.strict;
 		var left = h("div", { "class": "ide-left" });
 		var right = h("div", { "class": "ide-right" });
-		var box = h("div", { "class": "ide-split" + (state.ideStack ? " ide-stacked" : "") }, left, right);
+		var box = h("div", { "class": "ide-split" + (state.ideStack ? " ide-stacked" : "") });
+		box.appendChild(left);
+		box.appendChild(makeSplitResizer(box));
+		box.appendChild(right);
 		add(left, para(e.enonce));
 		if (e.regles && e.regles.length) { left.appendChild(h("div", { "class": "rules", "aria-label": "Règles imposées" }, e.regles.map(function (r) { return h("span", { "class": "rule", text: ruleLabel(r) }); }))); }
 		var multiSol = isMultiEx(e);
@@ -55381,7 +55514,10 @@ var SwingUI = (function ()
 		var noHelp = opts.exam || strict;
 		var left = h("div", { "class": "ide-left" });
 		var right = h("div", { "class": "ide-right" });
-		var box = h("div", { "class": "ide-split" + (state.ideStack ? " ide-stacked" : "") }, left, right);
+		var box = h("div", { "class": "ide-split" + (state.ideStack ? " ide-stacked" : "") });
+		box.appendChild(left);
+		box.appendChild(makeSplitResizer(box));
+		box.appendChild(right);
 		add(left, para(e.enonce));
 		left.appendChild(h("p", { "class": "small", style: "margin:10px 0 4px" }, h("strong", { text: "Ce que la page doit contenir" })));
 		var list = h("ul", { "class": "checks" });
@@ -56806,7 +56942,7 @@ function renderSandbox()
 	function saveCode() { state.code[key] = curCode(); save(); }
 	function refresh() { if (prev) { prev.srcdoc = edApi.getValue(); } }
 	var edApi = codeEditor({
-		id: "sbEd", mode: web ? "html" : "java", niveau: niv, rows: 20,
+		id: "sbEd", mode: web ? "html" : "java", niveau: niv, rows: 24, tall: true,
 		fileName: web ? "index.html" : null,
 		downloadName: "bac-a-sable-" + L.id,
 		getFiles: function () { return multiMode && fe ? fe.files() : null; },
@@ -56869,6 +57005,7 @@ function renderSandbox()
 		web ? null : inBox,
 		out);
 	sbSplit.appendChild(sbCodeCol);
+	sbSplit.appendChild(makeSplitResizer(sbSplit, { reverse: true }));
 	sbSplit.appendChild(sbOutCol);
 	app.appendChild(h("div", { "class": "card card-ide" }, sbSplit));
 	if (web)
